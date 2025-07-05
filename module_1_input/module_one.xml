@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0" version="27.2.0">
+  <diagram id="5uiuSjRm_VTmdPstidng" name="Module 1: Input">
+    <mxGraphModel dx="3545" dy="1468" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="2r9E-pAIJETtAIGziVjl-13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="2r9E-pAIJETtAIGziVjl-1" target="2r9E-pAIJETtAIGziVjl-12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="2r9E-pAIJETtAIGziVjl-1" value="&lt;b&gt;property_data.csv&lt;br&gt;&lt;/b&gt;Database of all taxable city properties with features that impact value + location" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="210" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="2r9E-pAIJETtAIGziVjl-21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="1" source="2r9E-pAIJETtAIGziVjl-2" target="2r9E-pAIJETtAIGziVjl-20">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="2r9E-pAIJETtAIGziVjl-2" value="&lt;b&gt;businesses.csv&lt;br&gt;&lt;/b&gt;Database of businesses with &quot;id&quot; column to match the business with its corresponding property" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="1">
+          <mxGeometry x="810" y="20" width="210" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="2r9E-pAIJETtAIGziVjl-19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="1" source="2r9E-pAIJETtAIGziVjl-11" target="2r9E-pAIJETtAIGziVjl-18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="2r9E-pAIJETtAIGziVjl-11" value="&lt;b&gt;made_payment.csv&lt;/b&gt;&lt;div&gt;Database of properties that made a payment in 2024&lt;/div&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="1">
+          <mxGeometry x="425" y="20" width="210" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="2r9E-pAIJETtAIGziVjl-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="2r9E-pAIJETtAIGziVjl-12" target="2r9E-pAIJETtAIGziVjl-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="2r9E-pAIJETtAIGziVjl-12" value="Create a field where csv can be selected for import" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="85" y="200" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="2r9E-pAIJETtAIGziVjl-17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="2r9E-pAIJETtAIGziVjl-14" target="2r9E-pAIJETtAIGziVjl-16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="2r9E-pAIJETtAIGziVjl-14" value="Prompt User to Classify columns into the following categories:&lt;div&gt;id_property (only one column),&lt;/div&gt;&lt;div&gt;latitude&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;(only one column)&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;,&lt;/span&gt;&lt;/div&gt;&lt;div&gt;longitude&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;(only one column)&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;,&lt;/span&gt;&lt;/div&gt;&lt;div&gt;property_area&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;(only one column)&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;,&lt;/span&gt;&lt;/div&gt;&lt;div&gt;property_type&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;(only one column)&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;,&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;structure_type (multiple_columns),&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;property_features (multiple columns)&lt;/span&gt;&lt;/div&gt;" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-22.5" y="310" width="335" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="2r9E-pAIJETtAIGziVjl-16" value="For property_type, structure_type, property_features:&lt;div&gt;Restructure the data to create dummy variables (or one-hot-encoding).&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Example: The variable &quot;window_material&quot; has values: &quot;&lt;span style=&quot;background-color: transparent;&quot;&gt;Wood&quot;, &quot;&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;No Windows&quot;, &quot;&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Breeze Block&quot;, &quot;&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Sliding panels with aluminium frame&quot;, &quot;&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Traditional glazed casement set in metal frame or wood frame&quot;, &quot;&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Louvre&quot;. This should be updated to: &quot;window_material_wood&quot;, &quot;window_material_no_windows&quot;, &quot;window_material_breeze_block&quot;, &quot;window_material_sliding_panels_with_aluminium_frame&quot;, &quot;window_material_traditional_glazed_casement_set_in_metal_frame_or_wood_frame&quot;, and &quot;window_material_louvre&quot;, each with values &quot;yes&quot; and &quot;no&quot;&lt;/span&gt;&lt;/div&gt;" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-101.25" y="520" width="492.5" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="2r9E-pAIJETtAIGziVjl-25" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="2r9E-pAIJETtAIGziVjl-18" target="2r9E-pAIJETtAIGziVjl-24">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="2r9E-pAIJETtAIGziVjl-18" value="Create a field where csv can be selected for import" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="470" y="200" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="2r9E-pAIJETtAIGziVjl-27" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="2r9E-pAIJETtAIGziVjl-20" target="2r9E-pAIJETtAIGziVjl-26">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="2r9E-pAIJETtAIGziVjl-20" value="Create a field where csv can be selected for import" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="855" y="210" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="2r9E-pAIJETtAIGziVjl-24" value="Prompt User to Classify columns into the following categories:&lt;div&gt;id_property (only one column),&lt;/div&gt;&lt;div&gt;made_payment (only one column)&lt;/div&gt;" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="362.5" y="310" width="335" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="2r9E-pAIJETtAIGziVjl-26" value="Prompt User to Classify columns into the following categories:&lt;div&gt;id_property (only one column),&lt;/div&gt;&lt;div&gt;business_name (only one column),&lt;/div&gt;&lt;div&gt;business_area (only one column),&lt;/div&gt;&lt;div&gt;business_category (only one column)&lt;/div&gt;" style="whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="747.5" y="310" width="335" height="130" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
