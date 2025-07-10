@@ -1,12 +1,31 @@
-# React + Vite
+# Revenue Simulator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A progressive property tax simulator tool for city officials to experiment with tax configurations and analyze their impact on revenue distribution.
 
-Currently, two official plugins are available:
+## 🎯 Project Goals
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+1. Enable city officials to experiment with property value coefficients
+2. Test different tax rates and minimum tax amounts
+3. Analyze tax burden distribution across property value quantiles
+4. Support data-driven policy decisions for progressive taxation
 
-## Expanding the ESLint configuration
+## 🏗️ Architecture
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+The system consists of 5 interconnected modules:
+- **Module 1**: Data Input & Preprocessing
+- **Module 2**: Parameter Configuration
+- **Module 3**: Revenue Calculations
+- **Module 4**: Tax Burden Analysis
+- **Module 5**: GIS Visualization
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
+
+### Installation
+```bash
+cd property-tax-simulator
+npm install
+npm run dev
