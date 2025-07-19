@@ -1,4 +1,9 @@
-# app.R
+# Set options for deployment
+options(
+  shiny.port = as.numeric(Sys.getenv("PORT", 3838)),
+  shiny.host = Sys.getenv("HOST", "0.0.0.0"),
+  shiny.maxRequestSize = 50*1024^2  # 50MB file limit
+)
 
 # Define UI
 ui <- dashboardPage(

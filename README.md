@@ -12,21 +12,15 @@ This Shiny web application provides a comprehensive simulator for property tax a
 4. **Module 4: Tax Burden Analysis** - Analyze tax distribution across property value quantiles
 5. **Module 5: GIS Visualization** - Visualize tax data geographically
 
-## Installation
+## For End Users (No Installation Required!)
 
-### Prerequisites
+Access the Property Tax Revenue Simulator directly in your web browser:
 
-- R (version 4.0 or higher)
-- RStudio (recommended)
+🌐 **[https://your-account.shinyapps.io/property-tax-simulator/](https://your-account.shinyapps.io/property-tax-simulator/)**
 
-### Required R Packages
+No installation or technical knowledge required - just click the link and start using the simulator!
 
-```r
-install.packages(c(
-  "shiny",
-  "shinydashboard",
-  "DT",
-  "tidyverse",
-  "readr",
-  "fastDummies"
-))
+### System Requirements for Users
+- Modern web browser (Chrome, Firefox, Safari, Edge)
+- Internet connection
+- Your property data in CSV format
