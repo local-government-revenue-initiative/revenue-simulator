@@ -241,8 +241,8 @@ module1_server <- function(id) {
         processed_payment <- values$payment_data
         for (std_name in names(values$payment_mapping)) {
           if (values$payment_mapping[[std_name]] != "") {
-            processed_payment <- processed_payment %>%
-              rename(!!std_name := !!values$payment_mapping[[std_name]])
+            old_name <- values$payment_mapping[[std_name]]
+            names(processed_payment)[names(processed_payment) == old_name] <- std_name
           }
         }
         
@@ -252,8 +252,8 @@ module1_server <- function(id) {
         processed_business <- values$business_data
         for (std_name in names(values$business_mapping)) {
           if (values$business_mapping[[std_name]] != "") {
-            processed_business <- processed_business %>%
-              rename(!!std_name := !!values$business_mapping[[std_name]])
+            old_name <- values$business_mapping[[std_name]]
+            names(processed_business)[names(processed_business) == old_name] <- std_name
           }
         }
         

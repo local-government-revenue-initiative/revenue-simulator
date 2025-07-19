@@ -61,8 +61,8 @@ process_property_data <- function(df, column_mapping) {
   df_renamed <- df
   for (standard_name in names(column_mapping)) {
     if (column_mapping[[standard_name]] != "") {
-      df_renamed <- df_renamed %>%
-        rename(!!standard_name := !!column_mapping[[standard_name]])
+      old_name <- column_mapping[[standard_name]]
+      names(df_renamed)[names(df_renamed) == old_name] <- standard_name
     }
   }
   
