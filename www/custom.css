@@ -1,0 +1,51 @@
+/* Custom styling for the Property Tax Simulator */
+
+/* Primary button styling */
+.btn-primary {
+  background-color: #3498db;
+  border-color: #2980b9;
+}
+
+.btn-primary:hover {
+  background-color: #2980b9;
+  border-color: #21618c;
+}
+
+/* Success button styling */
+.btn-success {
+  background-color: #27ae60;
+  border-color: #229954;
+}
+
+.btn-success:hover {
+  background-color: #229954;
+  border-color: #1e8449;
+}
+
+/* Large button */
+.btn-lg {
+  padding: 10px 20px;
+  font-size: 18px;
+}
+
+/* Box headers */
+.box-header {
+  background-color: #f5f5f5;
+}
+
+/* Required field indicator */
+label:contains("*") {
+  font-weight: bold;
+}
+
+/* Data table improvements */
+.dataTables_wrapper {
+  margin-top: 10px;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .content-wrapper, .right-side {
+    margin-left: 0 !important;
+  }
+}
