@@ -87,7 +87,7 @@ module1_server <- function(id) {
           selectInput(
             ns(paste0("map_prop_", col)),
             label = label,
-            choices = c("" = "", names(values$property_data)),
+            choices = c("(none)" = "", names(values$property_data)),  # Fixed here
             selected = suggestions[[col]]
           )
         })
@@ -108,7 +108,7 @@ module1_server <- function(id) {
           selectInput(
             ns(paste0("map_pay_", col)),
             label = paste0(col, " *"),
-            choices = c("" = "", names(values$payment_data)),
+            choices = c("(none)" = "", names(values$payment_data)),  # Fixed here
             selected = suggestions[[col]]
           )
         })
@@ -133,7 +133,7 @@ module1_server <- function(id) {
           selectInput(
             ns(paste0("map_bus_", col)),
             label = label,
-            choices = c("" = "", names(values$business_data)),
+            choices = c("(none)" = "", names(values$business_data)),  # Fixed here
             selected = suggestions[[col]]
           )
         })
@@ -168,10 +168,13 @@ module1_server <- function(id) {
       
       if (length(errors) == 0) {
         values$property_mapping <- mapping
-        showNotification("Property mapping validated successfully!", type = "success")
+        showNotification("Property mapping validated successfully!", 
+                         type = "message",  # Changed from "success" to "message"
+                         duration = 5)
       } else {
         showNotification(paste("Validation errors:", paste(errors, collapse = ", ")), 
-                         type = "error", duration = 10)
+                         type = "error", 
+                         duration = 10)
       }
     })
     
@@ -186,10 +189,13 @@ module1_server <- function(id) {
       
       if (length(errors) == 0) {
         values$payment_mapping <- mapping
-        showNotification("Payment mapping validated successfully!", type = "success")
+        showNotification("Payment mapping validated successfully!", 
+                         type = "message",  # Changed from "success" to "message"
+                         duration = 5)
       } else {
         showNotification(paste("Validation errors:", paste(errors, collapse = ", ")), 
-                         type = "error", duration = 10)
+                         type = "error", 
+                         duration = 10)
       }
     })
     
@@ -206,10 +212,13 @@ module1_server <- function(id) {
       
       if (length(errors) == 0) {
         values$business_mapping <- mapping
-        showNotification("Business mapping validated successfully!", type = "success")
+        showNotification("Business mapping validated successfully!", 
+                         type = "message",  # Changed from "success" to "message"
+                         duration = 5)
       } else {
         showNotification(paste("Validation errors:", paste(errors, collapse = ", ")), 
-                         type = "error", duration = 10)
+                         type = "error", 
+                         duration = 10)
       }
     })
     
@@ -241,8 +250,8 @@ module1_server <- function(id) {
         processed_payment <- values$payment_data
         for (std_name in names(values$payment_mapping)) {
           if (values$payment_mapping[[std_name]] != "") {
-            old_name <- values$payment_mapping[[std_name]]
-            names(processed_payment)[names(processed_payment) == old_name] <- std_name
+            processed_payment <- processed_payment %>%
+              rename(!!std_name := !!values$payment_mapping[[std_name]])
           }
         }
         
@@ -252,8 +261,8 @@ module1_server <- function(id) {
         processed_business <- values$business_data
         for (std_name in names(values$business_mapping)) {
           if (values$business_mapping[[std_name]] != "") {
-            old_name <- values$business_mapping[[std_name]]
-            names(processed_business)[names(processed_business) == old_name] <- std_name
+            processed_business <- processed_business %>%
+              rename(!!std_name := !!values$business_mapping[[std_name]])
           }
         }
         
@@ -331,3 +340,4 @@ module1_server <- function(id) {
     }))
   })
 }
+

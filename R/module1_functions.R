@@ -28,10 +28,21 @@ suggest_column_mapping <- function(df, expected_columns) {
 validate_column_mapping <- function(df, mapping, required_columns) {
   errors <- character()
   
+  # Check required columns
   for (col in required_columns) {
     if (is.null(mapping[[col]]) || mapping[[col]] == "" || !mapping[[col]] %in% names(df)) {
       errors <- c(errors, paste("Required column", col, "not mapped or invalid"))
     }
+  }
+  
+  # Check for duplicate mappings
+  mapped_columns <- unlist(mapping)
+  mapped_columns <- mapped_columns[mapped_columns != ""]  # Remove empty mappings
+  
+  if (length(mapped_columns) != length(unique(mapped_columns))) {
+    duplicates <- mapped_columns[duplicated(mapped_columns)]
+    errors <- c(errors, paste("Duplicate column mappings found:", 
+                            paste(unique(duplicates), collapse = ", ")))
   }
   
   return(errors)
@@ -57,12 +68,24 @@ create_dummy_variables <- function(df, categorical_columns) {
 
 # Function to process property data
 process_property_data <- function(df, column_mapping) {
+  # First, remove any empty mappings and check for duplicates
+  clean_mapping <- column_mapping[column_mapping != ""]
+  
+  # Check for duplicate values in mapping
+  if (any(duplicated(clean_mapping))) {
+    stop("Duplicate column mappings detected. Each CSV column can only be mapped once.")
+  }
+  
   # Rename columns based on mapping
   df_renamed <- df
-  for (standard_name in names(column_mapping)) {
-    if (column_mapping[[standard_name]] != "") {
-      old_name <- column_mapping[[standard_name]]
-      names(df_renamed)[names(df_renamed) == old_name] <- standard_name
+  for (standard_name in names(clean_mapping)) {
+    old_name <- clean_mapping[[standard_name]]
+    if (!is.null(old_name) && old_name != "" && old_name %in% names(df_renamed)) {
+      # Only rename if the column exists and hasn't been renamed already
+      if (old_name %in% names(df_renamed)) {
+        df_renamed <- df_renamed %>%
+          rename(!!standard_name := !!old_name)
+      }
     }
   }
   
@@ -104,3 +127,4 @@ merge_datasets <- function(property_data, payment_data, business_data,
   
   return(merged_data)
 }
+
