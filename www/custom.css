@@ -49,3 +49,57 @@ label:contains("*") {
     margin-left: 0 !important;
   }
 }
+
+/* Module 2 specific styles */
+
+/* Slider styling */
+.js-irs-0 .irs-single, .js-irs-0 .irs-bar-edge, .js-irs-0 .irs-bar {
+  background: #3498db;
+  border-color: #3498db;
+}
+
+/* Feature group headers */
+h4 {
+  color: #2c3e50;
+  margin-top: 20px;
+  margin-bottom: 15px;
+}
+
+/* Configuration tabs */
+.nav-tabs > li.active > a {
+  background-color: #3498db;
+  color: white;
+}
+
+/* Numeric input styling */
+.form-control {
+  border-radius: 4px;
+}
+
+/* Small buttons */
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 12px;
+  margin-right: 10px;
+}
+
+/* Scenario selector */
+#module2-scenario_select {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+/* Help text */
+.help-block {
+  color: #737373;
+  font-size: 13px;
+  margin-top: 5px;
+}
+
+/* Configuration summary box */
+pre {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 15px;
+}

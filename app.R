@@ -1,9 +1,25 @@
-# Set options for deployment
-options(
-  shiny.port = as.numeric(Sys.getenv("PORT", 3838)),
-  shiny.host = Sys.getenv("HOST", "0.0.0.0"),
-  shiny.maxRequestSize = 50*1024^2  # 50MB file limit
-)
+# app.R
+# Load all required libraries FIRST
+library(shiny)
+library(shinydashboard)
+library(DT)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(fastDummies)
+
+# Set options
+options(shiny.maxRequestSize = 30*1024^2)  # 30MB max file size
+
+# Source all module functions
+source("R/module1_functions.R")
+source("R/module2_functions.R")
+
+# Source UI and server modules
+source("modules/module1_ui.R")
+source("modules/module1_server.R")
+source("modules/module2_ui.R")
+source("modules/module2_server.R")
 
 # Define UI
 ui <- dashboardPage(
@@ -31,9 +47,9 @@ ui <- dashboardPage(
     
     tabItems(
       module1_ui("module1"),
+      module2_ui("module2"),
       
       # Placeholder for other modules
-      tabItem(tabName = "module2", h2("Module 2: Coming Soon")),
       tabItem(tabName = "module3", h2("Module 3: Coming Soon")),
       tabItem(tabName = "module4", h2("Module 4: Coming Soon")),
       tabItem(tabName = "module5", h2("Module 5: Coming Soon"))
@@ -43,11 +59,14 @@ ui <- dashboardPage(
 
 # Define server
 server <- function(input, output, session) {
-  # Module 1 server
+  # Module 1 server - returns processed data
   processed_data <- module1_server("module1")
   
-  # Pass processed data to other modules when implemented
-  # module2_server("module2", processed_data)
+  # Module 2 server - returns configurations
+  configurations <- module2_server("module2", processed_data)
+  
+  # Pass data to other modules when implemented
+  # module3_server("module3", processed_data, configurations)
   # etc.
 }
 

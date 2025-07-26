@@ -1,0 +1,10 @@
+name: property-tax-simulator
+title:
+username: evan-trowbridge
+account: evan-trowbridge
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 15098225
+bundleId: 10641854
+url: https://evan-trowbridge.shinyapps.io/property-tax-simulator/
+version: 1

@@ -1,0 +1,12 @@
+name: property-tax-simulator
+title:
+username: logri
+account: logri
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 15098237
+bundleId: 10669536
+url: https://logri.shinyapps.io/property-tax-simulator/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE

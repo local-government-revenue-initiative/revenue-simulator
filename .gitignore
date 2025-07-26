@@ -1,20 +1,7 @@
-# R specific
-.Rhistory
-.RData
+# .rscignore
+.git/
 .Rproj.user/
 *.Rproj
-
-# Shiny specific
-rsconnect/
-.secrets/
-
-# Data files (if sensitive)
-# data/*.csv
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Temporary files
-*~
-*.swp
+README.md
+.gitignore
+tests/
