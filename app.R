@@ -11,17 +11,25 @@ library(fastDummies)
 # Set options
 options(shiny.maxRequestSize = 30*1024^2)  # 30MB max file size
 
+# Null-coalescing operator
+`%||%` <- function(x, y) {
+  if (is.null(x)) y else x
+}
+
 # Source all module functions
 source("R/module1_functions.R")
 source("R/module2_functions.R")
+source("R/module3_functions.R")
 
 # Source UI and server modules
 source("modules/module1_ui.R")
 source("modules/module1_server.R")
 source("modules/module2_ui.R")
 source("modules/module2_server.R")
+source("modules/module3_ui.R")
+source("modules/module3_server.R")
 
-# Define UI
+# Update UI to include Module 2
 ui <- dashboardPage(
   dashboardHeader(title = "Property Tax Revenue Simulator"),
   
@@ -29,13 +37,15 @@ ui <- dashboardPage(
     sidebarMenu(
       menuItem("Module 1: Data Input", tabName = "module1", 
                icon = icon("database")),
-      menuItem("Module 2: Parameters", tabName = "module2", 
-               icon = icon("sliders-h")),
-      menuItem("Module 3: Revenue", tabName = "module3", 
+      menuItem("Module 2: Value Parameters", tabName = "module2", 
                icon = icon("calculator")),
-      menuItem("Module 4: Analysis", tabName = "module4", 
+      menuItem("Module 3: Tax Parameters", tabName = "module3", 
+               icon = icon("percent")),
+      menuItem("Module 4: Revenue", tabName = "module4", 
+               icon = icon("dollar-sign")),
+      menuItem("Module 5: Analysis", tabName = "module5", 
                icon = icon("chart-bar")),
-      menuItem("Module 5: GIS", tabName = "module5", 
+      menuItem("Module 6: GIS", tabName = "module6", 
                icon = icon("map"))
     )
   ),
@@ -48,26 +58,26 @@ ui <- dashboardPage(
     tabItems(
       module1_ui("module1"),
       module2_ui("module2"),
+      module3_ui("module3"),
       
       # Placeholder for other modules
-      tabItem(tabName = "module3", h2("Module 3: Coming Soon")),
       tabItem(tabName = "module4", h2("Module 4: Coming Soon")),
-      tabItem(tabName = "module5", h2("Module 5: Coming Soon"))
+      tabItem(tabName = "module5", h2("Module 5: Coming Soon")),
+      tabItem(tabName = "module6", h2("Module 6: Coming Soon"))
     )
   )
 )
 
-# Define server
+# Update the server function:
 server <- function(input, output, session) {
-  # Module 1 server - returns processed data
+  # Module 1 server
   processed_data <- module1_server("module1")
   
-  # Module 2 server - returns configurations
-  configurations <- module2_server("module2", processed_data)
+  # Module 2 server - pass processed data
+  param_configs <- module2_server("module2", processed_data)
   
-  # Pass data to other modules when implemented
-  # module3_server("module3", processed_data, configurations)
-  # etc.
+  # Module 3 server
+  tax_configs <- module3_server("module3", processed_data, reactive(NULL))
 }
 
 # Run the app

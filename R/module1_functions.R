@@ -98,7 +98,7 @@ process_property_data <- function(df, column_mapping) {
                         "has_outbuilding", "street_quality", "domestic_use_of_groundfloor",
                         "street_lanes", "tourist_area", "environmental_hazard",
                         "main_road_high_visibility", "informal_settlement",
-                        "commercial_corridor", "has_water")
+                        "commercial_corridor", "has_water", "ward")  
   
   # Filter to only categorical columns that exist
   categorical_cols <- categorical_cols[categorical_cols %in% names(df_renamed)]
@@ -109,22 +109,58 @@ process_property_data <- function(df, column_mapping) {
   return(df_processed)
 }
 
-# Function to merge all datasets
+# Simpler version of merge_datasets
 merge_datasets <- function(property_data, payment_data, business_data,
                            property_id_col, payment_id_col, business_id_col) {
-  # Ensure ID columns are character type for merging
+  # Ensure ID columns are character type
   property_data[[property_id_col]] <- as.character(property_data[[property_id_col]])
   payment_data[[payment_id_col]] <- as.character(payment_data[[payment_id_col]])
   business_data[[business_id_col]] <- as.character(business_data[[business_id_col]])
   
-  # Merge property and payment data
-  merged_data <- property_data %>%
-    left_join(payment_data, by = setNames(payment_id_col, property_id_col))
+  # Issue 1: Deduplicate payment data
+  payment_data_unique <- payment_data %>%
+    distinct(!!sym(payment_id_col), .keep_all = TRUE)
   
-  # Merge with business data
-  merged_data <- merged_data %>%
-    left_join(business_data, by = setNames(business_id_col, property_id_col))
+  # Join property and payment data
+  merged_data <- property_data %>%
+    left_join(payment_data_unique, by = setNames(payment_id_col, property_id_col))
+  
+  # Issue 2: Join business data with priority logic
+  if ("property_type" %in% names(merged_data) && nrow(business_data) > 0) {
+    # Add row identifier
+    merged_data <- merged_data %>%
+      mutate(row_id = row_number())
+    
+    # For each business, find the best matching property row
+    business_matches <- business_data %>%
+      inner_join(
+        merged_data %>% select(row_id, !!sym(property_id_col), property_type),
+        by = setNames(property_id_col, business_id_col),
+        multiple = "all"
+      ) %>%
+      mutate(
+        type_priority = case_when(
+          tolower(property_type) == "commercial" ~ 1,
+          tolower(property_type) == "domestic" ~ 2,
+          tolower(property_type) == "institutional" ~ 3,
+          TRUE ~ 99
+        )
+      ) %>%
+      group_by(!!sym(business_id_col)) %>%
+      slice_min(type_priority, n = 1, with_ties = FALSE) %>%
+      ungroup() %>%
+      select(-type_priority, -property_type)
+    
+    # Join back to merged data
+    merged_data <- merged_data %>%
+      left_join(business_matches, by = c("row_id", setNames(business_id_col, property_id_col))) %>%
+      select(-row_id)
+    
+  } else {
+    # Simple join if no property_type column
+    merged_data <- merged_data %>%
+      left_join(business_data, by = setNames(business_id_col, property_id_col))
+  }
   
   return(merged_data)
 }
-

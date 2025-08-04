@@ -72,7 +72,7 @@ module1_server <- function(id) {
                             "domestic_use_of_groundfloor", "street_lanes",
                             "tourist_area", "environmental_hazard",
                             "main_road_high_visibility", "informal_settlement",
-                            "commercial_corridor", "has_water")
+                            "commercial_corridor", "has_water", "ward")  # Added ward here
       
       suggestions <- suggest_column_mapping(values$property_data, property_columns)
       
@@ -119,7 +119,7 @@ module1_server <- function(id) {
       req(values$business_data)
       
       business_columns <- c("id_property", "business_name", "business_area", 
-                            "business_category")
+                            "business_category", "business_sub_category")  # Added business_sub_category
       suggestions <- suggest_column_mapping(values$business_data, business_columns)
       
       tagList(
@@ -133,7 +133,7 @@ module1_server <- function(id) {
           selectInput(
             ns(paste0("map_bus_", col)),
             label = label,
-            choices = c("(none)" = "", names(values$business_data)),  # Fixed here
+            choices = c("(none)" = "", names(values$business_data)),
             selected = suggestions[[col]]
           )
         })
@@ -153,7 +153,7 @@ module1_server <- function(id) {
                             "domestic_use_of_groundfloor", "street_lanes",
                             "tourist_area", "environmental_hazard",
                             "main_road_high_visibility", "informal_settlement",
-                            "commercial_corridor", "has_water")
+                            "commercial_corridor", "has_water", "ward")
       
       mapping <- list()
       for (col in property_columns) {
@@ -204,7 +204,8 @@ module1_server <- function(id) {
         id_property = input$map_bus_id_property,
         business_name = input$map_bus_business_name,
         business_area = input$map_bus_business_area,
-        business_category = input$map_bus_business_category
+        business_category = input$map_bus_business_category,
+        business_sub_category = input$map_bus_business_sub_category  # Added this line
       )
       
       errors <- validate_column_mapping(values$business_data, mapping, 
@@ -213,7 +214,7 @@ module1_server <- function(id) {
       if (length(errors) == 0) {
         values$business_mapping <- mapping
         showNotification("Business mapping validated successfully!", 
-                         type = "message",  # Changed from "success" to "message"
+                         type = "message",
                          duration = 5)
       } else {
         showNotification(paste("Validation errors:", paste(errors, collapse = ", ")), 
@@ -260,7 +261,8 @@ module1_server <- function(id) {
         # Process business data
         processed_business <- values$business_data
         for (std_name in names(values$business_mapping)) {
-          if (values$business_mapping[[std_name]] != "") {
+          if (!is.null(values$business_mapping[[std_name]]) && 
+              values$business_mapping[[std_name]] != "") {
             processed_business <- processed_business %>%
               rename(!!std_name := !!values$business_mapping[[std_name]])
           }
@@ -310,25 +312,60 @@ module1_server <- function(id) {
       req(values$processed_data)
       
       cat("=== Data Summary ===\n\n")
-      cat("Total Properties:", nrow(values$processed_data), "\n")
+      cat("Total Property Rows:", nrow(values$processed_data), "\n")
+      cat("Unique Properties:", length(unique(values$processed_data$id_property)), "\n")
       cat("Total Features:", ncol(values$processed_data), "\n")
-      cat("\nPayment Status:\n")
+      
+      # Show property type breakdown
+      if ("property_type" %in% names(values$property_mapping)) {
+        orig_col <- values$property_mapping[["property_type"]]
+        if (!is.null(orig_col) && orig_col != "" && orig_col %in% names(values$property_data)) {
+          cat("\nProperty Type Distribution:\n")
+          print(table(values$property_data[[orig_col]], useNA = "ifany"))
+        }
+      }
+      
+      cat("\n\nPayment Status:\n")
       if ("made_payment" %in% names(values$processed_data)) {
         print(table(values$processed_data$made_payment, useNA = "ifany"))
       }
+      
       cat("\n\nBusiness Properties:\n")
-      cat("Properties with businesses:", 
+      cat("Rows with businesses:", 
           sum(!is.na(values$processed_data$business_category)), "\n")
+      
+      # Business categories
       if ("business_category" %in% names(values$processed_data)) {
         cat("\nBusiness Categories:\n")
         print(table(values$processed_data$business_category, useNA = "ifany"))
+      }
+      
+      # Business sub-categories
+      if ("business_sub_category" %in% names(values$processed_data)) {
+        cat("\nBusiness Sub-Categories:\n")
+        # Show top 10 sub-categories to avoid too long output
+        sub_cat_table <- table(values$processed_data$business_sub_category, useNA = "ifany")
+        sub_cat_sorted <- sort(sub_cat_table, decreasing = TRUE)
+        print(head(sub_cat_sorted, 10))
+        if (length(sub_cat_sorted) > 10) {
+          cat("... and", length(sub_cat_sorted) - 10, "more sub-categories\n")
+        }
+      }
+      
+      # Add ward distribution if available
+      original_ward_col <- values$property_mapping[["ward"]]
+      if (!is.null(original_ward_col) && original_ward_col != "") {
+        cat("\n\nWard Distribution:\n")
+        if (original_ward_col %in% names(values$property_data)) {
+          print(table(values$property_data[[original_ward_col]], useNA = "ifany"))
+        }
       }
       
       cat("\n\nMissing Values Summary:\n")
       missing_summary <- colSums(is.na(values$processed_data))
       missing_summary <- missing_summary[missing_summary > 0]
       if (length(missing_summary) > 0) {
-        print(missing_summary)
+        print(head(missing_summary, 20))
       } else {
         cat("No missing values found!\n")
       }

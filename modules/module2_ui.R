@@ -7,169 +7,191 @@ module2_ui <- function(id) {
     tabName = "module2",
     fluidRow(
       box(
-        title = "Module 2: Parameter Configuration",
+        title = "Module 2: Parameters to Calculate Property and Business Values",
         width = 12,
         status = "primary",
         solidHeader = TRUE,
         
-        # Scenario selector
+        # Scenario action buttons
         fluidRow(
-          column(4,
-                 selectInput(ns("scenario_select"), 
-                             "Select Scenario to Configure:",
-                             choices = c("Existing" = "existing",
-                                         "Alternative A" = "alt_a",
-                                         "Alternative B" = "alt_b"),
-                             selected = "existing")
-          ),
-          column(4,
-                 actionButton(ns("copy_existing"), 
-                              "Copy from Existing", 
-                              icon = icon("copy"),
-                              class = "btn-info")
-          ),
-          column(4,
-                 downloadButton(ns("download_config"), 
-                                "Download Configuration",
-                                class = "btn-success")
+          column(12,
+                 p("Configure parameters for all three scenarios. Changes are saved automatically."),
+                 actionButton(ns("copy_existing_to_a"), "Copy Existing → Scenario A", 
+                              icon = icon("copy"), class = "btn-info btn-sm"),
+                 actionButton(ns("copy_existing_to_b"), "Copy Existing → Scenario B", 
+                              icon = icon("copy"), class = "btn-info btn-sm"),
+                 actionButton(ns("copy_a_to_b"), "Copy Scenario A → Scenario B", 
+                              icon = icon("copy"), class = "btn-info btn-sm"),
+                 actionButton(ns("reset_all"), "Reset All to Defaults", 
+                              icon = icon("undo"), class = "btn-warning btn-sm")
           )
         ),
         
         hr(),
         
-        # Configuration tabs
-        tabsetPanel(id = ns("config_tabs"),
-                    tabPanel("Inflation Adjustment",
+        # Tabbed interface for different parameter groups
+        tabsetPanel(id = ns("param_tabs"),
+                    
+                    # Tab 1: Base Value and Inflation
+                    tabPanel("Base Value & Inflation",
                              br(),
                              fluidRow(
-                               column(6,
-                                      numericInput(ns("inflation_rate"),
-                                                   "Inflation Adjustment Percentage:",
+                               column(4,
+                                      h4("Existing Scenario"),
+                                      numericInput(ns("base_value_existing"), 
+                                                   label = "Base Value", 
+                                                   value = 231.859128,
+                                                   step = 0.01),
+                                      numericInput(ns("inflation_existing"), 
+                                                   label = "Inflation Adjustment %", 
                                                    value = 0,
-                                                   min = -100,
+                                                   step = 0.1),
+                                      helpText("0% = no adjustment, 50% = 50% inflation"),
+                                      h5("Inflation-Adjusted Base Value:"),
+                                      verbatimTextOutput(ns("adjusted_base_existing")),
+                                      numericInput(ns("area_weight_existing"), 
+                                                   label = "Area Weight", 
+                                                   value = 0.5,
+                                                   step = 0.01),
+                                      helpText("Freetown uses 0.5")
+                               ),
+                               column(4,
+                                      h4("Alternative Scenario A"),
+                                      numericInput(ns("base_value_scenario_a"), 
+                                                   label = "Base Value", 
+                                                   value = 231.859128,
+                                                   step = 0.01),
+                                      numericInput(ns("inflation_scenario_a"), 
+                                                   label = "Inflation Adjustment %", 
+                                                   value = 0,
+                                                   step = 0.1),
+                                      helpText("0% = no adjustment, 50% = 50% inflation"),
+                                      h5("Inflation-Adjusted Base Value:"),
+                                      verbatimTextOutput(ns("adjusted_base_scenario_a")),
+                                      numericInput(ns("area_weight_scenario_a"), 
+                                                   label = "Area Weight", 
+                                                   value = 0.5,
+                                                   step = 0.01),
+                                      helpText("Freetown uses 0.5")
+                               ),
+                               column(4,
+                                      h4("Alternative Scenario B"),
+                                      numericInput(ns("base_value_scenario_b"), 
+                                                   label = "Base Value", 
+                                                   value = 231.859128,
+                                                   step = 0.01),
+                                      numericInput(ns("inflation_scenario_b"), 
+                                                   label = "Inflation Adjustment %", 
+                                                   value = 0,
+                                                   step = 0.1),
+                                      helpText("0% = no adjustment, 50% = 50% inflation"),
+                                      h5("Inflation-Adjusted Base Value:"),
+                                      verbatimTextOutput(ns("adjusted_base_scenario_b")),
+                                      numericInput(ns("area_weight_scenario_b"), 
+                                                   label = "Area Weight", 
+                                                   value = 0.5,
+                                                   step = 0.01),
+                                      helpText("Freetown uses 0.5")
+                               )
+                             )
+                    ),
+                    
+                    # Tab 2: Property Feature Weights
+                    tabPanel("Property Feature Weights",
+                             br(),
+                             p("Weights for property features typically range from -250 to 250. Negative weights decrease value, positive weights increase value."),
+                             br(),
+                             
+                             # Dynamic UI for each scenario's features with collapsible sections
+                             fluidRow(
+                               column(4,
+                                      h4("Existing Scenario"),
+                                      div(id = ns("feature_sections_existing"), 
+                                          style = "max-height: 600px; overflow-y: auto;",
+                                          uiOutput(ns("features_ui_existing"))
+                                      )
+                               ),
+                               column(4,
+                                      h4("Alternative Scenario A"),
+                                      div(id = ns("feature_sections_scenario_a"), 
+                                          style = "max-height: 600px; overflow-y: auto;",
+                                          uiOutput(ns("features_ui_scenario_a"))
+                                      )
+                               ),
+                               column(4,
+                                      h4("Alternative Scenario B"),
+                                      div(id = ns("feature_sections_scenario_b"), 
+                                          style = "max-height: 600px; overflow-y: auto;",
+                                          uiOutput(ns("features_ui_scenario_b"))
+                                      )
+                               )
+                             )
+                    ),
+                    
+                    # Tab 3: Structure Type Weights
+                    tabPanel("Structure Type Weights",
+                             br(),
+                             p("Weights for structure types can range up to 5,000. These weights are applied to commercial and institutional property types."),
+                             br(),
+                             
+                             fluidRow(
+                               column(4,
+                                      h4("Existing Scenario"),
+                                      uiOutput(ns("structure_ui_existing"))
+                               ),
+                               column(4,
+                                      h4("Alternative Scenario A"),
+                                      uiOutput(ns("structure_ui_scenario_a"))
+                               ),
+                               column(4,
+                                      h4("Alternative Scenario B"),
+                                      uiOutput(ns("structure_ui_scenario_b"))
+                               )
+                             )
+                    ),
+                    
+                    # Tab 4: Data Preview
+                    tabPanel("Data Preview",
+                             br(),
+                             fluidRow(
+                               column(4,
+                                      selectInput(ns("preview_scenario"), 
+                                                  "Select Scenario to Preview:",
+                                                  choices = c("Existing" = "existing",
+                                                              "Scenario A" = "scenario_a",
+                                                              "Scenario B" = "scenario_b"),
+                                                  selected = "existing")
+                               ),
+                               column(4,
+                                      numericInput(ns("preview_rows"), 
+                                                   "Number of rows to preview:",
+                                                   value = 100,
+                                                   min = 10,
                                                    max = 1000,
-                                                   step = 0.1)
+                                                   step = 10)
                                ),
-                               column(6,
-                                      helpText("Enter the inflation adjustment as a percentage.",
-                                               "Positive values increase property values,",
-                                               "negative values decrease them.")
-                               )
-                             )
-                    ),
-                    
-                    tabPanel("Property Types",
-                             br(),
-                             helpText("Set tax rates and minimum tax amounts for each property type."),
-                             br(),
-                             uiOutput(ns("property_types_ui"))
-                    ),
-                    
-                    tabPanel("Property Features",
-                             br(),
-                             helpText("Set weights for property features used in value estimation.",
-                                      "Higher weights mean the feature has more impact on property value."),
-                             br(),
-                             fluidRow(
-                               column(6,
-                                      actionButton(ns("reset_weights"), 
-                                                   "Reset to Defaults", 
-                                                   icon = icon("undo"),
-                                                   class = "btn-warning btn-sm")
-                               ),
-                               column(6,
-                                      actionButton(ns("normalize_weights"), 
-                                                   "Normalize Weights", 
-                                                   icon = icon("balance-scale"),
-                                                   class = "btn-info btn-sm")
+                               column(4,
+                                      br(),
+                                      actionButton(ns("calculate_preview"), 
+                                                   "Calculate Preview", 
+                                                   icon = icon("calculator"),
+                                                   class = "btn-primary")
                                )
                              ),
                              br(),
-                             uiOutput(ns("property_features_ui"))
-                    ),
-                    
-                    tabPanel("Business Categories",
-                             br(),
-                             helpText("Set tax rates and minimum tax amounts for each business category."),
-                             br(),
-                             uiOutput(ns("business_categories_ui"))
-                    ),
-                    
-                    tabPanel("Advanced Options",
-                             br(),
-                             h4("Area and Value Bands (Optional)"),
-                             helpText("Set different tax rates based on property area or estimated value ranges."),
-                             br(),
-                             
-                             h5("Area-based Tax Bands"),
-                             fluidRow(
-                               column(3, numericInput(ns("area_band1_max"), "Band 1 Max (sq ft):", 100)),
-                               column(3, numericInput(ns("area_band1_rate"), "Band 1 Rate (%):", 1)),
-                               column(3, numericInput(ns("area_band2_max"), "Band 2 Max (sq ft):", 500)),
-                               column(3, numericInput(ns("area_band2_rate"), "Band 2 Rate (%):", 1.5))
-                             ),
-                             fluidRow(
-                               column(3, numericInput(ns("area_band3_max"), "Band 3 Max (sq ft):", 1000)),
-                               column(3, numericInput(ns("area_band3_rate"), "Band 3 Rate (%):", 2)),
-                               column(3, helpText("Above Band 3:")),
-                               column(3, numericInput(ns("area_band4_rate"), "Rate (%):", 2.5))
-                             ),
-                             
-                             hr(),
-                             
-                             h5("Value-based Tax Bands"),
-                             fluidRow(
-                               column(3, numericInput(ns("value_band1_max"), "Band 1 Max ($):", 50000)),
-                               column(3, numericInput(ns("value_band1_rate"), "Band 1 Rate (%):", 0.5)),
-                               column(3, numericInput(ns("value_band2_max"), "Band 2 Max ($):", 200000)),
-                               column(3, numericInput(ns("value_band2_rate"), "Band 2 Rate (%):", 1))
-                             ),
-                             fluidRow(
-                               column(3, numericInput(ns("value_band3_max"), "Band 3 Max ($):", 500000)),
-                               column(3, numericInput(ns("value_band3_rate"), "Band 3 Rate (%):", 1.5)),
-                               column(3, helpText("Above Band 3:")),
-                               column(3, numericInput(ns("value_band4_rate"), "Rate (%):", 2))
-                             )
+                             DT::dataTableOutput(ns("preview_table"))
                     )
         ),
         
         hr(),
         
-        # Save configuration
+        # Configuration summary
         fluidRow(
           column(12,
-                 actionButton(ns("save_config"), 
-                              "Save Configuration", 
-                              icon = icon("save"),
-                              class = "btn-primary btn-lg")
+                 h4("Configuration Summary"),
+                 verbatimTextOutput(ns("config_summary"))
           )
-        ),
-        br(),
-        verbatimTextOutput(ns("save_status"))
-      )
-    ),
-    
-    # Preview section
-    fluidRow(
-      box(
-        title = "Configuration Summary",
-        width = 12,
-        status = "info",
-        collapsible = TRUE,
-        collapsed = TRUE,
-        verbatimTextOutput(ns("config_summary"))
-      )
-    ),
-    
-    # Comparison section
-    fluidRow(
-      box(
-        title = "Scenario Comparison",
-        width = 12,
-        status = "success",
-        collapsible = TRUE,
-        collapsed = TRUE,
-        DT::dataTableOutput(ns("scenario_comparison"))
+        )
       )
     )
   )
