@@ -449,17 +449,107 @@ module3_server <- function(id, processed_data, property_configs) {
         # For now, using placeholder values
         
         # Get the property values from Module 2
-        scenario_config <- prop_configs[[scenario]]
+        scenario_config <- property_configs()[[scenario]]
         
         # Sample first 100 rows
         n_rows <- min(100, nrow(data))
         preview_data <- data[1:n_rows, ]
         
-        incProgress(0.3, detail = "Calculating property values...")
+        # Calculate property values using Module 2 configurations
+        incProgress(0.3, detail = "Calculating property values...")        
         
-        # TODO: Get actual property values from Module 2 calculations
-        # For now, using placeholder values
-        property_values <- runif(n_rows, 500000, 10000000)
+        # Get configuration from Module 2
+        if (!is.null(property_configs)) {
+          module2_config <- property_configs()[[scenario]]
+          
+          # Calculate inflation-adjusted base value
+          inflation_adjusted_base <- module2_config$base_value * (1 + module2_config$inflation)
+          area_weight <- module2_config$area_weight
+          
+          # Get property areas
+          property_areas <- if("property_area" %in% names(preview_data)) {
+            preview_data$property_area
+          } else {
+            rep(NA, n_rows)
+          }
+          
+          # Calculate feature weights product for each property
+          all_features <- names(module2_config$feature_weights)
+          product_weights <- rep(1, n_rows)
+          
+          for (feat in all_features) {
+            if (feat %in% names(preview_data)) {
+              weight <- module2_config$feature_weights[[feat]]
+              if (!is.null(weight) && !is.na(weight)) {
+                feature_multiplier <- ifelse(preview_data[[feat]] == 1, 
+                                             (weight/100 + 1), 
+                                             1)
+                product_weights <- product_weights * feature_multiplier
+              }
+            }
+          }
+          
+          # Calculate structure type weights (MATCHING MODULE 2 LOGIC)
+          all_structures <- names(module2_config$structure_weights)
+          
+          # Create a matrix of structure type indicators
+          structure_matrix <- matrix(0, nrow = n_rows, ncol = length(all_structures))
+          weight_vector <- numeric(length(all_structures))
+          
+          for (j in seq_along(all_structures)) {
+            struct <- all_structures[j]
+            
+            if (struct %in% names(preview_data)) {
+              # Get the column values and handle NAs properly
+              col_values <- preview_data[[struct]]
+              # Convert to 1 where value is 1, 0 everywhere else (including NAs)
+              structure_matrix[, j] <- ifelse(!is.na(col_values) & col_values == 1, 1, 0)
+              
+              # Get the weight
+              weight <- module2_config$structure_weights[[struct]]
+              if (is.null(weight)) weight <- 0
+              
+              weight_vector[j] <- weight
+            }
+          }
+          
+          # Each row should have at most one structure type
+          # Multiply the structure matrix by the weight vector to get the weight for each row
+          structure_weights <- structure_matrix %*% weight_vector
+          
+          # Convert to vector
+          structure_weights <- as.vector(structure_weights)
+          
+          # Apply structure type weights as multipliers (MATCHING MODULE 2)
+          structure_multipliers <- (structure_weights/100 + 1)
+          
+          # Calculate property values using the same formula as Module 2
+          property_values <- ifelse(is.na(property_areas) | property_areas <= 0,
+                                    NA,
+                                    inflation_adjusted_base * 
+                                      (property_areas ^ area_weight) * 
+                                      product_weights * 
+                                      structure_multipliers)
+          
+          # Calculate business values similarly
+          business_areas <- if("business_area" %in% names(preview_data)) {
+            preview_data$business_area
+          } else {
+            rep(NA, n_rows)
+          }
+          
+          business_values <- ifelse(!is.na(business_areas) & business_areas > 0,
+                                    inflation_adjusted_base * 
+                                      (business_areas ^ area_weight) * 
+                                      product_weights * 
+                                      structure_multipliers,
+                                    NA)
+          
+        } else {
+          # Fallback if no config available
+          property_values <- rep(NA, n_rows)
+          business_values <- rep(NA, n_rows)
+        }
         
         incProgress(0.3, detail = "Calculating taxes...")
         

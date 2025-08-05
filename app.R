@@ -77,7 +77,7 @@ server <- function(input, output, session) {
   param_configs <- module2_server("module2", processed_data)
   
   # Module 3 server
-  tax_configs <- module3_server("module3", processed_data, reactive(NULL))
+  tax_configs <- module3_server("module3", processed_data, param_configs)
 }
 
 # Run the app
