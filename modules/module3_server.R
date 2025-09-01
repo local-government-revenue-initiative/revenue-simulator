@@ -29,6 +29,9 @@ module3_server <- function(id, processed_data, property_configs) {
       renderUI({
         req(values$business_subcategories)
         
+        # Get default configuration
+        default_config <- get_default_tax_config()
+        
         subcategory_configs <- lapply(values$business_subcategories, function(subcategory) {
           # Clean subcategory name for IDs
           subcat_id <- gsub("[^A-Za-z0-9]", "_", subcategory)
@@ -62,14 +65,14 @@ module3_server <- function(id, processed_data, property_configs) {
                   column(6,
                          numericInput(ns(paste0("bus_subcat_", subcat_id, "_min_", scenario_suffix)),
                                       "Minimum:",
-                                      value = 50000,
+                                      value = default_config$business_license$default_subcategory$minimum,
                                       min = 0)),
                   column(6,
                          numericInput(ns(paste0("bus_subcat_", subcat_id, "_rate_", scenario_suffix)),
                                       "Rate (%):",
-                                      value = 0.10,
+                                      value = default_config$business_license$default_subcategory$rate * 100,
                                       min = 0,
-                                      step = 0.01))
+                                      step = 0.1))
                 )
               ),
               
@@ -77,7 +80,7 @@ module3_server <- function(id, processed_data, property_configs) {
                 condition = paste0("input['", ns(paste0("bus_subcat_", subcat_id, "_type_", scenario_suffix)), "'] == 'flat_tax'"),
                 numericInput(ns(paste0("bus_subcat_", subcat_id, "_flat_", scenario_suffix)),
                              "Flat Tax Amount:",
-                             value = 50000,
+                             value = 350,
                              min = 0)
               )
             ),
@@ -103,19 +106,19 @@ module3_server <- function(id, processed_data, property_configs) {
                 column(4, numericInput(ns(paste0("bus_subcat_", subcat_id, "_slot1_min_", scenario_suffix)), 
                                        "Min:", value = 0, min = 0)),
                 column(4, numericInput(ns(paste0("bus_subcat_", subcat_id, "_slot1_max_", scenario_suffix)), 
-                                       "Max:", value = 1000000, min = 0))
+                                       "Max:", value = 350, min = 0))
               ),
               fluidRow(
                 column(4, p("Slot 2:", style = "font-weight: bold;")),
                 column(4, numericInput(ns(paste0("bus_subcat_", subcat_id, "_slot2_min_", scenario_suffix)), 
-                                       "Min:", value = 1000000, min = 0)),
+                                       "Min:", value = 350, min = 0)),
                 column(4, numericInput(ns(paste0("bus_subcat_", subcat_id, "_slot2_max_", scenario_suffix)), 
-                                       "Max:", value = 5000000, min = 0))
+                                       "Max:", value = 700, min = 0))
               ),
               fluidRow(
                 column(4, p("Slot 3:", style = "font-weight: bold;")),
                 column(4, numericInput(ns(paste0("bus_subcat_", subcat_id, "_slot3_min_", scenario_suffix)), 
-                                       "Min:", value = 5000000, min = 0)),
+                                       "Min:", value = 700, min = 0)),
                 column(4, p("Max: No limit", style = "padding-top: 25px;"))
               ),
               
@@ -129,25 +132,25 @@ module3_server <- function(id, processed_data, property_configs) {
                 p("Logic Slot 1:", style = "font-weight: bold;"),
                 fluidRow(
                   column(6, numericInput(ns(paste0("bus_subcat_", subcat_id, "_slot1_min_tax_", scenario_suffix)), 
-                                         "Min Tax:", value = 25000, min = 0)),
+                                         "Min Tax:", value = 350, min = 0)),
                   column(6, numericInput(ns(paste0("bus_subcat_", subcat_id, "_slot1_rate_", scenario_suffix)), 
-                                         "Rate (%):", value = 0.05, min = 0, step = 0.01))
+                                         "Rate (%):", value = 3, min = 0, step = 0.1))
                 ),
                 # Slot 2
                 p("Logic Slot 2:", style = "font-weight: bold;"),
                 fluidRow(
                   column(6, numericInput(ns(paste0("bus_subcat_", subcat_id, "_slot2_min_tax_", scenario_suffix)), 
-                                         "Min Tax:", value = 50000, min = 0)),
+                                         "Min Tax:", value = 700, min = 0)),
                   column(6, numericInput(ns(paste0("bus_subcat_", subcat_id, "_slot2_rate_", scenario_suffix)), 
-                                         "Rate (%):", value = 0.10, min = 0, step = 0.01))
+                                         "Rate (%):", value = 5, min = 0, step = 0.1))
                 ),
                 # Slot 3
                 p("Logic Slot 3:", style = "font-weight: bold;"),
                 fluidRow(
                   column(6, numericInput(ns(paste0("bus_subcat_", subcat_id, "_slot3_min_tax_", scenario_suffix)), 
-                                         "Min Tax:", value = 100000, min = 0)),
+                                         "Min Tax:", value = 1000, min = 0)),
                   column(6, numericInput(ns(paste0("bus_subcat_", subcat_id, "_slot3_rate_", scenario_suffix)), 
-                                         "Rate (%):", value = 0.15, min = 0, step = 0.01))
+                                         "Rate (%):", value = 7, min = 0, step = 0.1))
                 )
               ),
               
@@ -157,15 +160,15 @@ module3_server <- function(id, processed_data, property_configs) {
                   column(4, 
                          p("Slot 1 Flat Tax:", style = "font-weight: bold;"),
                          numericInput(ns(paste0("bus_subcat_", subcat_id, "_slot1_flat_", scenario_suffix)), 
-                                      NULL, value = 25000, min = 0)),
+                                      NULL, value = 350, min = 0)),
                   column(4, 
                          p("Slot 2 Flat Tax:", style = "font-weight: bold;"),
                          numericInput(ns(paste0("bus_subcat_", subcat_id, "_slot2_flat_", scenario_suffix)), 
-                                      NULL, value = 50000, min = 0)),
+                                      NULL, value = 700, min = 0)),
                   column(4, 
                          p("Slot 3 Flat Tax:", style = "font-weight: bold;"),
                          numericInput(ns(paste0("bus_subcat_", subcat_id, "_slot3_flat_", scenario_suffix)), 
-                                      NULL, value = 100000, min = 0))
+                                      NULL, value = 1000, min = 0))
                 )
               )
             )
@@ -183,7 +186,7 @@ module3_server <- function(id, processed_data, property_configs) {
         output[[paste0("business_subcategories_", sc)]] <- generate_business_subcategories_ui(sc)
       })
     }
-
+    
     # Copy functions implementation
     observeEvent(input$copy_existing_to_a, {
       # Copy property tax settings
@@ -280,7 +283,7 @@ module3_server <- function(id, processed_data, property_configs) {
           updateNumericInput(session, paste0(prop_type, "_min_", scenario), 
                              value = defaults$property_tax[[prop_type]]$minimum)
           updateNumericInput(session, paste0(prop_type, "_rate_", scenario), 
-                             value = defaults$property_tax[[prop_type]]$rate)
+                             value = defaults$property_tax[[prop_type]]$rate * 100)  # Convert to percentage
         }
         
         # Reset business licenses
@@ -292,18 +295,18 @@ module3_server <- function(id, processed_data, property_configs) {
             updateCheckboxInput(session, paste0("bus_subcat_", subcat_id, "_use_slots_", scenario), 
                                 value = FALSE)
             updateNumericInput(session, paste0("bus_subcat_", subcat_id, "_min_", scenario), 
-                               value = 50000)
+                               value = defaults$business_license$default_subcategory$minimum)
             updateNumericInput(session, paste0("bus_subcat_", subcat_id, "_rate_", scenario), 
-                               value = 0.10)
+                               value = defaults$business_license$default_subcategory$rate * 100)  # Convert to percentage
             updateNumericInput(session, paste0("bus_subcat_", subcat_id, "_flat_", scenario), 
-                               value = 50000)
+                               value = defaults$business_license$default_subcategory$flat_amount)
           }
         }
       }
       
       showNotification("Reset all scenarios to default values", type = "message")
     })    
-        
+    
     # Helper function to collect property tax configuration
     collect_property_tax_config <- function(scenario) {
       config <- list()

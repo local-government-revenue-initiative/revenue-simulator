@@ -7,31 +7,31 @@ get_default_tax_config <- function() {
     property_tax = list(
       # Global band definitions
       bands = list(
-        band1 = list(min = 0, max = 1000000),
-        band2 = list(min = 1000000, max = 5000000),
-        band3 = list(min = 5000000, max = Inf)
+        band1 = list(min = 0, max = 350),
+        band2 = list(min = 350, max = 700),
+        band3 = list(min = 700, max = Inf)
       ),
       # Tax rates by property type
       domestic = list(
         use_bands = FALSE,
-        minimum = 100000,
-        rate = 0.15,  # 0.15%
-        band_rates = list(rate1 = 0.10, rate2 = 0.15, rate3 = 0.20),
-        band_minimums = list(min1 = 50000, min2 = 100000, min3 = 200000)
+        minimum = 200,        # Changed from 350 to 200
+        rate = 0.025,         # Changed from 0.5 to 0.025 (2.5%)
+        band_rates = list(rate1 = 0.02, rate2 = 0.025, rate3 = 0.03),
+        band_minimums = list(min1 = 100, min2 = 200, min3 = 300)
       ),
       commercial = list(
         use_bands = FALSE,
-        minimum = 200000,
-        rate = 0.25,
-        band_rates = list(rate1 = 0.20, rate2 = 0.25, rate3 = 0.30),
-        band_minimums = list(min1 = 100000, min2 = 200000, min3 = 400000)
+        minimum = 200,        # Changed from 200000 to 200
+        rate = 0.04,          # Changed from 0.25 to 0.04 (4%)
+        band_rates = list(rate1 = 0.03, rate2 = 0.04, rate3 = 0.05),
+        band_minimums = list(min1 = 150, min2 = 200, min3 = 400)
       ),
       institutional = list(
         use_bands = FALSE,
-        minimum = 150000,
-        rate = 0.20,
-        band_rates = list(rate1 = 0.15, rate2 = 0.20, rate3 = 0.25),
-        band_minimums = list(min1 = 75000, min2 = 150000, min3 = 300000)
+        minimum = 200,        # Changed from 150000 to 200
+        rate = 0.025,         # Changed from 0.20 to 0.025 (2.5%)
+        band_rates = list(rate1 = 0.02, rate2 = 0.025, rate3 = 0.03),
+        band_minimums = list(min1 = 100, min2 = 200, min3 = 300)
       )
     ),
     
@@ -53,11 +53,11 @@ get_default_tax_config <- function() {
       default_subcategory = list(
         calculation_method = "default",  # Use global default
         use_bands = FALSE,
-        minimum = 50000,
-        rate = 0.10,
-        flat_amount = 50000,
-        flat_amounts_value = list(band1 = 50000, band2 = 100000, band3 = 200000),
-        flat_amounts_area = list(band1 = 1000, band2 = 2000, band3 = 5000)
+        minimum = 350,        # Changed from 50000 to 350
+        rate = 0.05,          # Changed from 0.10 to 0.05 (5%)
+        flat_amount = 350,    # Changed from 50000 to 350
+        flat_amounts_value = list(band1 = 350, band2 = 700, band3 = 1000),
+        flat_amounts_area = list(band1 = 350, band2 = 500, band3 = 750)
       )
     )
   )

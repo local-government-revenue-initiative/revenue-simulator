@@ -63,14 +63,14 @@ module3_ui <- function(id) {
                                             column(6,
                                                    numericInput(ns("domestic_min_existing"),
                                                                 "Minimum Tax:",
-                                                                value = 100000,
+                                                                value = 200,
                                                                 min = 0)),
                                             column(6,
                                                    numericInput(ns("domestic_rate_existing"),
                                                                 "Tax Rate (%):",
-                                                                value = 0.15,
+                                                                value = 2.5,
                                                                 min = 0,
-                                                                step = 0.01))
+                                                                step = 0.1))
                                           )
                                         ),
                                         
@@ -81,16 +81,16 @@ module3_ui <- function(id) {
                                           fluidRow(
                                             column(4, p("Slot 1:", style = "font-weight: bold;")),
                                             column(4, numericInput(ns("domestic_slot1_min_existing"), "Min:", value = 0, min = 0)),
-                                            column(4, numericInput(ns("domestic_slot1_max_existing"), "Max:", value = 1000000, min = 0))
+                                            column(4, numericInput(ns("domestic_slot1_max_existing"), "Max:", value = 350, min = 0))
                                           ),
                                           fluidRow(
                                             column(4, p("Slot 2:", style = "font-weight: bold;")),
-                                            column(4, numericInput(ns("domestic_slot2_min_existing"), "Min:", value = 1000000, min = 0)),
-                                            column(4, numericInput(ns("domestic_slot2_max_existing"), "Max:", value = 5000000, min = 0))
+                                            column(4, numericInput(ns("domestic_slot2_min_existing"), "Min:", value = 350, min = 0)),
+                                            column(4, numericInput(ns("domestic_slot2_max_existing"), "Max:", value = 700, min = 0))
                                           ),
                                           fluidRow(
                                             column(4, p("Slot 3:", style = "font-weight: bold;")),
-                                            column(4, numericInput(ns("domestic_slot3_min_existing"), "Min:", value = 5000000, min = 0)),
+                                            column(4, numericInput(ns("domestic_slot3_min_existing"), "Min:", value = 700, min = 0)),
                                             column(4, p("Max: No limit", style = "padding-top: 25px;"))
                                           ),
                                           hr(),
@@ -98,20 +98,20 @@ module3_ui <- function(id) {
                                           # Slot 1
                                           p("Logic Slot 1:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("domestic_slot1_min_tax_existing"), "Min Tax:", value = 50000, min = 0)),
-                                            column(6, numericInput(ns("domestic_slot1_rate_existing"), "Rate (%):", value = 0.10, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("domestic_slot1_min_tax_existing"), "Min Tax:", value = 100, min = 0)),
+                                            column(6, numericInput(ns("domestic_slot1_rate_existing"), "Rate (%):", value = 2.0, min = 0, step = 0.1))
                                           ),
                                           # Slot 2
                                           p("Logic Slot 2:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("domestic_slot2_min_tax_existing"), "Min Tax:", value = 100000, min = 0)),
-                                            column(6, numericInput(ns("domestic_slot2_rate_existing"), "Rate (%):", value = 0.15, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("domestic_slot2_min_tax_existing"), "Min Tax:", value = 200, min = 0)),
+                                            column(6, numericInput(ns("domestic_slot2_rate_existing"), "Rate (%):", value = 2.5, min = 0, step = 0.1))
                                           ),
                                           # Slot 3
                                           p("Logic Slot 3:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("domestic_slot3_min_tax_existing"), "Min Tax:", value = 200000, min = 0)),
-                                            column(6, numericInput(ns("domestic_slot3_rate_existing"), "Rate (%):", value = 0.20, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("domestic_slot3_min_tax_existing"), "Min Tax:", value = 300, min = 0)),
+                                            column(6, numericInput(ns("domestic_slot3_rate_existing"), "Rate (%):", value = 3.0, min = 0, step = 0.1))
                                           )
                                         )
                                       ),
@@ -130,14 +130,14 @@ module3_ui <- function(id) {
                                             column(6,
                                                    numericInput(ns("commercial_min_existing"),
                                                                 "Minimum Tax:",
-                                                                value = 200000,
+                                                                value = 200,
                                                                 min = 0)),
                                             column(6,
                                                    numericInput(ns("commercial_rate_existing"),
                                                                 "Tax Rate (%):",
-                                                                value = 0.25,
+                                                                value = 4,
                                                                 min = 0,
-                                                                step = 0.01))
+                                                                step = 0.1))
                                           )
                                         ),
                                         
@@ -148,16 +148,16 @@ module3_ui <- function(id) {
                                           fluidRow(
                                             column(4, p("Slot 1:", style = "font-weight: bold;")),
                                             column(4, numericInput(ns("commercial_slot1_min_existing"), "Min:", value = 0, min = 0)),
-                                            column(4, numericInput(ns("commercial_slot1_max_existing"), "Max:", value = 2000000, min = 0))
+                                            column(4, numericInput(ns("commercial_slot1_max_existing"), "Max:", value = 350, min = 0))
                                           ),
                                           fluidRow(
                                             column(4, p("Slot 2:", style = "font-weight: bold;")),
-                                            column(4, numericInput(ns("commercial_slot2_min_existing"), "Min:", value = 2000000, min = 0)),
-                                            column(4, numericInput(ns("commercial_slot2_max_existing"), "Max:", value = 10000000, min = 0))
+                                            column(4, numericInput(ns("commercial_slot2_min_existing"), "Min:", value = 350, min = 0)),
+                                            column(4, numericInput(ns("commercial_slot2_max_existing"), "Max:", value = 700, min = 0))
                                           ),
                                           fluidRow(
                                             column(4, p("Slot 3:", style = "font-weight: bold;")),
-                                            column(4, numericInput(ns("commercial_slot3_min_existing"), "Min:", value = 10000000, min = 0)),
+                                            column(4, numericInput(ns("commercial_slot3_min_existing"), "Min:", value = 700, min = 0)),
                                             column(4, p("Max: No limit", style = "padding-top: 25px;"))
                                           ),
                                           hr(),
@@ -165,20 +165,20 @@ module3_ui <- function(id) {
                                           # Slot 1
                                           p("Logic Slot 1:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("commercial_slot1_min_tax_existing"), "Min Tax:", value = 100000, min = 0)),
-                                            column(6, numericInput(ns("commercial_slot1_rate_existing"), "Rate (%):", value = 0.20, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("commercial_slot1_min_tax_existing"), "Min Tax:", value = 150, min = 0)),
+                                            column(6, numericInput(ns("commercial_slot1_rate_existing"), "Rate (%):", value = 3.0, min = 0, step = 0.1))
                                           ),
                                           # Slot 2
                                           p("Logic Slot 2:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("commercial_slot2_min_tax_existing"), "Min Tax:", value = 200000, min = 0)),
-                                            column(6, numericInput(ns("commercial_slot2_rate_existing"), "Rate (%):", value = 0.25, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("commercial_slot2_min_tax_existing"), "Min Tax:", value = 200, min = 0)),
+                                            column(6, numericInput(ns("commercial_slot2_rate_existing"), "Rate (%):", value = 4.0, min = 0, step = 0.1))
                                           ),
                                           # Slot 3
                                           p("Logic Slot 3:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("commercial_slot3_min_tax_existing"), "Min Tax:", value = 400000, min = 0)),
-                                            column(6, numericInput(ns("commercial_slot3_rate_existing"), "Rate (%):", value = 0.30, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("commercial_slot3_min_tax_existing"), "Min Tax:", value = 400, min = 0)),
+                                            column(6, numericInput(ns("commercial_slot3_rate_existing"), "Rate (%):", value = 5.0, min = 0, step = 0.1))
                                           )
                                         )
                                       ),
@@ -197,14 +197,14 @@ module3_ui <- function(id) {
                                             column(6,
                                                    numericInput(ns("institutional_min_existing"),
                                                                 "Minimum Tax:",
-                                                                value = 150000,
+                                                                value = 200,
                                                                 min = 0)),
                                             column(6,
                                                    numericInput(ns("institutional_rate_existing"),
                                                                 "Tax Rate (%):",
-                                                                value = 0.20,
+                                                                value = 2.5,
                                                                 min = 0,
-                                                                step = 0.01))
+                                                                step = 0.1))
                                           )
                                         ),
                                         
@@ -215,16 +215,16 @@ module3_ui <- function(id) {
                                           fluidRow(
                                             column(4, p("Slot 1:", style = "font-weight: bold;")),
                                             column(4, numericInput(ns("institutional_slot1_min_existing"), "Min:", value = 0, min = 0)),
-                                            column(4, numericInput(ns("institutional_slot1_max_existing"), "Max:", value = 1500000, min = 0))
+                                            column(4, numericInput(ns("institutional_slot1_max_existing"), "Max:", value = 350, min = 0))
                                           ),
                                           fluidRow(
                                             column(4, p("Slot 2:", style = "font-weight: bold;")),
-                                            column(4, numericInput(ns("institutional_slot2_min_existing"), "Min:", value = 1500000, min = 0)),
-                                            column(4, numericInput(ns("institutional_slot2_max_existing"), "Max:", value = 7500000, min = 0))
+                                            column(4, numericInput(ns("institutional_slot2_min_existing"), "Min:", value = 350, min = 0)),
+                                            column(4, numericInput(ns("institutional_slot2_max_existing"), "Max:", value = 700, min = 0))
                                           ),
                                           fluidRow(
                                             column(4, p("Slot 3:", style = "font-weight: bold;")),
-                                            column(4, numericInput(ns("institutional_slot3_min_existing"), "Min:", value = 7500000, min = 0)),
+                                            column(4, numericInput(ns("institutional_slot3_min_existing"), "Min:", value = 700, min = 0)),
                                             column(4, p("Max: No limit", style = "padding-top: 25px;"))
                                           ),
                                           hr(),
@@ -232,20 +232,20 @@ module3_ui <- function(id) {
                                           # Slot 1
                                           p("Logic Slot 1:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("institutional_slot1_min_tax_existing"), "Min Tax:", value = 75000, min = 0)),
-                                            column(6, numericInput(ns("institutional_slot1_rate_existing"), "Rate (%):", value = 0.15, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("institutional_slot1_min_tax_existing"), "Min Tax:", value = 100, min = 0)),
+                                            column(6, numericInput(ns("institutional_slot1_rate_existing"), "Rate (%):", value = 2.0, min = 0, step = 0.1))
                                           ),
                                           # Slot 2
                                           p("Logic Slot 2:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("institutional_slot2_min_tax_existing"), "Min Tax:", value = 150000, min = 0)),
-                                            column(6, numericInput(ns("institutional_slot2_rate_existing"), "Rate (%):", value = 0.20, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("institutional_slot2_min_tax_existing"), "Min Tax:", value = 200, min = 0)),
+                                            column(6, numericInput(ns("institutional_slot2_rate_existing"), "Rate (%):", value = 2.5, min = 0, step = 0.1))
                                           ),
                                           # Slot 3
                                           p("Logic Slot 3:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("institutional_slot3_min_tax_existing"), "Min Tax:", value = 300000, min = 0)),
-                                            column(6, numericInput(ns("institutional_slot3_rate_existing"), "Rate (%):", value = 0.25, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("institutional_slot3_min_tax_existing"), "Min Tax:", value = 300, min = 0)),
+                                            column(6, numericInput(ns("institutional_slot3_rate_existing"), "Rate (%):", value = 3.0, min = 0, step = 0.1))
                                           )
                                         )
                                       )
@@ -269,14 +269,14 @@ module3_ui <- function(id) {
                                             column(6,
                                                    numericInput(ns("domestic_min_scenario_a"),
                                                                 "Minimum Tax:",
-                                                                value = 100000,
+                                                                value = 200,
                                                                 min = 0)),
                                             column(6,
                                                    numericInput(ns("domestic_rate_scenario_a"),
                                                                 "Tax Rate (%):",
-                                                                value = 0.15,
+                                                                value = 2.5,
                                                                 min = 0,
-                                                                step = 0.01))
+                                                                step = 0.1))
                                           )
                                         ),
                                         
@@ -287,16 +287,16 @@ module3_ui <- function(id) {
                                           fluidRow(
                                             column(4, p("Slot 1:", style = "font-weight: bold;")),
                                             column(4, numericInput(ns("domestic_slot1_min_scenario_a"), "Min:", value = 0, min = 0)),
-                                            column(4, numericInput(ns("domestic_slot1_max_scenario_a"), "Max:", value = 1000000, min = 0))
+                                            column(4, numericInput(ns("domestic_slot1_max_scenario_a"), "Max:", value = 350, min = 0))
                                           ),
                                           fluidRow(
                                             column(4, p("Slot 2:", style = "font-weight: bold;")),
-                                            column(4, numericInput(ns("domestic_slot2_min_scenario_a"), "Min:", value = 1000000, min = 0)),
-                                            column(4, numericInput(ns("domestic_slot2_max_scenario_a"), "Max:", value = 5000000, min = 0))
+                                            column(4, numericInput(ns("domestic_slot2_min_scenario_a"), "Min:", value = 350, min = 0)),
+                                            column(4, numericInput(ns("domestic_slot2_max_scenario_a"), "Max:", value = 700, min = 0))
                                           ),
                                           fluidRow(
                                             column(4, p("Slot 3:", style = "font-weight: bold;")),
-                                            column(4, numericInput(ns("domestic_slot3_min_scenario_a"), "Min:", value = 5000000, min = 0)),
+                                            column(4, numericInput(ns("domestic_slot3_min_scenario_a"), "Min:", value = 700, min = 0)),
                                             column(4, p("Max: No limit", style = "padding-top: 25px;"))
                                           ),
                                           hr(),
@@ -304,20 +304,20 @@ module3_ui <- function(id) {
                                           # Slot 1
                                           p("Logic Slot 1:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("domestic_slot1_min_tax_scenario_a"), "Min Tax:", value = 50000, min = 0)),
-                                            column(6, numericInput(ns("domestic_slot1_rate_scenario_a"), "Rate (%):", value = 0.10, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("domestic_slot1_min_tax_scenario_a"), "Min Tax:", value = 100, min = 0)),
+                                            column(6, numericInput(ns("domestic_slot1_rate_scenario_a"), "Rate (%):", value = 2.0, min = 0, step = 0.1))
                                           ),
                                           # Slot 2
                                           p("Logic Slot 2:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("domestic_slot2_min_tax_scenario_a"), "Min Tax:", value = 100000, min = 0)),
-                                            column(6, numericInput(ns("domestic_slot2_rate_scenario_a"), "Rate (%):", value = 0.15, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("domestic_slot2_min_tax_scenario_a"), "Min Tax:", value = 200, min = 0)),
+                                            column(6, numericInput(ns("domestic_slot2_rate_scenario_a"), "Rate (%):", value = 2.5, min = 0, step = 0.1))
                                           ),
                                           # Slot 3
                                           p("Logic Slot 3:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("domestic_slot3_min_tax_scenario_a"), "Min Tax:", value = 200000, min = 0)),
-                                            column(6, numericInput(ns("domestic_slot3_rate_scenario_a"), "Rate (%):", value = 0.20, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("domestic_slot3_min_tax_scenario_a"), "Min Tax:", value = 300, min = 0)),
+                                            column(6, numericInput(ns("domestic_slot3_rate_scenario_a"), "Rate (%):", value = 3.0, min = 0, step = 0.1))
                                           )
                                         )
                                       ),
@@ -336,14 +336,14 @@ module3_ui <- function(id) {
                                             column(6,
                                                    numericInput(ns("commercial_min_scenario_a"),
                                                                 "Minimum Tax:",
-                                                                value = 200000,
+                                                                value = 200,
                                                                 min = 0)),
                                             column(6,
                                                    numericInput(ns("commercial_rate_scenario_a"),
                                                                 "Tax Rate (%):",
-                                                                value = 0.25,
+                                                                value = 4,
                                                                 min = 0,
-                                                                step = 0.01))
+                                                                step = 0.1))
                                           )
                                         ),
                                         
@@ -354,16 +354,16 @@ module3_ui <- function(id) {
                                           fluidRow(
                                             column(4, p("Slot 1:", style = "font-weight: bold;")),
                                             column(4, numericInput(ns("commercial_slot1_min_scenario_a"), "Min:", value = 0, min = 0)),
-                                            column(4, numericInput(ns("commercial_slot1_max_scenario_a"), "Max:", value = 2000000, min = 0))
+                                            column(4, numericInput(ns("commercial_slot1_max_scenario_a"), "Max:", value = 350, min = 0))
                                           ),
                                           fluidRow(
                                             column(4, p("Slot 2:", style = "font-weight: bold;")),
-                                            column(4, numericInput(ns("commercial_slot2_min_scenario_a"), "Min:", value = 2000000, min = 0)),
-                                            column(4, numericInput(ns("commercial_slot2_max_scenario_a"), "Max:", value = 10000000, min = 0))
+                                            column(4, numericInput(ns("commercial_slot2_min_scenario_a"), "Min:", value = 350, min = 0)),
+                                            column(4, numericInput(ns("commercial_slot2_max_scenario_a"), "Max:", value = 700, min = 0))
                                           ),
                                           fluidRow(
                                             column(4, p("Slot 3:", style = "font-weight: bold;")),
-                                            column(4, numericInput(ns("commercial_slot3_min_scenario_a"), "Min:", value = 10000000, min = 0)),
+                                            column(4, numericInput(ns("commercial_slot3_min_scenario_a"), "Min:", value = 700, min = 0)),
                                             column(4, p("Max: No limit", style = "padding-top: 25px;"))
                                           ),
                                           hr(),
@@ -371,20 +371,20 @@ module3_ui <- function(id) {
                                           # Slot 1
                                           p("Logic Slot 1:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("commercial_slot1_min_tax_scenario_a"), "Min Tax:", value = 100000, min = 0)),
-                                            column(6, numericInput(ns("commercial_slot1_rate_scenario_a"), "Rate (%):", value = 0.20, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("commercial_slot1_min_tax_scenario_a"), "Min Tax:", value = 150, min = 0)),
+                                            column(6, numericInput(ns("commercial_slot1_rate_scenario_a"), "Rate (%):", value = 3.0, min = 0, step = 0.1))
                                           ),
                                           # Slot 2
                                           p("Logic Slot 2:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("commercial_slot2_min_tax_scenario_a"), "Min Tax:", value = 200000, min = 0)),
-                                            column(6, numericInput(ns("commercial_slot2_rate_scenario_a"), "Rate (%):", value = 0.25, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("commercial_slot2_min_tax_scenario_a"), "Min Tax:", value = 200, min = 0)),
+                                            column(6, numericInput(ns("commercial_slot2_rate_scenario_a"), "Rate (%):", value = 4.0, min = 0, step = 0.1))
                                           ),
                                           # Slot 3
                                           p("Logic Slot 3:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("commercial_slot3_min_tax_scenario_a"), "Min Tax:", value = 400000, min = 0)),
-                                            column(6, numericInput(ns("commercial_slot3_rate_scenario_a"), "Rate (%):", value = 0.30, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("commercial_slot3_min_tax_scenario_a"), "Min Tax:", value = 400, min = 0)),
+                                            column(6, numericInput(ns("commercial_slot3_rate_scenario_a"), "Rate (%):", value = 5.0, min = 0, step = 0.1))
                                           )
                                         )
                                       ),
@@ -403,14 +403,14 @@ module3_ui <- function(id) {
                                             column(6,
                                                    numericInput(ns("institutional_min_scenario_a"),
                                                                 "Minimum Tax:",
-                                                                value = 150000,
+                                                                value = 200,
                                                                 min = 0)),
                                             column(6,
                                                    numericInput(ns("institutional_rate_scenario_a"),
                                                                 "Tax Rate (%):",
-                                                                value = 0.20,
+                                                                value = 2.5,
                                                                 min = 0,
-                                                                step = 0.01))
+                                                                step = 0.1))
                                           )
                                         ),
                                         
@@ -421,16 +421,16 @@ module3_ui <- function(id) {
                                           fluidRow(
                                             column(4, p("Slot 1:", style = "font-weight: bold;")),
                                             column(4, numericInput(ns("institutional_slot1_min_scenario_a"), "Min:", value = 0, min = 0)),
-                                            column(4, numericInput(ns("institutional_slot1_max_scenario_a"), "Max:", value = 1500000, min = 0))
+                                            column(4, numericInput(ns("institutional_slot1_max_scenario_a"), "Max:", value = 350, min = 0))
                                           ),
                                           fluidRow(
                                             column(4, p("Slot 2:", style = "font-weight: bold;")),
-                                            column(4, numericInput(ns("institutional_slot2_min_scenario_a"), "Min:", value = 1500000, min = 0)),
-                                            column(4, numericInput(ns("institutional_slot2_max_scenario_a"), "Max:", value = 7500000, min = 0))
+                                            column(4, numericInput(ns("institutional_slot2_min_scenario_a"), "Min:", value = 350, min = 0)),
+                                            column(4, numericInput(ns("institutional_slot2_max_scenario_a"), "Max:", value = 700, min = 0))
                                           ),
                                           fluidRow(
                                             column(4, p("Slot 3:", style = "font-weight: bold;")),
-                                            column(4, numericInput(ns("institutional_slot3_min_scenario_a"), "Min:", value = 7500000, min = 0)),
+                                            column(4, numericInput(ns("institutional_slot3_min_scenario_a"), "Min:", value = 700, min = 0)),
                                             column(4, p("Max: No limit", style = "padding-top: 25px;"))
                                           ),
                                           hr(),
@@ -438,20 +438,20 @@ module3_ui <- function(id) {
                                           # Slot 1
                                           p("Logic Slot 1:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("institutional_slot1_min_tax_scenario_a"), "Min Tax:", value = 75000, min = 0)),
-                                            column(6, numericInput(ns("institutional_slot1_rate_scenario_a"), "Rate (%):", value = 0.15, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("institutional_slot1_min_tax_scenario_a"), "Min Tax:", value = 100, min = 0)),
+                                            column(6, numericInput(ns("institutional_slot1_rate_scenario_a"), "Rate (%):", value = 2.0, min = 0, step = 0.1))
                                           ),
                                           # Slot 2
                                           p("Logic Slot 2:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("institutional_slot2_min_tax_scenario_a"), "Min Tax:", value = 150000, min = 0)),
-                                            column(6, numericInput(ns("institutional_slot2_rate_scenario_a"), "Rate (%):", value = 0.20, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("institutional_slot2_min_tax_scenario_a"), "Min Tax:", value = 200, min = 0)),
+                                            column(6, numericInput(ns("institutional_slot2_rate_scenario_a"), "Rate (%):", value = 2.5, min = 0, step = 0.1))
                                           ),
                                           # Slot 3
                                           p("Logic Slot 3:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("institutional_slot3_min_tax_scenario_a"), "Min Tax:", value = 300000, min = 0)),
-                                            column(6, numericInput(ns("institutional_slot3_rate_scenario_a"), "Rate (%):", value = 0.25, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("institutional_slot3_min_tax_scenario_a"), "Min Tax:", value = 300, min = 0)),
+                                            column(6, numericInput(ns("institutional_slot3_rate_scenario_a"), "Rate (%):", value = 3.0, min = 0, step = 0.1))
                                           )
                                         )
                                       )
@@ -475,14 +475,14 @@ module3_ui <- function(id) {
                                             column(6,
                                                    numericInput(ns("domestic_min_scenario_b"),
                                                                 "Minimum Tax:",
-                                                                value = 100000,
+                                                                value = 200,
                                                                 min = 0)),
                                             column(6,
                                                    numericInput(ns("domestic_rate_scenario_b"),
                                                                 "Tax Rate (%):",
-                                                                value = 0.15,
+                                                                value = 2.5,
                                                                 min = 0,
-                                                                step = 0.01))
+                                                                step = 0.1))
                                           )
                                         ),
                                         
@@ -493,16 +493,16 @@ module3_ui <- function(id) {
                                           fluidRow(
                                             column(4, p("Slot 1:", style = "font-weight: bold;")),
                                             column(4, numericInput(ns("domestic_slot1_min_scenario_b"), "Min:", value = 0, min = 0)),
-                                            column(4, numericInput(ns("domestic_slot1_max_scenario_b"), "Max:", value = 1000000, min = 0))
+                                            column(4, numericInput(ns("domestic_slot1_max_scenario_b"), "Max:", value = 350, min = 0))
                                           ),
                                           fluidRow(
                                             column(4, p("Slot 2:", style = "font-weight: bold;")),
-                                            column(4, numericInput(ns("domestic_slot2_min_scenario_b"), "Min:", value = 1000000, min = 0)),
-                                            column(4, numericInput(ns("domestic_slot2_max_scenario_b"), "Max:", value = 5000000, min = 0))
+                                            column(4, numericInput(ns("domestic_slot2_min_scenario_b"), "Min:", value = 350, min = 0)),
+                                            column(4, numericInput(ns("domestic_slot2_max_scenario_b"), "Max:", value = 700, min = 0))
                                           ),
                                           fluidRow(
                                             column(4, p("Slot 3:", style = "font-weight: bold;")),
-                                            column(4, numericInput(ns("domestic_slot3_min_scenario_b"), "Min:", value = 5000000, min = 0)),
+                                            column(4, numericInput(ns("domestic_slot3_min_scenario_b"), "Min:", value = 700, min = 0)),
                                             column(4, p("Max: No limit", style = "padding-top: 25px;"))
                                           ),
                                           hr(),
@@ -510,20 +510,20 @@ module3_ui <- function(id) {
                                           # Slot 1
                                           p("Logic Slot 1:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("domestic_slot1_min_tax_scenario_b"), "Min Tax:", value = 50000, min = 0)),
-                                            column(6, numericInput(ns("domestic_slot1_rate_scenario_b"), "Rate (%):", value = 0.10, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("domestic_slot1_min_tax_scenario_b"), "Min Tax:", value = 100, min = 0)),
+                                            column(6, numericInput(ns("domestic_slot1_rate_scenario_b"), "Rate (%):", value = 2.0, min = 0, step = 0.1))
                                           ),
                                           # Slot 2
                                           p("Logic Slot 2:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("domestic_slot2_min_tax_scenario_b"), "Min Tax:", value = 100000, min = 0)),
-                                            column(6, numericInput(ns("domestic_slot2_rate_scenario_b"), "Rate (%):", value = 0.15, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("domestic_slot2_min_tax_scenario_b"), "Min Tax:", value = 200, min = 0)),
+                                            column(6, numericInput(ns("domestic_slot2_rate_scenario_b"), "Rate (%):", value = 2.5, min = 0, step = 0.1))
                                           ),
                                           # Slot 3
                                           p("Logic Slot 3:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("domestic_slot3_min_tax_scenario_b"), "Min Tax:", value = 200000, min = 0)),
-                                            column(6, numericInput(ns("domestic_slot3_rate_scenario_b"), "Rate (%):", value = 0.20, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("domestic_slot3_min_tax_scenario_b"), "Min Tax:", value = 300, min = 0)),
+                                            column(6, numericInput(ns("domestic_slot3_rate_scenario_b"), "Rate (%):", value = 3.0, min = 0, step = 0.1))
                                           )
                                         )
                                       ),
@@ -542,14 +542,14 @@ module3_ui <- function(id) {
                                             column(6,
                                                    numericInput(ns("commercial_min_scenario_b"),
                                                                 "Minimum Tax:",
-                                                                value = 200000,
+                                                                value = 200,
                                                                 min = 0)),
                                             column(6,
                                                    numericInput(ns("commercial_rate_scenario_b"),
                                                                 "Tax Rate (%):",
-                                                                value = 0.25,
+                                                                value = 4,
                                                                 min = 0,
-                                                                step = 0.01))
+                                                                step = 0.1))
                                           )
                                         ),
                                         
@@ -560,16 +560,16 @@ module3_ui <- function(id) {
                                           fluidRow(
                                             column(4, p("Slot 1:", style = "font-weight: bold;")),
                                             column(4, numericInput(ns("commercial_slot1_min_scenario_b"), "Min:", value = 0, min = 0)),
-                                            column(4, numericInput(ns("commercial_slot1_max_scenario_b"), "Max:", value = 2000000, min = 0))
+                                            column(4, numericInput(ns("commercial_slot1_max_scenario_b"), "Max:", value = 350, min = 0))
                                           ),
                                           fluidRow(
                                             column(4, p("Slot 2:", style = "font-weight: bold;")),
-                                            column(4, numericInput(ns("commercial_slot2_min_scenario_b"), "Min:", value = 2000000, min = 0)),
-                                            column(4, numericInput(ns("commercial_slot2_max_scenario_b"), "Max:", value = 10000000, min = 0))
+                                            column(4, numericInput(ns("commercial_slot2_min_scenario_b"), "Min:", value = 350, min = 0)),
+                                            column(4, numericInput(ns("commercial_slot2_max_scenario_b"), "Max:", value = 700, min = 0))
                                           ),
                                           fluidRow(
                                             column(4, p("Slot 3:", style = "font-weight: bold;")),
-                                            column(4, numericInput(ns("commercial_slot3_min_scenario_b"), "Min:", value = 10000000, min = 0)),
+                                            column(4, numericInput(ns("commercial_slot3_min_scenario_b"), "Min:", value = 700, min = 0)),
                                             column(4, p("Max: No limit", style = "padding-top: 25px;"))
                                           ),
                                           hr(),
@@ -577,20 +577,20 @@ module3_ui <- function(id) {
                                           # Slot 1
                                           p("Logic Slot 1:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("commercial_slot1_min_tax_scenario_b"), "Min Tax:", value = 100000, min = 0)),
-                                            column(6, numericInput(ns("commercial_slot1_rate_scenario_b"), "Rate (%):", value = 0.20, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("commercial_slot1_min_tax_scenario_b"), "Min Tax:", value = 150, min = 0)),
+                                            column(6, numericInput(ns("commercial_slot1_rate_scenario_b"), "Rate (%):", value = 3.0, min = 0, step = 0.1))
                                           ),
                                           # Slot 2
                                           p("Logic Slot 2:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("commercial_slot2_min_tax_scenario_b"), "Min Tax:", value = 200000, min = 0)),
-                                            column(6, numericInput(ns("commercial_slot2_rate_scenario_b"), "Rate (%):", value = 0.25, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("commercial_slot2_min_tax_scenario_b"), "Min Tax:", value = 200, min = 0)),
+                                            column(6, numericInput(ns("commercial_slot2_rate_scenario_b"), "Rate (%):", value = 4.0, min = 0, step = 0.1))
                                           ),
                                           # Slot 3
                                           p("Logic Slot 3:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("commercial_slot3_min_tax_scenario_b"), "Min Tax:", value = 400000, min = 0)),
-                                            column(6, numericInput(ns("commercial_slot3_rate_scenario_b"), "Rate (%):", value = 0.30, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("commercial_slot3_min_tax_scenario_b"), "Min Tax:", value = 400, min = 0)),
+                                            column(6, numericInput(ns("commercial_slot3_rate_scenario_b"), "Rate (%):", value = 5.0, min = 0, step = 0.1))
                                           )
                                         )
                                       ),
@@ -609,14 +609,14 @@ module3_ui <- function(id) {
                                             column(6,
                                                    numericInput(ns("institutional_min_scenario_b"),
                                                                 "Minimum Tax:",
-                                                                value = 150000,
+                                                                value = 200,
                                                                 min = 0)),
                                             column(6,
                                                    numericInput(ns("institutional_rate_scenario_b"),
                                                                 "Tax Rate (%):",
-                                                                value = 0.20,
+                                                                value = 2.5,
                                                                 min = 0,
-                                                                step = 0.01))
+                                                                step = 0.1))
                                           )
                                         ),
                                         
@@ -627,16 +627,16 @@ module3_ui <- function(id) {
                                           fluidRow(
                                             column(4, p("Slot 1:", style = "font-weight: bold;")),
                                             column(4, numericInput(ns("institutional_slot1_min_scenario_b"), "Min:", value = 0, min = 0)),
-                                            column(4, numericInput(ns("institutional_slot1_max_scenario_b"), "Max:", value = 1500000, min = 0))
+                                            column(4, numericInput(ns("institutional_slot1_max_scenario_b"), "Max:", value = 350, min = 0))
                                           ),
                                           fluidRow(
                                             column(4, p("Slot 2:", style = "font-weight: bold;")),
-                                            column(4, numericInput(ns("institutional_slot2_min_scenario_b"), "Min:", value = 1500000, min = 0)),
-                                            column(4, numericInput(ns("institutional_slot2_max_scenario_b"), "Max:", value = 7500000, min = 0))
+                                            column(4, numericInput(ns("institutional_slot2_min_scenario_b"), "Min:", value = 350, min = 0)),
+                                            column(4, numericInput(ns("institutional_slot2_max_scenario_b"), "Max:", value = 700, min = 0))
                                           ),
                                           fluidRow(
                                             column(4, p("Slot 3:", style = "font-weight: bold;")),
-                                            column(4, numericInput(ns("institutional_slot3_min_scenario_b"), "Min:", value = 7500000, min = 0)),
+                                            column(4, numericInput(ns("institutional_slot3_min_scenario_b"), "Min:", value = 700, min = 0)),
                                             column(4, p("Max: No limit", style = "padding-top: 25px;"))
                                           ),
                                           hr(),
@@ -644,20 +644,20 @@ module3_ui <- function(id) {
                                           # Slot 1
                                           p("Logic Slot 1:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("institutional_slot1_min_tax_scenario_b"), "Min Tax:", value = 75000, min = 0)),
-                                            column(6, numericInput(ns("institutional_slot1_rate_scenario_b"), "Rate (%):", value = 0.15, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("institutional_slot1_min_tax_scenario_b"), "Min Tax:", value = 100, min = 0)),
+                                            column(6, numericInput(ns("institutional_slot1_rate_scenario_b"), "Rate (%):", value = 2.0, min = 0, step = 0.1))
                                           ),
                                           # Slot 2
                                           p("Logic Slot 2:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("institutional_slot2_min_tax_scenario_b"), "Min Tax:", value = 150000, min = 0)),
-                                            column(6, numericInput(ns("institutional_slot2_rate_scenario_b"), "Rate (%):", value = 0.20, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("institutional_slot2_min_tax_scenario_b"), "Min Tax:", value = 200, min = 0)),
+                                            column(6, numericInput(ns("institutional_slot2_rate_scenario_b"), "Rate (%):", value = 2.5, min = 0, step = 0.1))
                                           ),
                                           # Slot 3
                                           p("Logic Slot 3:", style = "font-weight: bold;"),
                                           fluidRow(
-                                            column(6, numericInput(ns("institutional_slot3_min_tax_scenario_b"), "Min Tax:", value = 300000, min = 0)),
-                                            column(6, numericInput(ns("institutional_slot3_rate_scenario_b"), "Rate (%):", value = 0.25, min = 0, step = 0.01))
+                                            column(6, numericInput(ns("institutional_slot3_min_tax_scenario_b"), "Min Tax:", value = 300, min = 0)),
+                                            column(6, numericInput(ns("institutional_slot3_rate_scenario_b"), "Rate (%):", value = 3.0, min = 0, step = 0.1))
                                           )
                                         )
                                       )
