@@ -497,6 +497,14 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
                         selected = "All")
     }
     
+    # Reset filters button
+    observeEvent(input$reset_filters, {
+      updateSelectInput(session, "filter_structure_types", selected = "All")
+      updateSelectInput(session, "filter_property_types", selected = "All")
+      updateSelectInput(session, "filter_license_categories", selected = "All")
+      updateSelectInput(session, "filter_license_subcategories", selected = "All")
+    })
+    
     # Value boxes for total revenue
     output$existing_total_revenue <- renderValueBox({
       if (is.null(values$revenue_data)) {
@@ -511,7 +519,7 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
         total <- sum(scenario_data$total_tax, na.rm = TRUE)
         
         valueBox(
-          value = format(total, big.mark = ",", scientific = FALSE),
+          value = format(round(total, 0), big.mark = ",", scientific = FALSE),
           subtitle = "Existing Scenario Revenue",
           icon = icon("dollar-sign"),
           color = "blue"
@@ -533,10 +541,14 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
         
         # Calculate change from existing
         existing_total <- sum(values$revenue_data[["existing"]]$total_tax, na.rm = TRUE)
-        change_pct <- round((total - existing_total) / existing_total * 100, 1)
+        change_pct <- if(existing_total > 0) {
+          round((total - existing_total) / existing_total * 100, 1)
+        } else {
+          0
+        }
         
         valueBox(
-          value = format(total, big.mark = ",", scientific = FALSE),
+          value = format(round(total, 0), big.mark = ",", scientific = FALSE),
           subtitle = paste0("Scenario A (", ifelse(change_pct >= 0, "+", ""), change_pct, "%)"),
           icon = icon("dollar-sign"),
           color = if(change_pct > 0) "green" else if(change_pct < 0) "red" else "blue"
@@ -558,10 +570,14 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
         
         # Calculate change from existing
         existing_total <- sum(values$revenue_data[["existing"]]$total_tax, na.rm = TRUE)
-        change_pct <- round((total - existing_total) / existing_total * 100, 1)
+        change_pct <- if(existing_total > 0) {
+          round((total - existing_total) / existing_total * 100, 1)
+        } else {
+          0
+        }
         
         valueBox(
-          value = format(total, big.mark = ",", scientific = FALSE),
+          value = format(round(total, 0), big.mark = ",", scientific = FALSE),
           subtitle = paste0("Scenario B (", ifelse(change_pct >= 0, "+", ""), change_pct, "%)"),
           icon = icon("dollar-sign"),
           color = if(change_pct > 0) "green" else if(change_pct < 0) "red" else "blue"
@@ -593,9 +609,23 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
                             names_to = "Type",
                             values_to = "Revenue")
       
+      # Format labels for display
+      combined_long$label <- scales::comma(round(combined_long$Revenue, 0))
+      
+      # Chart 1A colors: Standard blue and red
+      chart_colors <- c("Property_Tax" = "#3498db",      # Bright blue
+                        "Business_License" = "#e74c3c")   # Bright red
+      
       ggplot(combined_long, aes(x = scenario, y = Revenue, fill = Type)) +
         geom_bar(stat = "identity", position = "dodge") +
-        scale_y_continuous(labels = scales::comma) +
+        geom_text(aes(label = label), 
+                  position = position_dodge(width = 0.9),
+                  vjust = -0.5,
+                  size = 3.5) +
+        scale_fill_manual(values = chart_colors,
+                          labels = c("Property Tax", "Business License")) +
+        scale_y_continuous(labels = scales::comma,
+                           expand = expansion(mult = c(0, 0.1))) +  # Add space for labels
         labs(title = "Total Revenue by Type - All Properties",
              x = "Scenario",
              y = "Total Revenue",
@@ -630,9 +660,23 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
                             names_to = "Type",
                             values_to = "Revenue")
       
+      # Format labels for display
+      combined_long$label <- scales::comma(round(combined_long$Revenue, 0))
+      
+      # Chart 1B colors: Darker blue and red
+      chart_colors <- c("Property_Tax" = "#2874a6",      # Darker blue
+                        "Business_License" = "#c0392b")   # Darker red
+      
       ggplot(combined_long, aes(x = scenario, y = Revenue, fill = Type)) +
         geom_bar(stat = "identity", position = "dodge") +
-        scale_y_continuous(labels = scales::comma) +
+        geom_text(aes(label = label), 
+                  position = position_dodge(width = 0.9),
+                  vjust = -0.5,
+                  size = 3.5) +
+        scale_fill_manual(values = chart_colors,
+                          labels = c("Property Tax", "Business License")) +
+        scale_y_continuous(labels = scales::comma,
+                           expand = expansion(mult = c(0, 0.1))) +  # Add space for labels
         labs(title = "Total Revenue by Type - Filtered to Compliers",
              x = "Scenario",
              y = "Total Revenue",
@@ -688,6 +732,9 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
                             names_to = "Type",
                             values_to = "Revenue")
       
+      # Format labels for display
+      combined_long$label <- scales::comma(round(combined_long$Revenue, 0))
+      
       # Build filter text
       filter_text <- ""
       active_filters <- c()
@@ -711,9 +758,20 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
         filter_text <- " - No Filters Applied"
       }
       
+      # Chart 1C colors: Steel blue and Indian red
+      chart_colors <- c("Property_Tax" = "#4682b4",      # Steel blue
+                        "Business_License" = "#cd5c5c")   # Indian red
+      
       ggplot(combined_long, aes(x = scenario, y = Revenue, fill = Type)) +
         geom_bar(stat = "identity", position = "dodge") +
-        scale_y_continuous(labels = scales::comma) +
+        geom_text(aes(label = label), 
+                  position = position_dodge(width = 0.9),
+                  vjust = -0.5,
+                  size = 3.5) +
+        scale_fill_manual(values = chart_colors,
+                          labels = c("Property Tax", "Business License")) +
+        scale_y_continuous(labels = scales::comma,
+                           expand = expansion(mult = c(0, 0.1))) +  # Add space for labels
         labs(title = paste0("Total Revenue by Type", filter_text),
              x = "Scenario",
              y = "Total Revenue",

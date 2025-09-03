@@ -25,7 +25,24 @@ module4_ui <- function(id) {
         
         hr(),
         
-        # Summary cards
+        # Summary cards with custom styling for larger boxes
+        tags$style(HTML("
+          .small-box .inner h3 {
+            font-size: 24px;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: visible;
+          }
+          .small-box .inner p {
+            font-size: 14px;
+          }
+          .small-box {
+            min-height: 110px;
+          }
+          .small-box .inner {
+            padding: 15px;
+          }
+        ")),
         fluidRow(
           column(4,
                  valueBoxOutput(ns("existing_total_revenue"))),
@@ -58,18 +75,48 @@ module4_ui <- function(id) {
                              fluidRow(
                                column(12,
                                       h4("Chart 1C: Revenue with Filtering Options"),
-                                      fluidRow(
-                                        column(4,
-                                               selectInput(ns("filter_type"),
-                                                           "Filter By:",
-                                                           choices = c("No Filter" = "none",
-                                                                       "Structure Types" = "structure",
-                                                                       "Property Types" = "property",
-                                                                       "License Categories" = "category",
-                                                                       "License Subcategories" = "subcategory"))
+                                      wellPanel(
+                                        fluidRow(
+                                          column(3,
+                                                 selectInput(ns("filter_structure_types"),
+                                                             "Structure Types:",
+                                                             choices = c("All"),
+                                                             selected = "All",
+                                                             multiple = TRUE,
+                                                             selectize = TRUE)
+                                          ),
+                                          column(3,
+                                                 selectInput(ns("filter_property_types"),
+                                                             "Property Types:",
+                                                             choices = c("All"),
+                                                             selected = "All",
+                                                             multiple = TRUE,
+                                                             selectize = TRUE)
+                                          ),
+                                          column(3,
+                                                 selectInput(ns("filter_license_categories"),
+                                                             "License Categories:",
+                                                             choices = c("All"),
+                                                             selected = "All",
+                                                             multiple = TRUE,
+                                                             selectize = TRUE)
+                                          ),
+                                          column(3,
+                                                 selectInput(ns("filter_license_subcategories"),
+                                                             "License Subcategories:",
+                                                             choices = c("All"),
+                                                             selected = "All",
+                                                             multiple = TRUE,
+                                                             selectize = TRUE)
+                                          )
                                         ),
-                                        column(8,
-                                               uiOutput(ns("filter_values_ui"))
+                                        fluidRow(
+                                          column(12,
+                                                 actionButton(ns("reset_filters"), 
+                                                              "Reset All Filters", 
+                                                              icon = icon("undo"),
+                                                              class = "btn-warning btn-sm")
+                                          )
                                         )
                                       ),
                                       plotOutput(ns("revenue_filtered_plot"), height = "400px")
