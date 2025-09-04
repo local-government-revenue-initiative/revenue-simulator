@@ -92,14 +92,14 @@ module5_server <- function(id, revenue_data) {
                        "Not calculated"),
         subtitle = "Total Properties",
         icon = icon("home"),
-        color = "blue"
+        color = if(values$analysis_complete) "blue" else "black"
       )
     })
     
     output$effective_rate_box <- renderValueBox({
       if (!values$analysis_complete) {
         valueBox(value = "Not calculated", subtitle = "Avg Effective Rate", 
-                 icon = icon("percentage"), color = "gray")
+                 icon = icon("percentage"), color = "black")
       } else {
         rate <- (sum(values$aggregated_data$total_tax) / 
                    sum(values$aggregated_data$total_property_value)) * 100
@@ -115,7 +115,7 @@ module5_server <- function(id, revenue_data) {
     output$gini_coefficient_box <- renderValueBox({
       if (!values$analysis_complete) {
         valueBox(value = "Not calculated", subtitle = "Gini Coefficient", 
-                 icon = icon("chart-line"), color = "gray")
+                 icon = icon("chart-line"), color = "black")
       } else {
         gini <- values$gini_results$gini_coefficient
         valueBox(
@@ -130,7 +130,7 @@ module5_server <- function(id, revenue_data) {
     output$overtaxed_count_box <- renderValueBox({
       if (!values$analysis_complete) {
         valueBox(value = "Not calculated", subtitle = "Overtaxed Properties", 
-                 icon = icon("exclamation-triangle"), color = "gray")
+                 icon = icon("exclamation-triangle"), color = "black")
       } else {
         count <- nrow(values$overtaxed_properties)
         pct <- (count / nrow(values$data_with_quantiles)) * 100

@@ -143,7 +143,7 @@ create_dummy_variables <- function(df, categorical_columns) {
   df_dummy <- dummy_cols(df, 
                          select_columns = categorical_columns,
                          remove_first_dummy = FALSE,
-                         remove_selected_columns = TRUE)
+                         remove_selected_columns = FALSE)
   
   return(df_dummy)
 }
@@ -191,7 +191,7 @@ process_property_data <- function(df, column_mapping) {
   return(df_processed)
 }
 
-# Updated merge_datasets function to handle many-to-many relationships properly v6
+# Updated merge_datasets function to handle many-to-many relationships properly v8
 merge_datasets <- function(property_data, payment_data, business_data,
                            property_id_col, payment_id_col, business_id_col) {
   # Ensure ID columns are character type
@@ -215,61 +215,71 @@ merge_datasets <- function(property_data, payment_data, business_data,
               by = setNames(payment_id_col, property_id_col))
   
   # Handle business data join
-  if (nrow(business_data) > 0) {
-    if ("property_type" %in% names(merged_data)) {
-      # Complex case: Properties have types, businesses need smart assignment
-      
-      # Step 1: Add type priority to the merged data
-      merged_with_priority <- merged_data %>%
-        mutate(
-          type_priority = case_when(
-            tolower(property_type) == "commercial" ~ 1,
-            tolower(property_type) == "domestic" ~ 2,
-            tolower(property_type) == "institutional" ~ 3,
-            TRUE ~ 99
-          )
+  if (nrow(business_data) > 0 && "property_type" %in% names(merged_data)) {
+    # Complex case: Properties have types, businesses need smart assignment
+    
+    # Step 1: Add unique row ID and type priority to track each property row
+    merged_with_priority <- merged_data %>%
+      mutate(
+        property_row_id = row_number(),
+        type_priority = case_when(
+          tolower(property_type) == "commercial" ~ 1,
+          tolower(property_type) == "domestic" ~ 2, 
+          tolower(property_type) == "institutional" ~ 3,
+          TRUE ~ 99
         )
+      )
+    
+    # Step 2: Identify which property IDs have businesses
+    properties_with_businesses <- unique(business_data[[business_id_col]])
+    
+    # Step 3: Split the data
+    # Properties that don't have any businesses at all - keep as is
+    props_without_businesses <- merged_with_priority %>%
+      filter(!(!!sym(property_id_col) %in% properties_with_businesses)) %>%
+      select(-property_row_id, -type_priority)
+    
+    # Properties that have businesses - need special handling
+    props_with_businesses <- merged_with_priority %>%
+      filter(!!sym(property_id_col) %in% properties_with_businesses)
+    
+    if (nrow(props_with_businesses) > 0) {
+      # Step 4: For each property with businesses, find the best row to attach them to
+      best_rows_per_property <- props_with_businesses %>%
+        group_by(!!sym(property_id_col)) %>%
+        arrange(type_priority) %>%
+        slice(1) %>%
+        ungroup() %>%
+        select(!!sym(property_id_col), best_row_id = property_row_id)
       
-      # Step 2: Do the many-to-many join (this WILL create duplicates)
-      merged_with_businesses <- merged_with_priority %>%
-        left_join(business_data, 
-                  by = setNames(business_id_col, property_id_col),
-                  relationship = "many-to-many")  # Explicitly acknowledge many-to-many
+      # Step 5: Create business assignments - only for the best rows
+      business_assignments <- business_data %>%
+        inner_join(best_rows_per_property, by = setNames(property_id_col, business_id_col)) %>%
+        select(-!!sym(property_id_col))  # Remove property_id to avoid duplication
       
-      # Step 3: Clean up duplicates
-      # For rows with businesses, keep only the ones with the best (lowest) type_priority
-      # For rows without businesses, keep all of them
+      # Step 6: Left join businesses to ALL property rows
+      # This ensures we keep all property rows, but businesses only attach to designated rows
+      props_with_businesses_final <- props_with_businesses %>%
+        left_join(
+          business_assignments,
+          by = c("property_row_id" = "best_row_id")
+        ) %>%
+        select(-property_row_id, -type_priority, -business_unique_id)
       
-      # Separate rows with and without businesses
-      rows_with_business <- merged_with_businesses %>%
-        filter(!is.na(business_unique_id))
-      
-      rows_without_business <- merged_with_businesses %>%
-        filter(is.na(business_unique_id)) %>%
-        select(-business_unique_id, -type_priority)  # Clean up temp columns
-      
-      # For rows with businesses, keep only those with the best priority per business
-      if (nrow(rows_with_business) > 0) {
-        rows_with_business_cleaned <- rows_with_business %>%
-          group_by(business_unique_id) %>%
-          # Keep only the row with the lowest type_priority for each unique business
-          slice_min(type_priority, n = 1, with_ties = FALSE) %>%
-          ungroup() %>%
-          select(-business_unique_id, -type_priority)  # Clean up temp columns
-        
-        # Combine the cleaned business rows with the non-business rows
-        merged_data <- bind_rows(rows_without_business, rows_with_business_cleaned)
-      } else {
-        merged_data <- rows_without_business
-      }
+      # Step 7: Combine everything back together
+      merged_data <- bind_rows(props_without_businesses, props_with_businesses_final)
       
     } else {
-      # Simple case: No property_type column, just do the join
-      merged_data <- merged_data %>%
-        left_join(business_data %>% select(-business_unique_id), 
-                  by = setNames(business_id_col, property_id_col),
-                  relationship = "many-to-many")
+      # No properties have businesses
+      merged_data <- props_without_businesses
     }
+    
+  } else if (nrow(business_data) > 0) {
+    # Simple case: No property_type column, just do the join
+    merged_data <- merged_data %>%
+      left_join(business_data %>% select(-business_unique_id), 
+                by = setNames(business_id_col, property_id_col),
+                relationship = "many-to-many")
   }
   
   return(merged_data)

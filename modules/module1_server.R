@@ -307,8 +307,8 @@ module1_server <- function(id) {
       )
     })
     
+    # Simplified data summary section for module1_server.R
     # Data summary
-    # Add this improved data summary section to module1_server.R
     output$data_summary <- renderPrint({
       req(values$processed_data)
       
@@ -319,23 +319,22 @@ module1_server <- function(id) {
       cat("Unique Properties:", length(unique(values$processed_data$id_property)), "\n")
       cat("Total Columns:", ncol(values$processed_data), "\n\n")
       
-      # Property type breakdown (if available)
-      if ("property_type" %in% names(values$property_mapping)) {
-        orig_col <- values$property_mapping[["property_type"]]
-        if (!is.null(orig_col) && orig_col != "" && orig_col %in% names(values$property_data)) {
-          cat("=== PROPERTY TYPES ===\n")
-          cat("Original Property Type Distribution:\n")
-          print(table(values$property_data[[orig_col]], useNA = "ifany"))
-          cat("\n")
-          
-          # Count rows by property type in processed data
-          cat("Rows by Property Type in Processed Data:\n")
-          type_counts <- values$processed_data %>%
-            group_by_at(orig_col) %>%
-            summarise(n_rows = n(), .groups = 'drop')
-          print(as.data.frame(type_counts))
-          cat("\n")
-        }
+      # Property type breakdown (now we can use the original column!)
+      if ("property_type" %in% names(values$processed_data)) {
+        cat("=== PROPERTY TYPES ===\n")
+        cat("Property Type Distribution in Processed Data:\n")
+        print(table(values$processed_data$property_type, useNA = "ifany"))
+        cat("\n")
+        
+        # Count unique properties by type
+        cat("Unique Properties by Type:\n")
+        type_summary <- values$processed_data %>%
+          group_by(property_type, id_property) %>%
+          slice(1) %>%
+          group_by(property_type) %>%
+          summarise(n_unique_properties = n(), .groups = 'drop')
+        print(as.data.frame(type_summary))
+        cat("\n")
       }
       
       # Business merge statistics
@@ -345,26 +344,20 @@ module1_server <- function(id) {
       cat("Original Businesses in Input:", nrow(values$business_data), "\n")
       
       # Count businesses in processed data
-      business_cols <- names(values$business_mapping)
-      business_cols <- business_cols[business_cols != "id_property"]
-      
-      if (length(business_cols) > 0) {
-        first_business_col <- values$business_mapping[[business_cols[1]]]
-        if (!is.null(first_business_col) && first_business_col %in% names(values$processed_data)) {
-          n_business_rows <- sum(!is.na(values$processed_data[[first_business_col]]))
-          cat("Rows with Business Data:", n_business_rows, "\n")
-          
-          if (n_business_rows > 0) {
-            # Check for business duplication
-            if (n_business_rows == nrow(values$business_data)) {
-              cat("✓ All businesses matched exactly once (no duplication)\n")
-            } else if (n_business_rows < nrow(values$business_data)) {
-              cat("⚠ Some businesses did not match any property\n")
-              cat("  Unmatched businesses:", nrow(values$business_data) - n_business_rows, "\n")
-            } else {
-              cat("⚠ Unexpected: More business rows than original businesses\n")
-              cat("  This should not happen with the current merge logic\n")
-            }
+      if ("business_name" %in% names(values$processed_data)) {
+        n_business_rows <- sum(!is.na(values$processed_data$business_name))
+        cat("Rows with Business Data:", n_business_rows, "\n")
+        
+        if (n_business_rows > 0) {
+          # Check for business duplication
+          if (n_business_rows == nrow(values$business_data)) {
+            cat("✓ All businesses matched exactly once (no duplication)\n")
+          } else if (n_business_rows < nrow(values$business_data)) {
+            cat("⚠ Some businesses did not match any property\n")
+            cat("  Unmatched businesses:", nrow(values$business_data) - n_business_rows, "\n")
+          } else {
+            cat("⚠ Unexpected: More business rows than original businesses\n")
+            cat("  This should not happen with the current merge logic\n")
           }
         }
       }
@@ -385,11 +378,22 @@ module1_server <- function(id) {
           cat("  ", names(row_distribution)[i], "rows:", row_distribution[i], "properties\n")
         }
         
-        # Show a few examples
+        # Show a few examples with their types
         cat("\nExample Properties with Multiple Rows (first 5):\n")
         examples <- head(multi_row_props %>% arrange(desc(n_rows)), 5)
         for (i in 1:nrow(examples)) {
-          cat("  ", examples$id_property[i], ":", examples$n_rows[i], "rows\n")
+          prop_id <- examples$id_property[i]
+          cat("  ", prop_id, ":", examples$n_rows[i], "rows")
+          
+          # Show what types this property has
+          if ("property_type" %in% names(values$processed_data)) {
+            types <- values$processed_data %>%
+              filter(id_property == prop_id) %>%
+              pull(property_type) %>%
+              unique()
+            cat(" (", paste(types, collapse=", "), ")")
+          }
+          cat("\n")
         }
       }
       
@@ -429,13 +433,11 @@ module1_server <- function(id) {
         }
       }
       
-      # Ward distribution if available
-      original_ward_col <- values$property_mapping[["ward"]]
-      if (!is.null(original_ward_col) && original_ward_col != "") {
+      # Ward distribution
+      if ("ward" %in% names(values$processed_data)) {
         cat("\n=== WARD DISTRIBUTION ===\n")
-        if (original_ward_col %in% names(values$property_data)) {
-          print(table(values$property_data[[original_ward_col]], useNA = "ifany"))
-        }
+        ward_table <- table(values$processed_data$ward, useNA = "ifany")
+        print(ward_table)
       }
       
       # Missing values summary
@@ -443,8 +445,8 @@ module1_server <- function(id) {
       missing_summary <- colSums(is.na(values$processed_data))
       missing_summary <- missing_summary[missing_summary > 0]
       if (length(missing_summary) > 0) {
-        cat("Columns with missing values:\n")
-        print(head(missing_summary, 20))
+        cat("Columns with missing values (showing top 20):\n")
+        print(head(sort(missing_summary, decreasing = TRUE), 20))
       } else {
         cat("✓ No missing values found!\n")
       }
