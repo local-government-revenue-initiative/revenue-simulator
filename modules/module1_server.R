@@ -308,41 +308,118 @@ module1_server <- function(id) {
     })
     
     # Data summary
+    # Add this improved data summary section to module1_server.R
     output$data_summary <- renderPrint({
       req(values$processed_data)
       
-      cat("=== Data Summary ===\n\n")
-      cat("Total Property Rows:", nrow(values$processed_data), "\n")
-      cat("Unique Properties:", length(unique(values$processed_data$id_property)), "\n")
-      cat("Total Features:", ncol(values$processed_data), "\n")
+      cat("=== DATA MERGE SUMMARY ===\n\n")
       
-      # Show property type breakdown
+      # Basic counts
+      cat("Total Rows in Processed Data:", nrow(values$processed_data), "\n")
+      cat("Unique Properties:", length(unique(values$processed_data$id_property)), "\n")
+      cat("Total Columns:", ncol(values$processed_data), "\n\n")
+      
+      # Property type breakdown (if available)
       if ("property_type" %in% names(values$property_mapping)) {
         orig_col <- values$property_mapping[["property_type"]]
         if (!is.null(orig_col) && orig_col != "" && orig_col %in% names(values$property_data)) {
-          cat("\nProperty Type Distribution:\n")
+          cat("=== PROPERTY TYPES ===\n")
+          cat("Original Property Type Distribution:\n")
           print(table(values$property_data[[orig_col]], useNA = "ifany"))
+          cat("\n")
+          
+          # Count rows by property type in processed data
+          cat("Rows by Property Type in Processed Data:\n")
+          type_counts <- values$processed_data %>%
+            group_by_at(orig_col) %>%
+            summarise(n_rows = n(), .groups = 'drop')
+          print(as.data.frame(type_counts))
+          cat("\n")
         }
       }
       
-      cat("\n\nPayment Status:\n")
-      if ("made_payment" %in% names(values$processed_data)) {
-        print(table(values$processed_data$made_payment, useNA = "ifany"))
+      # Business merge statistics
+      cat("=== BUSINESS MERGE STATISTICS ===\n")
+      
+      # Original business count
+      cat("Original Businesses in Input:", nrow(values$business_data), "\n")
+      
+      # Count businesses in processed data
+      business_cols <- names(values$business_mapping)
+      business_cols <- business_cols[business_cols != "id_property"]
+      
+      if (length(business_cols) > 0) {
+        first_business_col <- values$business_mapping[[business_cols[1]]]
+        if (!is.null(first_business_col) && first_business_col %in% names(values$processed_data)) {
+          n_business_rows <- sum(!is.na(values$processed_data[[first_business_col]]))
+          cat("Rows with Business Data:", n_business_rows, "\n")
+          
+          if (n_business_rows > 0) {
+            # Check for business duplication
+            if (n_business_rows == nrow(values$business_data)) {
+              cat("✓ All businesses matched exactly once (no duplication)\n")
+            } else if (n_business_rows < nrow(values$business_data)) {
+              cat("⚠ Some businesses did not match any property\n")
+              cat("  Unmatched businesses:", nrow(values$business_data) - n_business_rows, "\n")
+            } else {
+              cat("⚠ Unexpected: More business rows than original businesses\n")
+              cat("  This should not happen with the current merge logic\n")
+            }
+          }
+        }
       }
       
-      cat("\n\nBusiness Properties:\n")
-      cat("Rows with businesses:", 
-          sum(!is.na(values$processed_data$business_category)), "\n")
+      # Properties with multiple rows
+      cat("\n=== MULTI-ROW PROPERTIES ===\n")
+      multi_row_props <- values$processed_data %>%
+        group_by(id_property) %>%
+        summarise(n_rows = n(), .groups = 'drop') %>%
+        filter(n_rows > 1)
+      
+      cat("Properties with Multiple Rows:", nrow(multi_row_props), "\n")
+      
+      if (nrow(multi_row_props) > 0) {
+        cat("\nRow Count Distribution:\n")
+        row_distribution <- table(multi_row_props$n_rows)
+        for (i in 1:length(row_distribution)) {
+          cat("  ", names(row_distribution)[i], "rows:", row_distribution[i], "properties\n")
+        }
+        
+        # Show a few examples
+        cat("\nExample Properties with Multiple Rows (first 5):\n")
+        examples <- head(multi_row_props %>% arrange(desc(n_rows)), 5)
+        for (i in 1:nrow(examples)) {
+          cat("  ", examples$id_property[i], ":", examples$n_rows[i], "rows\n")
+        }
+      }
+      
+      # Payment status
+      cat("\n=== PAYMENT STATUS ===\n")
+      if ("made_payment" %in% names(values$processed_data)) {
+        payment_summary <- table(values$processed_data$made_payment, useNA = "ifany")
+        print(payment_summary)
+        
+        # Compliance rate by unique properties
+        unique_props_payment <- values$processed_data %>%
+          group_by(id_property) %>%
+          summarise(made_payment = any(made_payment == TRUE, na.rm = TRUE), .groups = 'drop')
+        
+        cat("\nCompliance Rate (Unique Properties):", 
+            round(mean(unique_props_payment$made_payment, na.rm = TRUE) * 100, 1), "%\n")
+      }
       
       # Business categories
       if ("business_category" %in% names(values$processed_data)) {
-        cat("\nBusiness Categories:\n")
+        cat("\n=== BUSINESS CATEGORIES ===\n")
+        cat("Rows with businesses:", 
+            sum(!is.na(values$processed_data$business_category)), "\n")
+        cat("\nBusiness Category Distribution:\n")
         print(table(values$processed_data$business_category, useNA = "ifany"))
       }
       
       # Business sub-categories
       if ("business_sub_category" %in% names(values$processed_data)) {
-        cat("\nBusiness Sub-Categories:\n")
+        cat("\n=== BUSINESS SUB-CATEGORIES ===\n")
         # Show top 10 sub-categories to avoid too long output
         sub_cat_table <- table(values$processed_data$business_sub_category, useNA = "ifany")
         sub_cat_sorted <- sort(sub_cat_table, decreasing = TRUE)
@@ -352,22 +429,24 @@ module1_server <- function(id) {
         }
       }
       
-      # Add ward distribution if available
+      # Ward distribution if available
       original_ward_col <- values$property_mapping[["ward"]]
       if (!is.null(original_ward_col) && original_ward_col != "") {
-        cat("\n\nWard Distribution:\n")
+        cat("\n=== WARD DISTRIBUTION ===\n")
         if (original_ward_col %in% names(values$property_data)) {
           print(table(values$property_data[[original_ward_col]], useNA = "ifany"))
         }
       }
       
-      cat("\n\nMissing Values Summary:\n")
+      # Missing values summary
+      cat("\n=== MISSING VALUES ===\n")
       missing_summary <- colSums(is.na(values$processed_data))
       missing_summary <- missing_summary[missing_summary > 0]
       if (length(missing_summary) > 0) {
+        cat("Columns with missing values:\n")
         print(head(missing_summary, 20))
       } else {
-        cat("No missing values found!\n")
+        cat("✓ No missing values found!\n")
       }
     })
     

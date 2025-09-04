@@ -15,10 +15,92 @@ suggest_column_mapping <- function(df, expected_columns) {
   col_names <- names(df)
   suggestions <- list()
   
+  # Define common variations for problematic columns
+  column_variations <- list(
+    coordinate_lng = c("coordinate_lng", "coordinate_long", "longitude", "long", "lng", "lon", 
+                       "coord_lng", "coord_long", "x", "coords_x"),
+    coordinate_lat = c("coordinate_lat", "latitude", "lat", "coord_lat", "y", "coords_y"),
+    ward = c("ward", "ward_id", "ward_number", "ward_no", "ward_num", "district", "area", 
+             "zone", "ward_code", "admin_ward"),
+    id_property = c("id_property", "property_id", "prop_id", "id", "property_code", 
+                    "property_number", "property_ref", "reference"),
+    property_area = c("property_area", "area", "size", "area_sqm", "property_size", 
+                      "total_area", "land_area", "plot_area", "sqm", "square_meters"),
+    made_payment = c("made_payment", "payment", "paid", "payment_made", "payment_status", 
+                     "has_paid", "payment_2024", "paid_2024"),
+    business_name = c("business_name", "business", "company", "company_name", "name", 
+                      "business_title", "establishment"),
+    business_area = c("business_area", "business_size", "business_sqm", "shop_area", 
+                      "commercial_area", "business_space"),
+    business_category = c("business_category", "business_cat", "category", "business_type", 
+                          "sector", "industry"),
+    business_sub_category = c("business_sub_category", "business_subcat", "sub_category", 
+                              "subcategory", "business_sub_type", "sub_type")
+  )
+  
+  # For each expected column, try to find a match
   for (expected in expected_columns) {
-    # Find best match using string similarity
-    matches <- agrep(expected, col_names, ignore.case = TRUE, value = TRUE)
-    suggestions[[expected]] <- if(length(matches) > 0) matches[1] else ""
+    # First, try exact match (case-insensitive)
+    exact_match <- col_names[tolower(col_names) == tolower(expected)]
+    if (length(exact_match) > 0) {
+      suggestions[[expected]] <- exact_match[1]
+      next
+    }
+    
+    # Second, check if we have known variations for this column
+    if (expected %in% names(column_variations)) {
+      variations <- column_variations[[expected]]
+      for (variant in variations) {
+        # Check for exact match with variation (case-insensitive)
+        variant_match <- col_names[tolower(col_names) == tolower(variant)]
+        if (length(variant_match) > 0) {
+          suggestions[[expected]] <- variant_match[1]
+          break
+        }
+        
+        # Check for partial match with variation
+        partial_match <- col_names[grepl(variant, col_names, ignore.case = TRUE)]
+        if (length(partial_match) > 0) {
+          suggestions[[expected]] <- partial_match[1]
+          break
+        }
+      }
+      
+      # If we found a match through variations, continue to next expected column
+      if (!is.null(suggestions[[expected]]) && suggestions[[expected]] != "") {
+        next
+      }
+    }
+    
+    # Third, try fuzzy matching as fallback
+    matches <- agrep(expected, col_names, ignore.case = TRUE, value = TRUE, max.distance = 0.3)
+    if (length(matches) > 0) {
+      suggestions[[expected]] <- matches[1]
+    } else {
+      # Fourth, try even more lenient fuzzy matching for short column names
+      if (nchar(expected) <= 5) {
+        matches <- agrep(expected, col_names, ignore.case = TRUE, value = TRUE, max.distance = 2)
+        suggestions[[expected]] <- if(length(matches) > 0) matches[1] else ""
+      } else {
+        suggestions[[expected]] <- ""
+      }
+    }
+  }
+  
+  # Final check: Make sure we don't have duplicate suggestions
+  # (two different expected columns mapped to the same actual column)
+  used_columns <- c()
+  for (expected in names(suggestions)) {
+    suggested <- suggestions[[expected]]
+    if (suggested != "" && suggested %in% used_columns) {
+      # This column was already suggested for another field
+      # Try to find an alternative
+      remaining_cols <- setdiff(col_names, used_columns)
+      matches <- agrep(expected, remaining_cols, ignore.case = TRUE, value = TRUE)
+      suggestions[[expected]] <- if(length(matches) > 0) matches[1] else ""
+    } else if (suggested != "") {
+      used_columns <- c(used_columns, suggested)
+    }
   }
   
   return(suggestions)
@@ -109,7 +191,7 @@ process_property_data <- function(df, column_mapping) {
   return(df_processed)
 }
 
-# Updated merge_datasets function to handle many-to-many relationships properly
+# Updated merge_datasets function to handle many-to-many relationships properly v6
 merge_datasets <- function(property_data, payment_data, business_data,
                            property_id_col, payment_id_col, business_id_col) {
   # Ensure ID columns are character type
@@ -117,13 +199,13 @@ merge_datasets <- function(property_data, payment_data, business_data,
   payment_data[[payment_id_col]] <- as.character(payment_data[[payment_id_col]])
   business_data[[business_id_col]] <- as.character(business_data[[business_id_col]])
   
-  # Add unique business ID to prevent unwanted duplication
+  # Add unique business ID to track each business through the merge
   if (nrow(business_data) > 0) {
     business_data <- business_data %>%
       mutate(business_unique_id = row_number())
   }
   
-  # Issue 1: Deduplicate payment data (in case of duplicates)
+  # Deduplicate payment data (in case of duplicates)
   payment_data_unique <- payment_data %>%
     distinct(!!sym(payment_id_col), .keep_all = TRUE)
   
@@ -132,55 +214,61 @@ merge_datasets <- function(property_data, payment_data, business_data,
     left_join(payment_data_unique, 
               by = setNames(payment_id_col, property_id_col))
   
-  # Issue 2: Handle business data join more carefully
+  # Handle business data join
   if (nrow(business_data) > 0) {
     if ("property_type" %in% names(merged_data)) {
-      # Complex case: Properties have types, need smart matching
+      # Complex case: Properties have types, businesses need smart assignment
       
-      # Create a priority mapping for property types
-      type_priority_map <- data.frame(
-        property_type = c("Commercial", "commercial", "COMMERCIAL",
-                          "Domestic", "domestic", "DOMESTIC",
-                          "Institutional", "institutional", "INSTITUTIONAL"),
-        type_priority = c(1, 1, 1, 2, 2, 2, 3, 3, 3),
-        stringsAsFactors = FALSE
-      )
-      
-      # Add priority to merged data
+      # Step 1: Add type priority to the merged data
       merged_with_priority <- merged_data %>%
-        mutate(row_id = row_number()) %>%
-        left_join(type_priority_map, by = "property_type") %>%
-        mutate(type_priority = ifelse(is.na(type_priority), 99, type_priority))
+        mutate(
+          type_priority = case_when(
+            tolower(property_type) == "commercial" ~ 1,
+            tolower(property_type) == "domestic" ~ 2,
+            tolower(property_type) == "institutional" ~ 3,
+            TRUE ~ 99
+          )
+        )
       
-      # For each property_id, identify the best row to attach businesses to
-      best_rows <- merged_with_priority %>%
-        group_by(!!sym(property_id_col)) %>%
-        slice_min(type_priority, n = 1, with_ties = FALSE) %>%
-        ungroup() %>%
-        select(!!sym(property_id_col), best_row_id = row_id)
+      # Step 2: Do the many-to-many join (this WILL create duplicates)
+      merged_with_businesses <- merged_with_priority %>%
+        left_join(business_data, 
+                  by = setNames(business_id_col, property_id_col),
+                  relationship = "many-to-many")  # Explicitly acknowledge many-to-many
       
-      # Create business assignments
-      business_assignments <- business_data %>%
-        inner_join(best_rows, by = setNames(property_id_col, business_id_col)) %>%
-        select(-all_of(business_id_col))
+      # Step 3: Clean up duplicates
+      # For rows with businesses, keep only the ones with the best (lowest) type_priority
+      # For rows without businesses, keep all of them
       
-      # Join businesses to the appropriate rows
-      final_merged <- merged_with_priority %>%
-        left_join(
-          business_assignments,
-          by = c("row_id" = "best_row_id"),
-          relationship = "one-to-many"  # One property row can have multiple businesses
-        ) %>%
-        select(-row_id, -type_priority, -business_unique_id)
+      # Separate rows with and without businesses
+      rows_with_business <- merged_with_businesses %>%
+        filter(!is.na(business_unique_id))
       
-      merged_data <- final_merged
+      rows_without_business <- merged_with_businesses %>%
+        filter(is.na(business_unique_id)) %>%
+        select(-business_unique_id, -type_priority)  # Clean up temp columns
+      
+      # For rows with businesses, keep only those with the best priority per business
+      if (nrow(rows_with_business) > 0) {
+        rows_with_business_cleaned <- rows_with_business %>%
+          group_by(business_unique_id) %>%
+          # Keep only the row with the lowest type_priority for each unique business
+          slice_min(type_priority, n = 1, with_ties = FALSE) %>%
+          ungroup() %>%
+          select(-business_unique_id, -type_priority)  # Clean up temp columns
+        
+        # Combine the cleaned business rows with the non-business rows
+        merged_data <- bind_rows(rows_without_business, rows_with_business_cleaned)
+      } else {
+        merged_data <- rows_without_business
+      }
       
     } else {
-      # Simple case: No property types, just join businesses
+      # Simple case: No property_type column, just do the join
       merged_data <- merged_data %>%
-        left_join(
-          business_data %>% select(-business_unique_id), 
-          by = setNames(business_id_col, property_id_col))
+        left_join(business_data %>% select(-business_unique_id), 
+                  by = setNames(business_id_col, property_id_col),
+                  relationship = "many-to-many")
     }
   }
   

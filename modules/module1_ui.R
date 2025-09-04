@@ -66,10 +66,26 @@ module1_ui <- function(id) {
         
         hr(),
         
-        # Processing section
+        # Processing section with explanatory text
         conditionalPanel(
           condition = paste0("output['", ns("mappings_validated"), "']"),
           h4("Step 3: Process Data"),
+          
+          # Add informative alert box
+          div(
+            class = "alert alert-info",
+            style = "margin-bottom: 20px;",
+            HTML("<strong><i class='fa fa-info-circle'></i> Data Processing Note:</strong><br><br>
+                  The processed data will have a row for each property-business combination:<br>
+                  <ul style='margin-bottom: 0;'>
+                    <li>If a property has multiple uses (domestic, commercial, institutional), each appears as a separate row</li>
+                    <li>If the property has businesses, they will be matched to the commercial row first (if available), 
+                        then domestic, then institutional</li>
+                    <li>Multiple businesses at the same property will result in multiple rows</li>
+                    <li>Business data will not be duplicated across different property types</li>
+                  </ul>")
+          ),
+          
           actionButton(ns("process_data"), "Process and Merge Data", 
                        class = "btn-success btn-lg"),
           br(),
@@ -97,6 +113,18 @@ module1_ui <- function(id) {
           width = 12,
           status = "info",
           collapsible = TRUE,
+          
+          # Add explanation at the top of the summary
+          div(
+            class = "well well-sm",
+            style = "background-color: #f0f8ff; border-left: 4px solid #3498db;",
+            HTML("<strong>Understanding the Processed Data:</strong><br>
+                  Each row represents either:<br>
+                  • A property with a specific use type (when no businesses are present), OR<br>
+                  • A property-business combination (when businesses exist at that property)<br><br>
+                  This means a single property ID may appear multiple times if it has multiple uses or multiple businesses.")
+          ),
+          
           verbatimTextOutput(ns("data_summary"))
         )
       )
