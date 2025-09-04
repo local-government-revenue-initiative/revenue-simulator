@@ -186,4 +186,3 @@ merge_datasets <- function(property_data, payment_data, business_data,
   
   return(merged_data)
 }
-
