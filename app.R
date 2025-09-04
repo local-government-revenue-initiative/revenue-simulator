@@ -1,5 +1,7 @@
 # app.R
-# Load all required libraries FIRST
+# Property Tax Revenue Simulator - Complete Application
+
+# Load all required libraries
 library(shiny)
 library(shinydashboard)
 library(DT)
@@ -7,9 +9,8 @@ library(dplyr)
 library(tidyr)
 library(readr)
 library(fastDummies)
-library(ggplot2)  # Added for Module 4 plotting
-library(scales)   # Added for Module 4 formatting
-# Note: openxlsx is optional for Excel export functionality
+library(ggplot2)
+library(scales)
 
 # Set options
 options(shiny.maxRequestSize = 30*1024^2)  # 30MB max file size
@@ -24,6 +25,7 @@ source("R/module1_functions.R")
 source("R/module2_functions.R")
 source("R/module3_functions.R")
 source("R/module4_functions.R")
+source("R/module5_functions.R")  # Added for Module 5
 
 # Source UI and server modules
 source("modules/module1_ui.R")
@@ -34,8 +36,10 @@ source("modules/module3_ui.R")
 source("modules/module3_server.R")
 source("modules/module4_ui.R")
 source("modules/module4_server.R")
+source("modules/module5_ui.R")     # Added for Module 5
+source("modules/module5_server.R")  # Added for Module 5
 
-# Update UI to include Module 4
+# Define UI
 ui <- dashboardPage(
   dashboardHeader(title = "Property Tax Revenue Simulator"),
   
@@ -49,8 +53,8 @@ ui <- dashboardPage(
                icon = icon("percent")),
       menuItem("Module 4: Revenue", tabName = "module4", 
                icon = icon("dollar-sign")),
-      menuItem("Module 5: Analysis", tabName = "module5", 
-               icon = icon("chart-bar")),
+      menuItem("Module 5: Tax Burden Analysis", tabName = "module5",  # Updated
+               icon = icon("balance-scale")),                          # Updated icon
       menuItem("Module 6: GIS", tabName = "module6", 
                icon = icon("map"))
     )
@@ -58,7 +62,84 @@ ui <- dashboardPage(
   
   dashboardBody(
     tags$head(
-      tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
+      tags$link(rel = "stylesheet", type = "text/css", href = "custom.css"),
+      # Add custom CSS for Module 5
+      tags$style(HTML("
+        /* Module 5 specific styles */
+        .info-box {
+          min-height: 90px;
+        }
+        
+        .info-box-icon {
+          height: 90px;
+          line-height: 90px;
+        }
+        
+        .info-box-content {
+          padding: 5px 10px;
+          margin-left: 90px;
+        }
+        
+        /* Value box improvements for Module 5 */
+        .small-box {
+          border-radius: 5px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+        }
+        
+        .small-box:hover {
+          box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+        }
+        
+        /* Tab panel styling */
+        .nav-tabs-custom > .nav-tabs > li.active {
+          border-top-color: #3c8dbc;
+        }
+        
+        /* Progress bar styling */
+        .progress-bar {
+          background-color: #3c8dbc;
+        }
+        
+        /* Existing custom styles from original app */
+        .btn-primary {
+          background-color: #3498db;
+          border-color: #2980b9;
+        }
+        
+        .btn-primary:hover {
+          background-color: #2980b9;
+          border-color: #21618c;
+        }
+        
+        .btn-success {
+          background-color: #27ae60;
+          border-color: #229954;
+        }
+        
+        .btn-success:hover {
+          background-color: #229954;
+          border-color: #1e8449;
+        }
+        
+        .btn-lg {
+          padding: 10px 20px;
+          font-size: 18px;
+        }
+        
+        .box-header {
+          background-color: #f5f5f5;
+        }
+        
+        .dataTables_wrapper {
+          margin-top: 10px;
+        }
+        
+        @media (max-width: 768px) {
+          .content-wrapper, .right-side {
+            margin-left: 0 !important;
+          }
+        }
+      "))
     ),
     
     tabItems(
@@ -66,28 +147,33 @@ ui <- dashboardPage(
       module2_ui("module2"),
       module3_ui("module3"),
       module4_ui("module4"),
+      module5_ui("module5"),  # Now using actual module instead of placeholder
       
-      # Placeholder for other modules
-      tabItem(tabName = "module5", h2("Module 5: Coming Soon")),
-      tabItem(tabName = "module6", h2("Module 6: Coming Soon"))
+      # Placeholder for Module 6
+      tabItem(tabName = "module6", h2("Module 6: GIS Visualization - Coming Soon"))
     )
   )
 )
 
-# Update the server function:
+# Define server
 server <- function(input, output, session) {
-  # Module 1 server
+  # Module 1 server - returns processed data
   processed_data <- module1_server("module1")
   
-  # Module 2 server - pass processed data
+  # Module 2 server - returns parameter configurations  
   param_configs <- module2_server("module2", processed_data)
   
-  # Module 3 server - pass all necessary data
+  # Module 3 server - returns tax configurations
   tax_configs <- module3_server("module3", processed_data, param_configs)
   
-  # Module 4 server - pass all necessary data
+  # Module 4 server - returns revenue data
   revenue_data <- module4_server("module4", processed_data, param_configs, tax_configs)
+  
+  # Module 5 server - tax burden analysis
+  analysis_results <- module5_server("module5", revenue_data)
+  
+  # Analysis results can be used in Module 6 for GIS visualization if needed
 }
 
-# Run the app
-shinyApp(ui, server)
+# Run the application
+shinyApp(ui = ui, server = server)
