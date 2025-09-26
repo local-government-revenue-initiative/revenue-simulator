@@ -125,7 +125,27 @@ get_default_weights <- function() {
       ward_444 = 118,
       ward_445 = 61,
       ward_446 = 180,
-      ward_NA = 0
+      ward_NA = 0,
+      aberdeen_lumley_tourist_Yes = 25,
+      aberdeen_lumley_tourist_No = 0,
+      juba_levuma_tourist_Yes = 20,
+      juba_levuma_tourist_No = 0,
+      buffered_commercial_corridors_Yes = 30,
+      buffered_commercial_corridors_No = 0,
+      cbd_Yes = 50,
+      cbd_No = 0,
+      dock_industrial_Yes = -20,
+      dock_industrial_No = 0,
+      kissy_industrial_area_Yes = -25,
+      kissy_industrial_area_No = 0,
+      kissy_texaco_terminal_area_Yes = -15,
+      kissy_texaco_terminal_area_No = 0,
+      wellington_industrial_estate_Yes = -20,
+      wellington_industrial_estate_No = 0,
+      hazardous_zones_Yes = -30,
+      hazardous_zones_No = 0,
+      informal_settlements_Yes = -25,
+      informal_settlements_No = 0      
     ),
     # Structure type weights in a separate list
     structure_weights = list(

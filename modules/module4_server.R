@@ -124,7 +124,9 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
         total_tax = property_taxes + business_licenses,
         made_payment = if("made_payment" %in% names(data)) data$made_payment else TRUE,
         business_category = if("business_category" %in% names(data)) data$business_category else NA,
-        business_sub_category = if("business_sub_category" %in% names(data)) data$business_sub_category else NA
+        business_sub_category = if("business_sub_category" %in% names(data)) data$business_sub_category else NA,
+        property_area = if("property_area" %in% names(data)) data$property_area else NA,
+        business_area = if("business_area" %in% names(data)) data$business_area else NA
       )
       
       return(result)

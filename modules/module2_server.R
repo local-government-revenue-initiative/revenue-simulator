@@ -277,6 +277,39 @@ module2_server <- function(id, processed_data) {
             )
           },
           
+          # Location Zones Features
+          if (length(values$feature_columns$location_zones) > 0) {
+            box(
+              title = "Location Zones",
+              width = 12,
+              collapsible = TRUE,
+              collapsed = TRUE,
+              status = "info",
+              solidHeader = FALSE,
+              lapply(values$feature_columns$location_zones, function(feat) {
+                # Try to get value from config first, then from defaults
+                default_val <- config$feature_weights[[feat]]
+                if (is.null(default_val)) {
+                  default_val <- values$defaults$feature_weights[[feat]]
+                }
+                if (is.null(default_val)) {
+                  default_val <- 0
+                }
+                
+                fluidRow(
+                  column(8, p(feat, style = "margin-top: 5px; font-size: 12px;")),
+                  column(4,
+                         numericInput(ns(paste0("weight_", feat, "_", scenario_suffix)),
+                                      label = NULL,
+                                      value = default_val,
+                                      step = 1,
+                                      width = "100%")
+                  )
+                )
+              })
+            )
+          },
+
           # Ward Features
           if (length(values$ward_columns) > 0) {
             box(
