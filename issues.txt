@@ -1,2 +1,6 @@
 # Module 1
 NA values for institutional_type or commercial_type after merging data
+Add download button for processed data
+
+# Module 2
+Could try to recategorize variables

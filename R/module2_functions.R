@@ -56,95 +56,95 @@ get_default_weights <- function() {
       street_access_Difficult = -7,
       street_access_Easy = 0,
       street_access_NA = 0,
-      `street_quality_Average Road` = 0,
-      `street_quality_Bad Road` = -10,
-      `street_quality_Good Road` = 4,
+      street_quality_Average = 0,
+      street_quality_Poor = -10,
+      `street_quality_Like New` = 4,
       street_lanes_Four = 4,
       street_lanes_None = -15,
       street_lanes_One = 0,
       street_lanes_Two = 2,
-      tourist_area_No = 0,
-      tourist_area_Yes = 24,
-      environmental_hazard_No = 0,
-      environmental_hazard_Yes = -15,
+      old_tourist_area_No = 0,
+      old_tourist_area_Yes  = 24,
+      old_environmental_hazard_No = 0,
+      old_environmental_hazard_Yes = -15,
       main_road_high_visibility_No = 0,
       main_road_high_visibility_Yes = 18,
-      informal_settlement_No = 0,
-      informal_settlement_Yes = -21,
-      commercial_corridor_No = 0,
-      commercial_corridor_Yes = 25,
+      old_informal_settlement_Yes = 0,
+      old_informal_settlement_No = -21,
+      old_commercial_corridor_No = 0,
+      old_commercial_corridor_Yes = 25,
       potential_to_build_No = 0,
       potential_to_build_Yes = 3,
       domestic_use_of_groundfloor_No = 5,
       domestic_use_of_groundfloor_Yes = 0,
-      ward_399 = 20,
-      ward_400 = 30,
-      ward_401 = 17,
-      ward_402 = 47,
-      ward_403 = 23,
-      ward_404 = 4,
-      ward_405 = 14,
-      ward_406 = 15,
-      ward_407 = 27,
-      ward_408 = 30,
-      ward_409 = 11,
-      ward_410 = 6,
-      ward_411 = -15,
-      ward_412 = 42,
-      ward_413 = 31,
-      ward_414 = 52,
-      ward_415 = 45,
-      ward_416 = 35,
-      ward_417 = 56,
-      ward_418 = 20,
-      ward_419 = 25,
-      ward_420 = 68,
-      ward_421 = 106,
-      ward_422 = 60,
-      ward_423 = 36,
-      ward_424 = 38,
-      ward_425 = 78,
-      ward_426 = 38,
-      ward_427 = 220,
-      ward_428 = 189,
-      ward_429 = 192,
-      ward_430 = 211,
-      ward_431 = 213,
-      ward_432 = 139,
-      ward_433 = 176,
-      ward_434 = 46,
-      ward_435 = 71,
-      ward_436 = 217,
-      ward_437 = 178,
-      ward_438 = 196,
-      ward_439 = 82,
-      ward_440 = 120,
-      ward_441 = 123,
-      ward_442 = 126,
-      ward_443 = 129,
-      ward_444 = 118,
-      ward_445 = 61,
-      ward_446 = 180,
-      ward_NA = 0,
-      aberdeen_lumley_tourist_Yes = 25,
+      ward_number_399 = 20,
+      ward_number_400 = 30,
+      ward_number_401 = 17,
+      ward_number_402 = 47,
+      ward_number_403 = 23,
+      ward_number_404 = 4,
+      ward_number_405 = 14,
+      ward_number_406 = 15,
+      ward_number_407 = 27,
+      ward_number_408 = 30,
+      ward_number_409 = 11,
+      ward_number_410 = 6,
+      ward_number_411 = -15,
+      ward_number_412 = 42,
+      ward_number_413 = 31,
+      ward_number_414 = 52,
+      ward_number_415 = 45,
+      ward_number_416 = 35,
+      ward_number_417 = 56,
+      ward_number_418 = 20,
+      ward_number_419 = 25,
+      ward_number_420 = 68,
+      ward_number_421 = 106,
+      ward_number_422 = 60,
+      ward_number_423 = 36,
+      ward_number_424 = 38,
+      ward_number_425 = 78,
+      ward_number_426 = 38,
+      ward_number_427 = 220,
+      ward_number_428 = 189,
+      ward_number_429 = 192,
+      ward_number_430 = 211,
+      ward_number_431 = 213,
+      ward_number_432 = 139,
+      ward_number_433 = 176,
+      ward_number_434 = 46,
+      ward_number_435 = 71,
+      ward_number_436 = 217,
+      ward_number_437 = 178,
+      ward_number_438 = 196,
+      ward_number_439 = 82,
+      ward_number_440 = 120,
+      ward_number_441 = 123,
+      ward_number_442 = 126,
+      ward_number_443 = 129,
+      ward_number_444 = 118,
+      ward_number_445 = 61,
+      ward_number_446 = 180,
+      ward_number_NA = 0,
+      aberdeen_lumley_tourist_Yes = 0,
       aberdeen_lumley_tourist_No = 0,
-      juba_levuma_tourist_Yes = 20,
+      juba_levuma_tourist_Yes = 0,
       juba_levuma_tourist_No = 0,
-      buffered_commercial_corridors_Yes = 30,
+      buffered_commercial_corridors_Yes = 0,
       buffered_commercial_corridors_No = 0,
-      cbd_Yes = 50,
+      cbd_Yes = 0,
       cbd_No = 0,
-      dock_industrial_Yes = -20,
+      dock_industrial_Yes = 0,
       dock_industrial_No = 0,
-      kissy_industrial_area_Yes = -25,
+      kissy_industrial_area_Yes = 0,
       kissy_industrial_area_No = 0,
-      kissy_texaco_terminal_area_Yes = -15,
+      kissy_texaco_terminal_area_Yes = 0,
       kissy_texaco_terminal_area_No = 0,
-      wellington_industrial_estate_Yes = -20,
+      wellington_industrial_estate_Yes = 0,
       wellington_industrial_estate_No = 0,
-      hazardous_zones_Yes = -30,
+      hazardous_zones_Yes = 0,
       hazardous_zones_No = 0,
-      informal_settlements_Yes = -25,
+      informal_settlements_Yes = 0,
       informal_settlements_No = 0      
     ),
     # Structure type weights in a separate list
@@ -152,10 +152,57 @@ get_default_weights <- function() {
       `commercial_type_Industrial Manufacturing` = -37,
       `commercial_type_Industrial Warehouse` = -47,
       commercial_type_NA = 0,
+      `commercial_type_Bank` = 106,
+      `commercial_type_Car Dealership` = 24,
+      `commercial_type_Commercial Warehouse` = 47,
+      `commercial_type_Golf Clubhouse` = 0,
+      `commercial_type_Guest House` = 4,
+      `commercial_type_Gym` = 0,
+      `commercial_type_Hotel` = 70,
+      `commercial_type_House or dwelling form` = 0,
+      `commercial_type_Industrial Manufacturing` = -37,
+      `commercial_type_Industrial Warehouse` = -47,
+      `commercial_type_Mixed Retail / Office` = 13,
+      `commercial_type_Motor Garage` = -30,
+      `commercial_type_Office` = 37,
+      `commercial_type_Petrol Station` = 53,
+      `commercial_type_Private Clinic` = 72,
+      `commercial_type_Private Clinic/Hospital` = 72,
+      `commercial_type_Private School` = 44,
+      `commercial_type_Retail` = 3,
+      `commercial_type_Squash Court` = 0,
+      `commercial_type_Storage` = 0,
+      `commercial_type_Super Market` = 7,
+      `commercial_type_NA` = 0,
+      `institutional_type_Government Office` = 79,
+      `instutional_type_Parliament Buildings` = 79,
+      `institutional_type_Police Buildings` = 70,
+      `institutional_type_Police compounds` = 70,
+      `institutional_type_Court Buildings` = 79,
+      `institutional_type_Municipal Offices` = 79,
+      `institutional_type_Army barraks and installations` = 43,
+      `institutional_type_Fire Station` = 43,
+      `institutional_type_Bank` = 106,
+      `institutional_type_Bollore Garage` = 1894,
+      `institutional_type_Commercial Warehouse` = 47,
+      `institutional_type_Dangote Office` = 346,
+      `institutional_type_House or dwelling form` = 0,
+      `institutional_type_Industrial Manufacturing` = -37,
+      `institutional_type_Industrial Warehouse` = -47,
+      `institutional_type_Leocem Industrial Manufacturing` = -37,
+      `institutional_type_Leocem Office` = 37,
+      `institutional_type_Mixed Retail / Office` = 13,
+      `institutional_type_Nectar House Form` = 174,
+      `institutional_type_Nectar Office` = 275,
       `institutional_type_Nectar Cargo` = 182,
       `institutional_type_Nectar Warehouse` = 46,
+      `institutional_type_Office` = 275,
       `institutional_type_SLPA Industrial` = 158,
       `institutional_type_SLPA Warehouse` = 119,
+      `institutional_type_SLPA Canteen` = 322,
+      `institutional_type_SLPA House Form` = 310,
+      `institutional_type_SLPA Motor Garage` = 186,
+      `institutional_type_SLPA Office` = 461,
       `institutional_type_Bollore Office` = 3819,
       `institutional_type_Bollore Warehouse` = 1426,
       `institutional_type_Dangote Warehouse` = 73,
@@ -164,10 +211,13 @@ get_default_weights <- function() {
   )
 }
 
-# Function to group feature columns by category
+# Function to group feature columns by category (excluding _na variables from UI)
 group_feature_columns <- function(column_names) {
+  # Filter out variables ending in _na for UI display
+    visible_columns <- column_names[!grepl("(_na|_NA)$", column_names)]
+  
   # Remove the dummy variable suffixes to get base feature names
-  base_features <- unique(gsub("_[^_]+$", "", column_names))
+  base_features <- unique(gsub("_[^_]+$", "", visible_columns))
   
   structure_features <- c("wall_material", "wall_condition", "roof_material", 
                           "roof_condition", "window_material", "has_veranda")
@@ -190,21 +240,75 @@ group_feature_columns <- function(column_names) {
   
   property_characteristics <- c("potential_to_build", "domestic_use_groundfloor")
   
-  # Get actual column names for each category
+  # Get actual column names for each category (excluding _na columns)
   grouped <- list(
-    structure_features = column_names[grepl(paste0("^(", paste(structure_features, collapse = "|"), ")_"), column_names)],
-    utility_features = column_names[grepl(paste0("^(", paste(utility_features, collapse = "|"), ")_"), column_names)],
-    location_features = column_names[grepl(paste0("^(", paste(location_features, collapse = "|"), ")_"), column_names)],
-    location_zones = column_names[grepl(paste0("^(", paste(location_zones, collapse = "|"), ")_"), column_names)],
-    property_characteristics = column_names[grepl(paste0("^(", paste(property_characteristics, collapse = "|"), ")_"), column_names)],
-    ward_features = column_names[grepl("^ward_", column_names)]
+    structure_features = visible_columns[grepl(paste0("^(", paste(structure_features, collapse = "|"), ")_"), visible_columns)],
+    utility_features = visible_columns[grepl(paste0("^(", paste(utility_features, collapse = "|"), ")_"), visible_columns)],
+    location_features = visible_columns[grepl(paste0("^(", paste(location_features, collapse = "|"), ")_"), visible_columns)],
+    location_zones = visible_columns[grepl(paste0("^(", paste(location_zones, collapse = "|"), ")_"), visible_columns)],
+    property_characteristics = visible_columns[grepl(paste0("^(", paste(property_characteristics, collapse = "|"), ")_"), visible_columns)],
+    ward_features = visible_columns[grepl("^ward_(number|rank)_", visible_columns)]
   )
   
   return(grouped)
 }
 
-# Function to extract structure type columns
+# Function to extract structure type columns (excluding _na variables from UI)
 get_structure_type_columns <- function(column_names) {
+  # Filter out variables ending in _na for UI display
+  visible_columns <- column_names[!grepl("(_na|_NA)$", column_names)]
+  
+  structure_types <- c("commercial_type", "institutional_type")
+  structure_cols <- visible_columns[grepl(paste0("^(", paste(structure_types, collapse = "|"), ")_"), visible_columns)]
+  return(structure_cols)
+}
+
+# Function to get all feature columns including hidden _na variables (for calculations)
+get_all_feature_columns <- function(column_names) {
+  # Remove non-feature columns
+  feature_cols <- column_names[!column_names %in% c("id_property", "coordinate_lat", 
+                                                    "coordinate_lng", "property_area",
+                                                    "made_payment", "business_name",
+                                                    "business_area", "business_category",
+                                                    "business_sub_category")]
+  
+  # Group features by category (including _na variables)
+  structure_features <- c("wall_material", "wall_condition", "roof_material", 
+                          "roof_condition", "window_material", "has_veranda")
+  
+  utility_features <- c("has_water", "drainage", "air_conditioning",
+                        "has_security", "has_pool", "has_outbuilding")
+  
+  location_features <- c("street_access", "street_quality", "street_lanes", 
+                         "tourist_area", "old_tourist_area", 
+                         "environmental_hazard", "old_environmental_hazard",
+                         "main_road_high_visibility", 
+                         "informal_settlement", "old_informal_settlement",
+                         "commercial_corridor", "old_commercial_corridor")
+  
+  location_zones <- c("aberdeen_lumley_tourist", "juba_levuma_tourist",
+                     "buffered_commercial_corridors", "cbd", "dock_industrial",
+                     "kissy_industrial_area", "kissy_texaco_terminal_area",
+                     "wellington_industrial_estate", "hazardous_zones",
+                     "informal_settlements")
+  
+  property_characteristics <- c("potential_to_build", "domestic_use_groundfloor")
+  
+  # Get all columns (including _na) for calculations
+  all_features <- c(
+    feature_cols[grepl(paste0("^(", paste(structure_features, collapse = "|"), ")_"), feature_cols)],
+    feature_cols[grepl(paste0("^(", paste(utility_features, collapse = "|"), ")_"), feature_cols)],
+    feature_cols[grepl(paste0("^(", paste(location_features, collapse = "|"), ")_"), feature_cols)],
+    feature_cols[grepl(paste0("^(", paste(location_zones, collapse = "|"), ")_"), feature_cols)],
+    feature_cols[grepl(paste0("^(", paste(property_characteristics, collapse = "|"), ")_"), feature_cols)],
+    feature_cols[grepl("^ward_", feature_cols)]
+  )
+  
+  return(all_features)
+}
+
+# Function to get all structure type columns including _na (for calculations)
+get_all_structure_columns <- function(column_names) {
   structure_types <- c("commercial_type", "institutional_type")
   structure_cols <- column_names[grepl(paste0("^(", paste(structure_types, collapse = "|"), ")_"), column_names)]
   return(structure_cols)

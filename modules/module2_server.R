@@ -30,31 +30,35 @@ module2_server <- function(id, processed_data) {
       }
     })
     
-    # Initialize when processed data is available
-    observe({
-      req(processed_data())
-      data <- processed_data()
-      
-      # Get feature columns from the processed data
-      all_columns <- names(data)
-      
-      # Remove non-feature columns
-      feature_cols <- all_columns[!all_columns %in% c("id_property", "coordinate_lat", 
-                                                      "coordinate_lng", "property_area",
-                                                      "made_payment", "business_name",
-                                                      "business_area", "business_category",
-                                                      "business_sub_category")]
-      
-      # Group features by category
-      values$feature_columns <- group_feature_columns(feature_cols)
-      values$structure_columns <- get_structure_type_columns(feature_cols)
-      
-      # Separate commercial and institutional types
-      values$commercial_type_columns <- feature_cols[grepl("^commercial_type_", feature_cols)]
-      values$institutional_type_columns <- feature_cols[grepl("^institutional_type_", feature_cols)]
-      
-      values$ward_columns <- feature_cols[grepl("^ward_", feature_cols)]
-    })
+    # In the observe block that initializes when processed data is available:
+observe({
+  req(processed_data())
+  data <- processed_data()
+  
+  # Get feature columns from the processed data
+  all_columns <- names(data)
+  
+  # Remove non-feature columns
+  feature_cols <- all_columns[!all_columns %in% c("id_property", "coordinate_lat", 
+                                                  "coordinate_lng", "property_area",
+                                                  "made_payment", "business_name",
+                                                  "business_area", "business_category",
+                                                  "business_sub_category")]
+  
+  # Group features by category (excluding _na for UI)
+  values$feature_columns <- group_feature_columns(feature_cols)
+  values$structure_columns <- get_structure_type_columns(feature_cols)
+  
+  # Store all feature columns (including _na) for calculations
+  values$all_feature_columns <- get_all_feature_columns(all_columns)
+  values$all_structure_columns <- get_all_structure_columns(feature_cols)
+  
+  # Separate commercial and institutional types (excluding _na for UI)
+  values$commercial_type_columns <- feature_cols[grepl("^commercial_type_", feature_cols) & !grepl("(_na|_NA)$", feature_cols)]
+  values$institutional_type_columns <- feature_cols[grepl("^institutional_type_", feature_cols) & !grepl("(_na|_NA)$", feature_cols)]
+  
+  values$ward_columns <- feature_cols[grepl("^ward_", feature_cols) & !grepl("(_na|_NA)$", feature_cols)]
+})
     
     # Calculate inflation-adjusted base values
     output$adjusted_base_existing <- renderText({
@@ -131,119 +135,151 @@ module2_server <- function(id, processed_data) {
       showNotification("Reset all scenarios to default values", type = "message")
     })
     
-    # Update the generate_feature_ui function to use defaults:
-    # Update the generate_feature_ui function to properly look up defaults:
-    generate_feature_ui <- function(scenario_suffix) {
-      renderUI({
-        req(values$feature_columns)
-        
-        # Get the config for this scenario
-        config <- switch(scenario_suffix,
-                         "existing" = values$existing_config,
-                         "scenario_a" = values$scenario_a_config,
-                         "scenario_b" = values$scenario_b_config
+# Modified generate_feature_ui function to handle hidden _na variables
+generate_feature_ui <- function(scenario_suffix) {
+  renderUI({
+    req(values$feature_columns)
+    
+    # Get the config for this scenario
+    config <- switch(scenario_suffix,
+                     "existing" = values$existing_config,
+                     "scenario_a" = values$scenario_a_config,
+                     "scenario_b" = values$scenario_b_config
+    )
+    
+    tagList(
+      # Structure Features
+      if (length(values$feature_columns$structure_features) > 0) {
+        box(
+          title = "Structure Features",
+          width = 12,
+          collapsible = TRUE,
+          collapsed = TRUE,
+          status = "info",
+          solidHeader = FALSE,
+          lapply(values$feature_columns$structure_features, function(feat) {
+            # Try to get value from config first, then from defaults
+            default_val <- config$feature_weights[[feat]]
+            if (is.null(default_val)) {
+              default_val <- values$defaults$feature_weights[[feat]]
+            }
+            if (is.null(default_val)) {
+              default_val <- 0
+            }
+            
+            fluidRow(
+              column(8, p(feat, style = "margin-top: 5px; font-size: 12px;")),
+              column(4,
+                     numericInput(ns(paste0("weight_", feat, "_", scenario_suffix)),
+                                  label = NULL,
+                                  value = default_val,
+                                  step = 1,
+                                  width = "100%")
+              )
+            )
+          })
         )
-        
-        tagList(
-          # Structure Features
-          if (length(values$feature_columns$structure_features) > 0) {
-            box(
-              title = "Structure Features",
-              width = 12,
-              collapsible = TRUE,
-              collapsed = TRUE,
-              status = "info",
-              solidHeader = FALSE,
-              lapply(values$feature_columns$structure_features, function(feat) {
-                # Try to get value from config first, then from defaults
-                default_val <- config$feature_weights[[feat]]
-                if (is.null(default_val)) {
-                  default_val <- values$defaults$feature_weights[[feat]]
-                }
-                if (is.null(default_val)) {
-                  default_val <- 0
-                }
-                
-                fluidRow(
-                  column(8, p(feat, style = "margin-top: 5px; font-size: 12px;")),
-                  column(4,
-                         numericInput(ns(paste0("weight_", feat, "_", scenario_suffix)),
-                                      label = NULL,
-                                      value = default_val,
-                                      step = 1,
-                                      width = "100%")
-                  )
-                )
-              })
+      },
+      
+      # Utility Features
+      if (length(values$feature_columns$utility_features) > 0) {
+        box(
+          title = "Utility Features",
+          width = 12,
+          collapsible = TRUE,
+          collapsed = TRUE,
+          status = "info",
+          solidHeader = FALSE,
+          lapply(values$feature_columns$utility_features, function(feat) {
+            # Try to get value from config first, then from defaults
+            default_val <- config$feature_weights[[feat]]
+            if (is.null(default_val)) {
+              default_val <- values$defaults$feature_weights[[feat]]
+            }
+            if (is.null(default_val)) {
+              default_val <- 0
+            }
+            
+            fluidRow(
+              column(8, p(feat, style = "margin-top: 5px; font-size: 12px;")),
+              column(4,
+                     numericInput(ns(paste0("weight_", feat, "_", scenario_suffix)),
+                                  label = NULL,
+                                  value = default_val,
+                                  step = 1,
+                                  width = "100%")
+              )
             )
-          },
-          
-          # Utility Features
-          if (length(values$feature_columns$utility_features) > 0) {
-            box(
-              title = "Utility Features",
-              width = 12,
-              collapsible = TRUE,
-              collapsed = TRUE,
-              status = "info",
-              solidHeader = FALSE,
-              lapply(values$feature_columns$utility_features, function(feat) {
-                # Try to get value from config first, then from defaults
-                default_val <- config$feature_weights[[feat]]
-                if (is.null(default_val)) {
-                  default_val <- values$defaults$feature_weights[[feat]]
-                }
-                if (is.null(default_val)) {
-                  default_val <- 0
-                }
-                
-                fluidRow(
-                  column(8, p(feat, style = "margin-top: 5px; font-size: 12px;")),
-                  column(4,
-                         numericInput(ns(paste0("weight_", feat, "_", scenario_suffix)),
-                                      label = NULL,
-                                      value = default_val,
-                                      step = 1,
-                                      width = "100%")
-                  )
-                )
-              })
+          })
+        )
+      },
+      
+      # Location Features  
+      if (length(values$feature_columns$location_features) > 0) {
+        box(
+          title = "Location Features",
+          width = 12,
+          collapsible = TRUE,
+          collapsed = TRUE,
+          status = "info",
+          solidHeader = FALSE,
+          lapply(values$feature_columns$location_features, function(feat) {
+            # Try to get value from config first, then from defaults
+            default_val <- config$feature_weights[[feat]]
+            if (is.null(default_val)) {
+              default_val <- values$defaults$feature_weights[[feat]]
+            }
+            if (is.null(default_val)) {
+              default_val <- 0
+            }
+            
+            fluidRow(
+              column(8, p(feat, style = "margin-top: 5px; font-size: 12px;")),
+              column(4,
+                     numericInput(ns(paste0("weight_", feat, "_", scenario_suffix)),
+                                  label = NULL,
+                                  value = default_val,
+                                  step = 1,
+                                  width = "100%")
+              )
             )
-          },
-          
-          # Location Features
-          if (length(values$feature_columns$location_features) > 0) {
-            box(
-              title = "Location Features",
-              width = 12,
-              collapsible = TRUE,
-              collapsed = TRUE,
-              status = "info",
-              solidHeader = FALSE,
-              lapply(values$feature_columns$location_features, function(feat) {
-                # Try to get value from config first, then from defaults
-                default_val <- config$feature_weights[[feat]]
-                if (is.null(default_val)) {
-                  default_val <- values$defaults$feature_weights[[feat]]
-                }
-                if (is.null(default_val)) {
-                  default_val <- 0
-                }
-                
-                fluidRow(
-                  column(8, p(feat, style = "margin-top: 5px; font-size: 12px;")),
-                  column(4,
-                         numericInput(ns(paste0("weight_", feat, "_", scenario_suffix)),
-                                      label = NULL,
-                                      value = default_val,
-                                      step = 1,
-                                      width = "100%")
-                  )
-                )
-              })
+          })
+        )
+      },
+      
+      # Location Zones
+      if (length(values$feature_columns$location_zones) > 0) {
+        box(
+          title = "Location Zones",
+          width = 12,
+          collapsible = TRUE,
+          collapsed = TRUE,
+          status = "info",
+          solidHeader = FALSE,
+          lapply(values$feature_columns$location_zones, function(feat) {
+            # Try to get value from config first, then from defaults
+            default_val <- config$feature_weights[[feat]]
+            if (is.null(default_val)) {
+              default_val <- values$defaults$feature_weights[[feat]]
+            }
+            if (is.null(default_val)) {
+              default_val <- 0
+            }
+            
+            fluidRow(
+              column(8, p(feat, style = "margin-top: 5px; font-size: 12px;")),
+              column(4,
+                     numericInput(ns(paste0("weight_", feat, "_", scenario_suffix)),
+                                  label = NULL,
+                                  value = default_val,
+                                  step = 1,
+                                  width = "100%")
+              )
             )
-          },
-          
+          })
+        )
+      },     
+         
           # Property Characteristics
           if (length(values$feature_columns$property_characteristics) > 0) {
             box(
@@ -277,39 +313,6 @@ module2_server <- function(id, processed_data) {
             )
           },
           
-          # Location Zones Features
-          if (length(values$feature_columns$location_zones) > 0) {
-            box(
-              title = "Location Zones",
-              width = 12,
-              collapsible = TRUE,
-              collapsed = TRUE,
-              status = "info",
-              solidHeader = FALSE,
-              lapply(values$feature_columns$location_zones, function(feat) {
-                # Try to get value from config first, then from defaults
-                default_val <- config$feature_weights[[feat]]
-                if (is.null(default_val)) {
-                  default_val <- values$defaults$feature_weights[[feat]]
-                }
-                if (is.null(default_val)) {
-                  default_val <- 0
-                }
-                
-                fluidRow(
-                  column(8, p(feat, style = "margin-top: 5px; font-size: 12px;")),
-                  column(4,
-                         numericInput(ns(paste0("weight_", feat, "_", scenario_suffix)),
-                                      label = NULL,
-                                      value = default_val,
-                                      step = 1,
-                                      width = "100%")
-                  )
-                )
-              })
-            )
-          },
-
           # Ward Features
           if (length(values$ward_columns) > 0) {
             box(
@@ -473,18 +476,20 @@ module2_server <- function(id, processed_data) {
         incProgress(0.3, detail = "Calculating feature weights...")
         
         # Calculate product of all feature weights for each row
-        all_features <- c(values$feature_columns$structure_features,
-                          values$feature_columns$utility_features,
-                          values$feature_columns$location_features,
-                          values$feature_columns$location_zones,
-                          values$feature_columns$property_characteristics,
-                          values$ward_columns)
+        # Use all feature columns including _na variables for calculations
+        all_features <- values$all_feature_columns
         
         product_weights <- rep(1, n_rows)
         
         for (feat in all_features) {
           input_id <- paste0("weight_", feat, "_", scenario)
-          weight <- input[[input_id]]
+          
+          # Set weight to 0 for _na variables (they won't have inputs since they're hidden)
+          if (grepl("(_na|_NA)$", feat)) {
+            weight <- 0
+          } else {
+            weight <- input[[input_id]]
+          }
           
           if (!is.null(weight) && feat %in% names(preview_data)) {
             # Apply weight where feature = 1
@@ -504,72 +509,7 @@ module2_server <- function(id, processed_data) {
         # Calculate structure type weights (find the single applicable type per property)
         structure_weights <- rep(0, n_rows)
         
-        all_structures <- c(values$commercial_type_columns,
-                            values$institutional_type_columns)
-        
-        # Debug
-        print(paste("Number of structure columns:", length(all_structures)))
-        
-        # ADD THE NEW DEBUGGING CODE HERE:
-        print("=== DEBUGGING STRUCTURE COLUMNS ===")
-        print(paste("Looking for structure columns in:", length(all_structures), "expected columns"))
-        
-        # Check what columns are actually in preview_data
-        all_cols <- names(preview_data)
-        print(paste("Total columns in preview_data:", length(all_cols)))
-        
-        # Look for any columns with 'commercial' or 'institutional' in the name
-        commercial_cols_in_data <- all_cols[grepl("commercial", all_cols, ignore.case = TRUE)]
-        institutional_cols_in_data <- all_cols[grepl("institutional", all_cols, ignore.case = TRUE)]
-        
-        print(paste("Commercial columns found:", length(commercial_cols_in_data)))
-        if (length(commercial_cols_in_data) > 0) {
-          print(paste("  ", commercial_cols_in_data[1:min(5, length(commercial_cols_in_data))]))
-        }
-        
-        print(paste("Institutional columns found:", length(institutional_cols_in_data)))
-        if (length(institutional_cols_in_data) > 0) {
-          print(paste("  ", institutional_cols_in_data[1:min(5, length(institutional_cols_in_data))]))
-        }
-        
-        # Check if the expected structure columns exist
-        print("Checking expected vs actual columns:")
-        for (i in 1:min(5, length(all_structures))) {
-          struct <- all_structures[i]
-          exists_in_data <- struct %in% names(preview_data)
-          print(paste("  Expected:", struct, "- Found:", exists_in_data))
-        }
-        
-        # Also check property_type column
-        if ("property_type" %in% names(preview_data)) {
-          print("Property types in data:")
-          print(table(preview_data$property_type))
-        }
-        
-        print("=== END STRUCTURE DEBUGGING ===")        
-        
-        # Add this right after the "=== END STRUCTURE DEBUGGING ===" line and before creating the structure_matrix:
-        
-        print("=== CHECKING STRUCTURE COLUMN VALUES ===")
-        # Check a few structure columns to see what values they contain
-        for (i in 1:min(3, length(all_structures))) {
-          struct <- all_structures[i]
-          if (struct %in% names(preview_data)) {
-            col_values <- preview_data[[struct]]
-            print(paste("Column:", struct))
-            print(paste("  Unique values:", paste(unique(col_values), collapse=", ")))
-            print(paste("  Number of 1s:", sum(col_values == 1, na.rm = TRUE)))
-            print(paste("  Number of 0s:", sum(col_values == 0, na.rm = TRUE)))
-            print(paste("  Number of NAs:", sum(is.na(col_values))))
-            print(paste("  First 10 values:", paste(col_values[1:10], collapse=", ")))
-          }
-        }
-        print("=== END STRUCTURE VALUE CHECK ===")
-        
-        # Debug: Check if we have any non-zero weights
-        print(paste("Non-zero structure weights:", sum(structure_weights != 0)))
-        print(paste("First 10 structure weights:", paste(structure_weights[1:10], collapse=", ")))
-        
+        all_structures <- values$all_structure_columns  # This includes _na variables
         
         # Create a matrix of structure type indicators
         structure_matrix <- matrix(0, nrow = n_rows, ncol = length(all_structures))
@@ -584,34 +524,26 @@ module2_server <- function(id, processed_data) {
             # Convert to 1 where value is 1, 0 everywhere else (including NAs)
             structure_matrix[, j] <- ifelse(!is.na(col_values) & col_values == 1, 1, 0)
             
-            # Get the weight
-            input_id <- paste0("weight_", struct, "_", scenario)
-            weight <- input[[input_id]]
-            
-            if (is.null(weight)) {
-              weight <- values$defaults$structure_weights[[struct]]
-              if (is.null(weight)) weight <- 0
+            # Get the weight, setting to 0 for _na variables
+            if (grepl("(_na|_NA)$", struct)) {
+              weight <- 0
+            } else {
+              input_id <- paste0("weight_", struct, "_", scenario)
+              weight <- input[[input_id]]
+              
+              if (is.null(weight)) {
+                weight <- values$defaults$structure_weights[[struct]]
+                if (is.null(weight)) weight <- 0
+              }
             }
             
             weight_vector[j] <- weight
-            
-            # Debug print
-            if (sum(structure_matrix[, j]) > 0) {
-              print(paste("Structure", struct, "applies to", sum(structure_matrix[, j]), "properties with weight", weight))
-            }
           }
         }
         
-        # Each row should have at most one structure type
-        # Multiply the structure matrix by the weight vector to get the weight for each row
+        # Calculate structure weights
         structure_weights <- structure_matrix %*% weight_vector
-        
-        # Convert to vector
         structure_weights <- as.vector(structure_weights)
-        
-        # NOW do the debug output AFTER calculation
-        print(paste("Non-zero structure weights:", sum(structure_weights != 0)))
-        print(paste("First 10 structure weights:", paste(structure_weights[1:10], collapse=", ")))
         
         # Apply structure type weights as multipliers
         structure_multipliers <- (structure_weights/100 + 1)
@@ -759,29 +691,52 @@ module2_server <- function(id, processed_data) {
           structure_weights = list()
         )
         
-        # Collect product of all feature weights for each row
+        # Collect all feature weights (including _na variables set to 0)
         all_features <- c(values$feature_columns$structure_features,
                           values$feature_columns$utility_features,
                           values$feature_columns$location_features,
-                          values$feature_columns$location_zones,
                           values$feature_columns$property_characteristics,
                           values$ward_columns)
         
+        # Add _na variables to the complete list
+        if (!is.null(values$all_feature_columns)) {
+          na_features <- values$all_feature_columns[grepl("(_na|_NA)$", values$all_feature_columns)]
+          all_features <- c(all_features, na_features)
+          all_features <- unique(all_features)
+        }
+        
         for (feat in all_features) {
-          input_id <- paste0("weight_", feat, "_", scenario)
-          if (!is.null(input[[input_id]])) {
-            config$feature_weights[[feat]] <- input[[input_id]]
+          if (grepl("(_na|_NA)$", feat)) {
+            # Set _na variables to weight 0
+            config$feature_weights[[feat]] <- 0
+          } else {
+            input_id <- paste0("weight_", feat, "_", scenario)
+            if (!is.null(input[[input_id]])) {
+              config$feature_weights[[feat]] <- input[[input_id]]
+            }
           }
         }
         
-        # Collect structure type weights
+        # Collect structure type weights (including _na variables set to 0)
         all_structures <- c(values$commercial_type_columns,
                             values$institutional_type_columns)
         
+        # Add _na structure variables
+        if (!is.null(values$all_structure_columns)) {
+          na_structures <- values$all_structure_columns[grepl("(_na|_NA)$", values$all_structure_columns)]
+          all_structures <- c(all_structures, na_structures)
+          all_structures <- unique(all_structures)
+        }
+        
         for (struct in all_structures) {
-          input_id <- paste0("weight_", struct, "_", scenario)
-          if (!is.null(input[[input_id]])) {
-            config$structure_weights[[struct]] <- input[[input_id]]
+          if (grepl("(_na|_NA)$", struct)) {
+            # Set _na variables to weight 0
+            config$structure_weights[[struct]] <- 0
+          } else {
+            input_id <- paste0("weight_", struct, "_", scenario)
+            if (!is.null(input[[input_id]])) {
+              config$structure_weights[[struct]] <- input[[input_id]]
+            }
           }
         }
         
