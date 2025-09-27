@@ -172,21 +172,30 @@ group_feature_columns <- function(column_names) {
   structure_features <- c("wall_material", "wall_condition", "roof_material", 
                           "roof_condition", "window_material", "has_veranda")
   
-  utility_features <- c("has_water", "drainage", "aid_conditioning", 
+  utility_features <- c("has_water", "drainage", "air_conditioning",
                         "has_security", "has_pool", "has_outbuilding")
   
   location_features <- c("street_access", "street_quality", "street_lanes", 
-                         "tourist_area", "environmental_hazard", 
-                         "main_road_high_visibility", "informal_settlement", 
-                         "commercial_corridor")
+                         "tourist_area", "old_tourist_area", 
+                         "environmental_hazard", "old_environmental_hazard",
+                         "main_road_high_visibility", 
+                         "informal_settlement", "old_informal_settlement",
+                         "commercial_corridor", "old_commercial_corridor")
   
-  property_characteristics <- c("potential_to_build", "domestic_use_of_groundfloor")
+  location_zones <- c("aberdeen_lumley_tourist", "juba_levuma_tourist",
+                     "buffered_commercial_corridors", "cbd", "dock_industrial",
+                     "kissy_industrial_area", "kissy_texaco_terminal_area",
+                     "wellington_industrial_estate", "hazardous_zones",
+                     "informal_settlements")
+  
+  property_characteristics <- c("potential_to_build", "domestic_use_groundfloor")
   
   # Get actual column names for each category
   grouped <- list(
     structure_features = column_names[grepl(paste0("^(", paste(structure_features, collapse = "|"), ")_"), column_names)],
     utility_features = column_names[grepl(paste0("^(", paste(utility_features, collapse = "|"), ")_"), column_names)],
     location_features = column_names[grepl(paste0("^(", paste(location_features, collapse = "|"), ")_"), column_names)],
+    location_zones = column_names[grepl(paste0("^(", paste(location_zones, collapse = "|"), ")_"), column_names)],
     property_characteristics = column_names[grepl(paste0("^(", paste(property_characteristics, collapse = "|"), ")_"), column_names)],
     ward_features = column_names[grepl("^ward_", column_names)]
   )

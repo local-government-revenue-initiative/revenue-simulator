@@ -62,17 +62,7 @@ module1_server <- function(id) {
     output$property_mapping_ui <- renderUI({
       req(values$property_data)
       
-      property_columns <- c("id_property", "coordinate_lat", "coordinate_lng", 
-                            "property_area", "property_type", "commercial_type",
-                            "institutional_type", "street_access", "drainage",
-                            "potential_to_build", "wall_material", "wall_condition",
-                            "has_veranda", "roof_material", "roof_condition",
-                            "window_material", "aid_conditioning", "has_security",
-                            "has_pool", "has_outbuilding", "street_quality",
-                            "domestic_use_of_groundfloor", "street_lanes",
-                            "tourist_area", "environmental_hazard",
-                            "main_road_high_visibility", "informal_settlement",
-                            "commercial_corridor", "has_water", "ward")  # Added ward here
+
       
       suggestions <- suggest_column_mapping(values$property_data, property_columns)
       
@@ -94,6 +84,27 @@ module1_server <- function(id) {
       )
     })
     
+      property_columns <- c("id_property", "coordinate_lat", "coordinate_lng", 
+                            "property_area", "property_type", "commercial_type",
+                            "institutional_type", "street_access", "drainage",
+                            "potential_to_build", "wall_material", "wall_condition",
+                            "has_veranda", "roof_material", "roof_condition",
+                            "window_material", "air_conditioning", "has_security",
+                            "has_pool", "has_outbuilding", "street_quality",
+                            "domestic_use_groundfloor", "street_lanes",
+                            "main_road_high_visibility", 
+                            # Old prefixed columns
+                            "old_tourist_area", "old_environmental_hazard",
+                            "old_informal_settlement", "old_commercial_corridor",
+                            # New location features  
+                            "aberdeen_lumley_tourist", "juba_levuma_tourist",
+                            "buffered_commercial_corridors", "cbd", "dock_industrial",
+                            "kissy_industrial_area", "kissy_texaco_terminal_area",
+                            "wellington_industrial_estate", "hazardous_zones",
+                            "informal_settlements",
+                            # Ward columns
+                            "ward_number", "ward_rank")
+
     output$payment_mapping_ui <- renderUI({
       req(values$payment_data)
       
@@ -144,27 +155,25 @@ module1_server <- function(id) {
     observeEvent(input$validate_property, {
       # Collect mappings
       property_columns <- c("id_property", "coordinate_lat", "coordinate_lng", 
-                                  "property_area", "property_type", "commercial_type",
-                                  "institutional_type", "street_access", "drainage",
-                                  "potential_to_build", "wall_material", "wall_condition",
-                                  "has_veranda", "roof_material", "roof_condition",
-                                  "window_material", "air_conditioning", "aid_conditioning",
-                                  "has_security", "has_pool", "has_outbuilding", "street_quality",
-                                  "domestic_use_of_groundfloor", "domestic_use_groundfloor",
-                                  "street_lanes", "tourist_area", "environmental_hazard",
-                                  "main_road_high_visibility", "informal_settlement",
-                                  "commercial_corridor", "has_water",
-                                  # Old prefixed columns
-                                  "old_tourist_area", "old_environmental_hazard",
-                                  "old_informal_settlement", "old_commercial_corridor",
-                                  # New location features  
-                                  "aberdeen_lumley_tourist", "juba_levuma_tourist",
-                                  "buffered_commercial_corridors", "cbd", "dock_industrial",
-                                  "kissy_industrial_area", "kissy_texaco_terminal_area",
-                                  "wellington_industrial_estate", "hazardous_zones",
-                                  "informal_settlements",
-                                  # Ward columns
-                                  "ward", "ward_number", "ward_rank")
+                            "property_area", "property_type", "commercial_type",
+                            "institutional_type", "street_access", "drainage",
+                            "potential_to_build", "wall_material", "wall_condition",
+                            "has_veranda", "roof_material", "roof_condition",
+                            "window_material", "air_conditioning", "has_security",
+                            "has_pool", "has_outbuilding", "street_quality",
+                            "domestic_use_groundfloor", "street_lanes",
+                            "main_road_high_visibility", "has_water",
+                            # Old prefixed columns
+                            "old_tourist_area", "old_environmental_hazard",
+                            "old_informal_settlement", "old_commercial_corridor",
+                            # New location features  
+                            "aberdeen_lumley_tourist", "juba_levuma_tourist",
+                            "buffered_commercial_corridors", "cbd", "dock_industrial",
+                            "kissy_industrial_area", "kissy_texaco_terminal_area",
+                            "wellington_industrial_estate", "hazardous_zones",
+                            "informal_settlements",
+                            # Ward columns
+                            "ward_number", "ward_rank")
       
       mapping <- list()
       for (col in property_columns) {
@@ -469,4 +478,3 @@ module1_server <- function(id) {
     }))
   })
 }
-

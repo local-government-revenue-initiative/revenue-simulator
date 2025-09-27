@@ -476,6 +476,7 @@ module2_server <- function(id, processed_data) {
         all_features <- c(values$feature_columns$structure_features,
                           values$feature_columns$utility_features,
                           values$feature_columns$location_features,
+                          values$feature_columns$location_zones,
                           values$feature_columns$property_characteristics,
                           values$ward_columns)
         
@@ -758,10 +759,11 @@ module2_server <- function(id, processed_data) {
           structure_weights = list()
         )
         
-        # Collect all feature weights
+        # Collect product of all feature weights for each row
         all_features <- c(values$feature_columns$structure_features,
                           values$feature_columns$utility_features,
                           values$feature_columns$location_features,
+                          values$feature_columns$location_zones,
                           values$feature_columns$property_characteristics,
                           values$ward_columns)
         
