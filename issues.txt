@@ -4,3 +4,7 @@ Add download button for processed data
 
 # Module 2
 Could try to recategorize variables
+
+# Module 3
+After we get the business subtypes from baloosoft, set default values
+I could see if the pre sept 27 code was actually better

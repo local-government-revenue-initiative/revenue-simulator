@@ -7,9 +7,9 @@ get_default_tax_config <- function() {
     property_tax = list(
       # Global band definitions
       bands = list(
-        band1 = list(min = 0, max = 350),
-        band2 = list(min = 350, max = 700),
-        band3 = list(min = 700, max = Inf)
+        band1 = list(min = 0, max = 0),
+        band2 = list(min = 0, max = 0),
+        band3 = list(min = 0, max = Inf)
       ),
       # Tax rates by property type
       domestic = list(
@@ -178,9 +178,9 @@ get_default_tax_config <- function() {
       # Default fallback configuration
       default_subcategory = list(
         calculation_method = "minimum_rate",
-        minimum = 350,        
-        rate = 0.05,          
-        flat_amount = 350
+        minimum = 0,        
+        rate = 0.00,          
+        flat_amount = 0
       )
     )
   )
@@ -237,37 +237,37 @@ calculate_business_license <- function(business_value, business_area, business_s
     subcat_config <- list(
       calculation_method = "minimum_rate",
       minimum = 350,
-      rate = 0.05
+      rate = 0.035
     )
   }
   
   if (subcat_config$calculation_method == "minimum_rate") {
-    # Traditional calculation: max of (value * rate) or minimum
+    # Method 1: Traditional calculation
     tax_amount <- max(business_value * subcat_config$rate, subcat_config$minimum)
     
-  } else if (subcat_config$calculation_method == "flat") {
-    # Flat amount
-    tax_amount <- subcat_config$flat_amount
+  } else if (subcat_config$calculation_method == "flat_value_bands") {
+    # Method 2: Flat amount based on business value bands
+    tax_amount <- subcat_config$value_bands$band3$tax  # Default to highest band
     
-  } else if (subcat_config$calculation_method == "slots") {
-    # Logic slots calculation
-    slot_basis_value <- if (subcat_config$slot_basis == "area") business_area else business_value
-    
-    # Find which slot applies
-    slot_num <- 3  # Default to highest slot
-    for (s in 1:3) {
-      slot <- subcat_config$slots[[paste0("slot", s)]]
-      if (slot_basis_value >= slot$min && slot_basis_value < slot$max) {
-        slot_num <- s
-        break
-      }
+    if (business_value <= subcat_config$value_bands$band1$max) {
+      tax_amount <- subcat_config$value_bands$band1$tax
+    } else if (business_value <= subcat_config$value_bands$band2$max) {
+      tax_amount <- subcat_config$value_bands$band2$tax
     }
     
-    slot_config <- subcat_config$slots[[paste0("slot", slot_num)]]
-    tax_amount <- max(slot_basis_value * slot_config$rate, slot_config$minimum)
+  } else if (subcat_config$calculation_method == "flat_area_bands") {
+    # Method 3: Flat amount based on business area bands
+    tax_amount <- subcat_config$area_bands$band3$tax  # Default to highest band
+    
+    if (business_area <= subcat_config$area_bands$band1$max) {
+      tax_amount <- subcat_config$area_bands$band1$tax
+    } else if (business_area <= subcat_config$area_bands$band2$max) {
+      tax_amount <- subcat_config$area_bands$band2$tax
+    }
+    
   } else {
     # Default fallback
-    tax_amount <- max(business_value * 0.05, 350)
+    tax_amount <- max(business_value * 0.035, 350)
   }
   
   return(list(
@@ -443,77 +443,147 @@ create_business_license_scenario_column <- function(ns, scenario_name, scenario_
   )
 }
 
-# Helper function to create individual business subcategory UI
+# Add this function to R/module3_functions.R
+get_subcategory_defaults <- function(subcategory) {
+  # Get the default configuration
+  defaults <- get_default_tax_config()
+  
+  # Check if this subcategory has specific Portfolio configuration
+  portfolio_subcats <- defaults$business_license$categories$Portfolio$subcategories
+  
+  if (subcategory %in% names(portfolio_subcats)) {
+    # Portfolio subcategory with flat amount
+    subcat_config <- portfolio_subcats[[subcategory]]
+    return(list(
+      minimum = subcat_config$flat_amount,
+      rate = 0, # Portfolio items typically don't use rates
+      flat_amount = subcat_config$flat_amount,
+      calculation_method = subcat_config$calculation_method
+    ))
+  }
+  
+  # Check if this subcategory matches a category pattern
+  for (category_name in names(defaults$business_license$categories)) {
+    if (category_name == "Portfolio") next # Already handled above
+    
+    category_config <- defaults$business_license$categories[[category_name]]
+    
+    # Simple pattern matching - you can make this more sophisticated
+    if (grepl(tolower(gsub(" ", "", category_name)), tolower(gsub(" ", "", subcategory)), fixed = TRUE)) {
+      return(list(
+        minimum = category_config$minimum,
+        rate = category_config$rate * 100, # Convert to percentage for display
+        flat_amount = category_config$minimum,
+        calculation_method = category_config$calculation_method
+      ))
+    }
+  }
+  
+  # Use default fallback
+  default_config <- defaults$business_license$default_subcategory
+  return(list(
+    minimum = default_config$minimum,
+    rate = default_config$rate * 100, # Convert to percentage for display
+    flat_amount = default_config$flat_amount,
+    calculation_method = default_config$calculation_method
+  ))
+}
+
+# Replace the existing create_business_subcategory_ui function
 create_business_subcategory_ui <- function(ns, subcategory, scenario_suffix) {
   subcategory_safe <- gsub("[^A-Za-z0-9_]", "_", subcategory)
   
+  # Get subcategory-specific defaults
+  defaults <- get_subcategory_defaults(subcategory)
+  
   wellPanel(
-    h6(subcategory, style = "font-weight: bold;"),
+    style = "margin-bottom: 10px;",
+    h6(subcategory, style = "font-weight: bold; color: #337ab7;"),
     
-    # Tax method selection
+    # Tax calculation method selection
     selectInput(ns(paste0("bus_subcat_", subcategory_safe, "_method_", scenario_suffix)),
-                "Tax Method:",
-                choices = c("Minimum + Rate" = "min_rate",
-                           "Flat Tax" = "flat"),
+                "Tax Calculation Method:",
+                choices = c(
+                  "Tax from minimum and rate" = "min_rate",
+                  "Flat amount from business value calculation" = "flat_value", 
+                  "Flat amount from business area" = "flat_area"
+                ),
                 selected = "min_rate"),
     
-    # Conditional panels for different tax methods
+    # Method 1: Minimum + Rate configuration
     conditionalPanel(
       condition = paste0("input['", ns(paste0("bus_subcat_", subcategory_safe, "_method_", scenario_suffix)), "'] == 'min_rate'"),
-      
-      # Use logic slots option
-      checkboxInput(ns(paste0("bus_subcat_", subcategory_safe, "_use_slots_", scenario_suffix)),
-                    "Use value/area-based logic slots",
-                    value = FALSE),
-      
-      # Simple min + rate configuration
-      conditionalPanel(
-        condition = paste0("!input['", ns(paste0("bus_subcat_", subcategory_safe, "_use_slots_", scenario_suffix)), "']"),
-        fluidRow(
-          column(6,
-                 numericInput(ns(paste0("bus_subcat_", subcategory_safe, "_min_", scenario_suffix)),
-                             "Minimum Tax:",
-                             value = get_default_business_min(subcategory),
-                             min = 0)),
-          column(6,
-                 numericInput(ns(paste0("bus_subcat_", subcategory_safe, "_rate_", scenario_suffix)),
-                             "Rate (%):",
-                             value = get_default_business_rate(subcategory),
-                             min = 0,
-                             step = 0.1))
-        )
-      ),
-      
-      # Logic slots configuration
-      conditionalPanel(
-        condition = paste0("input['", ns(paste0("bus_subcat_", subcategory_safe, "_use_slots_", scenario_suffix)), "']"),
-        
-        # Slot basis selection
-        radioButtons(ns(paste0("bus_subcat_", subcategory_safe, "_slot_basis_", scenario_suffix)),
-                     "Base slots on:",
-                     choices = c("Business Value" = "value", "Business Area" = "area"),
-                     selected = "value",
-                     inline = TRUE),
-        
-        # Slot ranges
-        h6("Logic Slot Ranges:"),
-        create_business_slot_ranges_ui(ns, subcategory_safe, scenario_suffix),
-        
-        hr(),
-        
-        # Tax configuration per slot
-        h6("Tax Configuration per Slot:"),
-        create_business_slot_tax_config_ui(ns, subcategory_safe, scenario_suffix)
+      fluidRow(
+        column(6,
+               numericInput(ns(paste0("bus_subcat_", subcategory_safe, "_min_", scenario_suffix)),
+                           "Minimum Tax:",
+                           value = defaults$minimum,  # Use subcategory-specific default
+                           min = 0)),
+        column(6,
+               numericInput(ns(paste0("bus_subcat_", subcategory_safe, "_rate_", scenario_suffix)),
+                           "Rate (%):",
+                           value = defaults$rate,     # Use subcategory-specific default
+                           min = 0,
+                           step = 0.1))
       )
     ),
     
-    # Flat tax configuration
+    # Method 2: Flat amount from business value (with up to 3 value bands)
     conditionalPanel(
-      condition = paste0("input['", ns(paste0("bus_subcat_", subcategory_safe, "_method_", scenario_suffix)), "'] == 'flat'"),
-      numericInput(ns(paste0("bus_subcat_", subcategory_safe, "_flat_", scenario_suffix)),
-                   "Flat Tax Amount:",
-                   value = get_default_business_flat(subcategory),
-                   min = 0)
+      condition = paste0("input['", ns(paste0("bus_subcat_", subcategory_safe, "_method_", scenario_suffix)), "'] == 'flat_value'"),
+      h6("Value-Based Flat Tax (up to 3 bands):"),
+      # Band 1
+      fluidRow(
+        column(4, p("Band 1:", style = "font-weight: bold;")),
+        column(4, numericInput(ns(paste0("bus_subcat_", subcategory_safe, "_value_band1_max_", scenario_suffix)), 
+                              "Max Value:", value = 100000, min = 0)),
+        column(4, numericInput(ns(paste0("bus_subcat_", subcategory_safe, "_value_band1_tax_", scenario_suffix)), 
+                              "Flat Tax:", value = 500, min = 0))
+      ),
+      # Band 2
+      fluidRow(
+        column(4, p("Band 2:", style = "font-weight: bold;")),
+        column(4, numericInput(ns(paste0("bus_subcat_", subcategory_safe, "_value_band2_max_", scenario_suffix)), 
+                              "Max Value:", value = 500000, min = 0)),
+        column(4, numericInput(ns(paste0("bus_subcat_", subcategory_safe, "_value_band2_tax_", scenario_suffix)), 
+                              "Flat Tax:", value = 1500, min = 0))
+      ),
+      # Band 3
+      fluidRow(
+        column(4, p("Band 3 (above):", style = "font-weight: bold;")),
+        column(4, p("No limit", style = "padding-top: 25px;")),
+        column(4, numericInput(ns(paste0("bus_subcat_", subcategory_safe, "_value_band3_tax_", scenario_suffix)), 
+                              "Flat Tax:", value = 3000, min = 0))
+      )
+    ),
+    
+    # Method 3: Flat amount from business area (with up to 3 area bands)
+    conditionalPanel(
+      condition = paste0("input['", ns(paste0("bus_subcat_", subcategory_safe, "_method_", scenario_suffix)), "'] == 'flat_area'"),
+      h6("Area-Based Flat Tax (up to 3 bands):"),
+      # Band 1
+      fluidRow(
+        column(4, p("Band 1:", style = "font-weight: bold;")),
+        column(4, numericInput(ns(paste0("bus_subcat_", subcategory_safe, "_area_band1_max_", scenario_suffix)), 
+                              "Max Area:", value = 100, min = 0)),
+        column(4, numericInput(ns(paste0("bus_subcat_", subcategory_safe, "_area_band1_tax_", scenario_suffix)), 
+                              "Flat Tax:", value = 300, min = 0))
+      ),
+      # Band 2
+      fluidRow(
+        column(4, p("Band 2:", style = "font-weight: bold;")),
+        column(4, numericInput(ns(paste0("bus_subcat_", subcategory_safe, "_area_band2_max_", scenario_suffix)), 
+                              "Max Area:", value = 500, min = 0)),
+        column(4, numericInput(ns(paste0("bus_subcat_", subcategory_safe, "_area_band2_tax_", scenario_suffix)), 
+                              "Flat Tax:", value = 800, min = 0))
+      ),
+      # Band 3
+      fluidRow(
+        column(4, p("Band 3 (above):", style = "font-weight: bold;")),
+        column(4, p("No limit", style = "padding-top: 25px;")),
+        column(4, numericInput(ns(paste0("bus_subcat_", subcategory_safe, "_area_band3_tax_", scenario_suffix)), 
+                              "Flat Tax:", value = 1200, min = 0))
+      )
     )
   )
 }
@@ -625,12 +695,35 @@ get_business_slot_defaults <- function(subcategory_safe) {
   )
 }
 
-# Helper function to get business subcategories (you may need to adjust this based on your data)
+# Updated function to get business subcategories from actual data
 get_business_subcategories <- function() {
-  c("Communication services", 
-    "Consumer discretionary", 
-    "Consumer staples", 
-    "Energy", 
-    "Financials", 
-    "Materials Manufacturing/Industrials/Services")
+  # This will be populated by the server using actual data
+  # Return empty vector as fallback
+  return(c())
+}
+
+# New function to get business subcategories from processed data
+get_business_subcategories_from_data <- function(processed_data) {
+  if (is.null(processed_data) || !"business_sub_category" %in% names(processed_data)) {
+    return(c())
+  }
+  
+  # Get unique business subcategories from the actual data
+  subcategories <- unique(processed_data$business_sub_category[!is.na(processed_data$business_sub_category)])
+  
+  # Sort them for consistent display
+  return(sort(subcategories))
+}
+
+# Also get categories if they exist
+get_business_categories_from_data <- function(processed_data) {
+  if (is.null(processed_data) || !"business_category" %in% names(processed_data)) {
+    return(c())
+  }
+  
+  # Get unique business categories from the actual data
+  categories <- unique(processed_data$business_category[!is.na(processed_data$business_category)])
+  
+  # Sort them for consistent display
+  return(sort(categories))
 }

@@ -13,59 +13,58 @@ module3_server <- function(id, processed_data, property_configs) {
       preview_data = NULL
     )
     
-    # Get business categories and subcategories from data and config
-    observe({
-      tryCatch({
-        req(processed_data())
-        data <- processed_data()
-        
-        # Get the default configuration to show all categories and subcategories
-        default_config <- get_default_tax_config()
-        if (is.null(default_config) || is.null(default_config$business_license) || 
-            is.null(default_config$business_license$categories)) {
-          values$config_categories <- NULL
-          return()
-        }
-        
-        # Get categories from the default config
-        config_categories <- names(default_config$business_license$categories)
-        values$config_categories <- config_categories
-        
-        # Also get subcategories from data for backwards compatibility
-        if ("business_sub_category" %in% names(data)) {
-          data_subcategories <- unique(data$business_sub_category[!is.na(data$business_sub_category)])
-          values$business_subcategories <- sort(data_subcategories)
-        } else {
-          values$business_subcategories <- NULL
-        }
-      }, error = function(e) {
-        showNotification(paste("Error loading business categories:", e$message), type = "error")
-        values$config_categories <- NULL
-        values$business_subcategories <- NULL
-      })
-    })
+# Replace the existing observe block with this simpler version
+observe({
+  tryCatch({
+    req(processed_data())
+    data <- processed_data()
     
-    # CORRECTED: Single UI generation approach
-    generate_business_subcategories_ui <- function(scenario_suffix) {
-      renderUI({
-        tryCatch({
-          subcategories <- get_business_subcategories()
-          
-          if (length(subcategories) == 0) {
-            return(p("No business subcategories found."))
-          }
-          
-          category_configs <- lapply(subcategories, function(subcategory) {
-            create_business_subcategory_ui(ns, subcategory, scenario_suffix)
-          })
-          
-          do.call(tagList, category_configs)
-        }, error = function(e) {
-          showNotification(paste("Error generating business UI:", e$message), type = "error")
-          return(p("Error loading business categories"))
-        })
+    # Get business subcategories directly from the data
+    values$business_subcategories <- get_business_subcategories_from_data(data)
+    values$business_categories <- get_business_categories_from_data(data)
+    
+    cat("Found", length(values$business_subcategories), "business subcategories in data\n")
+    cat("Found", length(values$business_categories), "business categories in data\n")
+    
+  }, error = function(e) {
+    showNotification(paste("Error loading business data:", e$message), type = "error")
+    values$business_subcategories <- c()
+    values$business_categories <- c()
+  })
+})
+    
+# Simplified UI generation that uses actual data
+generate_business_subcategories_ui <- function(scenario_suffix) {
+  renderUI({
+    tryCatch({
+      # Use subcategories from actual data
+      subcategories <- values$business_subcategories
+      
+      if (is.null(subcategories) || length(subcategories) == 0) {
+        return(div(
+          p("No business subcategories found in the imported data.", 
+            style = "color: #666; font-style: italic;"),
+          p("Make sure your business data includes a 'business_sub_category' column with values.")
+        ))
+      }
+      
+      # Create UI for each subcategory found in the data
+      category_configs <- lapply(subcategories, function(subcategory) {
+        create_business_subcategory_ui(ns, subcategory, scenario_suffix)
       })
-    }
+      
+      do.call(tagList, c(
+        list(p(paste("Configuring", length(subcategories), "business subcategories found in your data:"), 
+               style = "font-weight: bold; margin-bottom: 15px;")),
+        category_configs
+      ))
+      
+    }, error = function(e) {
+      showNotification(paste("Error generating business UI:", e$message), type = "error")
+      return(p("Error loading business categories"))
+    })
+  })
+}
     
     # Generate business subcategory UIs for each scenario
     output$business_subcategories_existing <- generate_business_subcategories_ui("existing")
@@ -118,86 +117,36 @@ module3_server <- function(id, processed_data, property_configs) {
         }
         
         # CORRECTED: Copy business license settings using new structure
-        subcategories <- get_business_subcategories()
-        for (subcategory in subcategories) {
+        subcategories <- values$business_subcategories
+        # Copy business license settings - simplified approach
+        if (!is.null(values$business_subcategories)) {
+        for (subcategory in values$business_subcategories) {
           subcategory_safe <- gsub("[^A-Za-z0-9_]", "_", subcategory)
           
-          # Check if this is a Portfolio subcategory
-          default_config <- get_default_tax_config()
-          is_portfolio_subcat <- subcategory %in% names(default_config$business_license$categories$Portfolio$subcategories)
+          # Copy method selection
+          method_source <- paste0("bus_subcat_", subcategory_safe, "_method_existing")
+          method_target <- paste0("bus_subcat_", subcategory_safe, "_method_scenario_a") 
           
-          if (is_portfolio_subcat) {
-            # Copy flat amount only
-            flat_source <- paste0("bus_subcat_", subcategory_safe, "_flat_existing")
-            flat_target <- paste0("bus_subcat_", subcategory_safe, "_flat_scenario_a")
+          if (!is.null(input[[method_source]])) {
+            updateSelectInput(session, method_target, selected = input[[method_source]])
+          }
+          
+          # Copy all input types (they will be hidden/shown based on method selection)
+          input_suffixes <- c("_min_", "_rate_", 
+                              "_value_band1_max_", "_value_band1_tax_",
+                              "_value_band2_max_", "_value_band2_tax_", "_value_band3_tax_",
+                              "_area_band1_max_", "_area_band1_tax_",
+                              "_area_band2_max_", "_area_band2_tax_", "_area_band3_tax_")
+          
+          for (suffix in input_suffixes) {
+            source_id <- paste0("bus_subcat_", subcategory_safe, suffix, "existing")
+            target_id <- paste0("bus_subcat_", subcategory_safe, suffix, "scenario_a")
             
-            if (!is.null(input[[flat_source]])) {
-              updateNumericInput(session, flat_target, value = input[[flat_source]])
-            }
-          } else {
-            # Copy method selection
-            method_source <- paste0("bus_subcat_", subcategory_safe, "_method_existing")
-            method_target <- paste0("bus_subcat_", subcategory_safe, "_method_scenario_a")
-            
-            if (!is.null(input[[method_source]])) {
-              updateSelectInput(session, method_target, selected = input[[method_source]])
-            }
-            
-            # Copy use_slots checkbox
-            use_slots_source <- paste0("bus_subcat_", subcategory_safe, "_use_slots_existing")
-            use_slots_target <- paste0("bus_subcat_", subcategory_safe, "_use_slots_scenario_a")
-            
-            if (!is.null(input[[use_slots_source]])) {
-              updateCheckboxInput(session, use_slots_target, value = input[[use_slots_source]])
-            }
-            
-            # Copy minimum and rate
-            min_source <- paste0("bus_subcat_", subcategory_safe, "_min_existing")
-            rate_source <- paste0("bus_subcat_", subcategory_safe, "_rate_existing")
-            
-            if (!is.null(input[[min_source]])) {
-              updateNumericInput(session, paste0("bus_subcat_", subcategory_safe, "_min_scenario_a"), 
-                                value = input[[min_source]])
-            }
-            if (!is.null(input[[rate_source]])) {
-              updateNumericInput(session, paste0("bus_subcat_", subcategory_safe, "_rate_scenario_a"), 
-                                value = input[[rate_source]])
-            }
-            
-            # Copy flat amount
-            flat_source <- paste0("bus_subcat_", subcategory_safe, "_flat_existing")
-            flat_target <- paste0("bus_subcat_", subcategory_safe, "_flat_scenario_a")
-            
-            if (!is.null(input[[flat_source]])) {
-              updateNumericInput(session, flat_target, value = input[[flat_source]])
-            }
-            
-            # Copy slots configuration if slots are being used
-            if (!is.null(input[[use_slots_source]]) && input[[use_slots_source]]) {
-              # Copy slot basis
-              basis_source <- paste0("bus_subcat_", subcategory_safe, "_slot_basis_existing")
-              basis_target <- paste0("bus_subcat_", subcategory_safe, "_slot_basis_scenario_a")
-              
-              if (!is.null(input[[basis_source]])) {
-                updateRadioButtons(session, basis_target, selected = input[[basis_source]])
-              }
-              
-              # Copy all slot configurations
-              for (slot in 1:3) {
-                slot_inputs <- c("min", "max", "min_tax", "rate")
-                for (slot_input in slot_inputs) {
-                  if (slot == 3 && slot_input == "max") next  # Skip max for slot 3
-                  
-                  input_source <- paste0("bus_subcat_", subcategory_safe, "_slot", slot, "_", slot_input, "_existing")
-                  input_target <- paste0("bus_subcat_", subcategory_safe, "_slot", slot, "_", slot_input, "_scenario_a")
-                  
-                  if (!is.null(input[[input_source]])) {
-                    updateNumericInput(session, input_target, value = input[[input_source]])
-                  }
-                }
-              }
+            if (!is.null(input[[source_id]])) {
+              updateNumericInput(session, target_id, value = input[[source_id]])
             }
           }
+        }
         }
         
         showNotification("Copied Existing Scenario to Scenario A", type = "message")
@@ -208,8 +157,6 @@ module3_server <- function(id, processed_data, property_configs) {
 
     # Copy from existing to scenario B (similar corrections)
     observeEvent(input$copy_existing_to_b, {
-
-    })
       tryCatch({
         # Copy property tax settings
         for (prop_type in c("domestic", "commercial", "institutional")) {
@@ -253,98 +200,47 @@ module3_server <- function(id, processed_data, property_configs) {
         }
         
         # Copy business license settings using new structure
-        subcategories <- get_business_subcategories()
-        for (subcategory in subcategories) {
+        subcategories <- values$business_subcategories
+        # Copy business license settings using new structure
+        if (!is.null(values$business_subcategories)) {
+        # Copy all the new business license method inputs
+        for (subcategory in values$business_subcategories) {
           subcategory_safe <- gsub("[^A-Za-z0-9_]", "_", subcategory)
           
-          # Check if this is a Portfolio subcategory
-          default_config <- get_default_tax_config()
-          is_portfolio_subcat <- subcategory %in% names(default_config$business_license$categories$Portfolio$subcategories)
+          # Copy method selection
+          method_source <- paste0("bus_subcat_", subcategory_safe, "_method_existing")
+          method_target <- paste0("bus_subcat_", subcategory_safe, "_method_scenario_b")  # Adjust for target scenario
           
-          if (is_portfolio_subcat) {
-            # Copy flat amount only
-            flat_source <- paste0("bus_subcat_", subcategory_safe, "_flat_existing")
-            flat_target <- paste0("bus_subcat_", subcategory_safe, "_flat_scenario_b")
+          if (!is.null(input[[method_source]])) {
+            updateSelectInput(session, method_target, selected = input[[method_source]])
+          }
+          
+          # Copy all input types (they will be hidden/shown based on method selection)
+          input_suffixes <- c("_min_", "_rate_", 
+                              "_value_band1_max_", "_value_band1_tax_",
+                              "_value_band2_max_", "_value_band2_tax_", "_value_band3_tax_",
+                              "_area_band1_max_", "_area_band1_tax_",
+                              "_area_band2_max_", "_area_band2_tax_", "_area_band3_tax_")
+          
+          for (suffix in input_suffixes) {
+            source_id <- paste0("bus_subcat_", subcategory_safe, suffix, "existing")
+            target_id <- paste0("bus_subcat_", subcategory_safe, suffix, "scenario_b")  # Adjust for target scenario
             
-            if (!is.null(input[[flat_source]])) {
-              updateNumericInput(session, flat_target, value = input[[flat_source]])
-            }
-          } else {
-            # Copy method selection
-            method_source <- paste0("bus_subcat_", subcategory_safe, "_method_existing")
-            method_target <- paste0("bus_subcat_", subcategory_safe, "_method_scenario_b")
-            
-            if (!is.null(input[[method_source]])) {
-              updateSelectInput(session, method_target, selected = input[[method_source]])
-            }
-            
-            # Copy use_slots checkbox
-            use_slots_source <- paste0("bus_subcat_", subcategory_safe, "_use_slots_existing")
-            use_slots_target <- paste0("bus_subcat_", subcategory_safe, "_use_slots_scenario_b")
-            
-            if (!is.null(input[[use_slots_source]])) {
-              updateCheckboxInput(session, use_slots_target, value = input[[use_slots_source]])
-            }
-            
-            # Copy minimum and rate
-            min_source <- paste0("bus_subcat_", subcategory_safe, "_min_existing")
-            rate_source <- paste0("bus_subcat_", subcategory_safe, "_rate_existing")
-            
-            if (!is.null(input[[min_source]])) {
-              updateNumericInput(session, paste0("bus_subcat_", subcategory_safe, "_min_scenario_b"), 
-                                value = input[[min_source]])
-            }
-            if (!is.null(input[[rate_source]])) {
-              updateNumericInput(session, paste0("bus_subcat_", subcategory_safe, "_rate_scenario_b"), 
-                                value = input[[rate_source]])
-            }
-            
-            # Copy flat amount
-            flat_source <- paste0("bus_subcat_", subcategory_safe, "_flat_existing")
-            flat_target <- paste0("bus_subcat_", subcategory_safe, "_flat_scenario_b")
-            
-            if (!is.null(input[[flat_source]])) {
-              updateNumericInput(session, flat_target, value = input[[flat_source]])
-            }
-            
-            # Copy slots configuration if slots are being used
-            if (!is.null(input[[use_slots_source]]) && input[[use_slots_source]]) {
-              # Copy slot basis
-              basis_source <- paste0("bus_subcat_", subcategory_safe, "_slot_basis_existing")
-              basis_target <- paste0("bus_subcat_", subcategory_safe, "_slot_basis_scenario_b")
-              
-              if (!is.null(input[[basis_source]])) {
-                updateRadioButtons(session, basis_target, selected = input[[basis_source]])
-              }
-              
-              # Copy all slot configurations
-              for (slot in 1:3) {
-                slot_inputs <- c("min", "max", "min_tax", "rate")
-                for (slot_input in slot_inputs) {
-                  if (slot == 3 && slot_input == "max") next  # Skip max for slot 3
-                  
-                  input_source <- paste0("bus_subcat_", subcategory_safe, "_slot", slot, "_", slot_input, "_existing")
-                  input_target <- paste0("bus_subcat_", subcategory_safe, "_slot", slot, "_", slot_input, "_scenario_b")
-                  
-                  if (!is.null(input[[input_source]])) {
-                    updateNumericInput(session, input_target, value = input[[input_source]])
-                  }
-                }
-              }
+            if (!is.null(input[[source_id]])) {
+              updateNumericInput(session, target_id, value = input[[source_id]])
             }
           }
+        }
         }
         
         showNotification("Copied Existing Scenario to Scenario B", type = "message")
       }, error = function(e) {
         showNotification(paste("Error copying to Scenario B:", e$message), type = "error")
       })
-
+    })
 
     # Copy from scenario A to scenario B (similar corrections)
     observeEvent(input$copy_a_to_b, {
-
-    })
 tryCatch({
         # Copy property tax settings
         for (prop_type in c("domestic", "commercial", "institutional")) {
@@ -388,93 +284,44 @@ tryCatch({
         }
         
         # Copy business license settings using new structure
-        subcategories <- get_business_subcategories()
-        for (subcategory in subcategories) {
+        subcategories <- values$business_subcategories
+        # Copy business license settings using new structure
+        if (!is.null(values$business_subcategories)) {
+        # Copy all the new business license method inputs
+        for (subcategory in values$business_subcategories) {
           subcategory_safe <- gsub("[^A-Za-z0-9_]", "_", subcategory)
           
-          # Check if this is a Portfolio subcategory
-          default_config <- get_default_tax_config()
-          is_portfolio_subcat <- subcategory %in% names(default_config$business_license$categories$Portfolio$subcategories)
+          # Copy method selection
+          method_source <- paste0("bus_subcat_", subcategory_safe, "_method_scenario_a")
+          method_target <- paste0("bus_subcat_", subcategory_safe, "_method_scenario_b")  # Adjust for target scenario
           
-          if (is_portfolio_subcat) {
-            # Copy flat amount only
-            flat_source <- paste0("bus_subcat_", subcategory_safe, "_flat_scenario_a")
-            flat_target <- paste0("bus_subcat_", subcategory_safe, "_flat_scenario_b")
+          if (!is.null(input[[method_source]])) {
+            updateSelectInput(session, method_target, selected = input[[method_source]])
+          }
+          
+          # Copy all input types (they will be hidden/shown based on method selection)
+          input_suffixes <- c("_min_", "_rate_", 
+                              "_value_band1_max_", "_value_band1_tax_",
+                              "_value_band2_max_", "_value_band2_tax_", "_value_band3_tax_",
+                              "_area_band1_max_", "_area_band1_tax_",
+                              "_area_band2_max_", "_area_band2_tax_", "_area_band3_tax_")
+          
+          for (suffix in input_suffixes) {
+            source_id <- paste0("bus_subcat_", subcategory_safe, suffix, "scenario_a")
+            target_id <- paste0("bus_subcat_", subcategory_safe, suffix, "scenario_b")  # Adjust for target scenario
             
-            if (!is.null(input[[flat_source]])) {
-              updateNumericInput(session, flat_target, value = input[[flat_source]])
-            }
-          } else {
-            # Copy method selection
-            method_source <- paste0("bus_subcat_", subcategory_safe, "_method_scenario_a")
-            method_target <- paste0("bus_subcat_", subcategory_safe, "_method_scenario_b")
-            
-            if (!is.null(input[[method_source]])) {
-              updateSelectInput(session, method_target, selected = input[[method_source]])
-            }
-            
-            # Copy use_slots checkbox
-            use_slots_source <- paste0("bus_subcat_", subcategory_safe, "_use_slots_scenario_a")
-            use_slots_target <- paste0("bus_subcat_", subcategory_safe, "_use_slots_scenario_b")
-            
-            if (!is.null(input[[use_slots_source]])) {
-              updateCheckboxInput(session, use_slots_target, value = input[[use_slots_source]])
-            }
-            
-            # Copy minimum and rate
-            min_source <- paste0("bus_subcat_", subcategory_safe, "_min_scenario_a")
-            rate_source <- paste0("bus_subcat_", subcategory_safe, "_rate_scenario_a")
-            
-            if (!is.null(input[[min_source]])) {
-              updateNumericInput(session, paste0("bus_subcat_", subcategory_safe, "_min_scenario_b"), 
-                                value = input[[min_source]])
-            }
-            if (!is.null(input[[rate_source]])) {
-              updateNumericInput(session, paste0("bus_subcat_", subcategory_safe, "_rate_scenario_b"), 
-                                value = input[[rate_source]])
-            }
-            
-            # Copy flat amount
-            flat_source <- paste0("bus_subcat_", subcategory_safe, "_flat_scenario_a")
-            flat_target <- paste0("bus_subcat_", subcategory_safe, "_flat_scenario_b")
-            
-            if (!is.null(input[[flat_source]])) {
-              updateNumericInput(session, flat_target, value = input[[flat_source]])
-            }
-            
-            # Copy slots configuration if slots are being used
-            if (!is.null(input[[use_slots_source]]) && input[[use_slots_source]]) {
-              # Copy slot basis
-              basis_source <- paste0("bus_subcat_", subcategory_safe, "_slot_basis_scenario_a")
-              basis_target <- paste0("bus_subcat_", subcategory_safe, "_slot_basis_scenario_b")
-              
-              if (!is.null(input[[basis_source]])) {
-                updateRadioButtons(session, basis_target, selected = input[[basis_source]])
-              }
-              
-              # Copy all slot configurations
-              for (slot in 1:3) {
-                slot_inputs <- c("min", "max", "min_tax", "rate")
-                for (slot_input in slot_inputs) {
-                  if (slot == 3 && slot_input == "max") next  # Skip max for slot 3
-                  
-                  input_source <- paste0("bus_subcat_", subcategory_safe, "_slot", slot, "_", slot_input, "_scenario_a")
-                  input_target <- paste0("bus_subcat_", subcategory_safe, "_slot", slot, "_", slot_input, "_scenario_b")
-                  
-                  if (!is.null(input[[input_source]])) {
-                    updateNumericInput(session, input_target, value = input[[input_source]])
-                  }
-                }
-              }
+            if (!is.null(input[[source_id]])) {
+              updateNumericInput(session, target_id, value = input[[source_id]])
             }
           }
+        }
         }
         
         showNotification("Copied Scenario A to Scenario B", type = "message")
       }, error = function(e) {
         showNotification(paste("Error copying Scenario A to Scenario B:", e$message), type = "error")
       })
-
+    })
     
 # Reset function with comprehensive error handling
 observeEvent(input$reset_all, {
@@ -513,38 +360,24 @@ observeEvent(input$reset_all, {
         })
       }
       
-      # Reset business licenses using new structure
-if (!is.null(values$config_categories)) {
-  for (category in values$config_categories) {
-    cat_id <- gsub("[^A-Za-z0-9]", "_", category)
-    
-    # Reset calculation method to default
-    updateRadioButtons(session, paste0("bus_cat_", cat_id, "_method_", scenario), 
-                      selected = "minimum_rate")
-    
-    # Reset minimum + rate inputs
-    updateNumericInput(session, paste0("bus_cat_", cat_id, "_min_", scenario), value = 350)
-    updateNumericInput(session, paste0("bus_cat_", cat_id, "_rate_", scenario), value = 3.5)
-    
-    # Reset value-based inputs
-    updateCheckboxInput(session, paste0("bus_cat_", cat_id, "_use_value_bands_", scenario), value = FALSE)
-    updateNumericInput(session, paste0("bus_cat_", cat_id, "_flat_value_", scenario), value = 1000)
-    
-    # Reset area-based inputs  
-    updateCheckboxInput(session, paste0("bus_cat_", cat_id, "_use_area_bands_", scenario), value = FALSE)
-    updateNumericInput(session, paste0("bus_cat_", cat_id, "_flat_area_", scenario), value = 10)
-    
-    # Reset band configurations (both value and area)
-    for (band in 1:3) {
-      if (band <= 2) {
-        updateNumericInput(session, paste0("bus_cat_", cat_id, "_vband", band, "_max_", scenario), value = c(50000, 100000)[band])
-        updateNumericInput(session, paste0("bus_cat_", cat_id, "_aband", band, "_max_", scenario), value = c(100, 500)[band])
+      # In module3_server.R, update the reset function business license section:
+      # Reset business license settings - simplified approach  
+      if (!is.null(values$business_subcategories)) {
+        for (subcategory in values$business_subcategories) {
+          subcategory_safe <- gsub("[^A-Za-z0-9_]", "_", subcategory)
+          
+          # Get subcategory-specific defaults
+          defaults <- get_subcategory_defaults(subcategory)
+          
+          # Reset to subcategory-specific defaults
+          updateSelectInput(session, paste0("bus_subcat_", subcategory_safe, "_method_", scenario), 
+                            selected = "min_rate")
+          updateNumericInput(session, paste0("bus_subcat_", subcategory_safe, "_min_", scenario), 
+                            value = defaults$minimum)
+          updateNumericInput(session, paste0("bus_subcat_", subcategory_safe, "_rate_", scenario), 
+                            value = defaults$rate)
+        }
       }
-      updateNumericInput(session, paste0("bus_cat_", cat_id, "_vband", band, "_amount_", scenario), value = c(500, 1000, 2000)[band])
-      updateNumericInput(session, paste0("bus_cat_", cat_id, "_aband", band, "_amount_", scenario), value = c(500, 1500, 3000)[band])
-    }
-  }
-}
     }
     
     showNotification("Reset all scenarios to default values", type = "message")
@@ -636,77 +469,70 @@ if (!is.null(values$config_categories)) {
 collect_business_license_config <- function(scenario) {
   config <- list()
   
-  subcategories <- get_business_subcategories()
+  # Use actual subcategories from data
+  subcategories <- values$business_subcategories
+  
+  if (is.null(subcategories) || length(subcategories) == 0) {
+    return(config)
+  }
   
   for (subcategory in subcategories) {
     subcategory_safe <- gsub("[^A-Za-z0-9_]", "_", subcategory)
     
-    # Check if this is a Portfolio subcategory
-    default_config <- get_default_tax_config()
-    is_portfolio_subcat <- subcategory %in% names(default_config$business_license$categories$Portfolio$subcategories)
+    # Get method selection
+    method <- input[[paste0("bus_subcat_", subcategory_safe, "_method_", scenario)]]
+    if (is.null(method)) method <- "min_rate"
     
-    if (is_portfolio_subcat) {
-      # Portfolio subcategories only have flat amount
-      flat_amount <- input[[paste0("bus_subcat_", subcategory_safe, "_flat_", scenario)]]
+    if (method == "min_rate") {
+      # Method 1: Minimum + rate
+      minimum <- input[[paste0("bus_subcat_", subcategory_safe, "_min_", scenario)]]
+      rate <- input[[paste0("bus_subcat_", subcategory_safe, "_rate_", scenario)]]
       
       config[[subcategory]] <- list(
-        calculation_method = "flat",
-        flat_amount = if(is.null(flat_amount)) 1000 else flat_amount
+        calculation_method = "minimum_rate",
+        minimum = if(is.null(minimum)) 350 else minimum,
+        rate = if(is.null(rate)) 0.035 else rate / 100
       )
-    } else {
-      # Regular categories - check method selection
-      method <- input[[paste0("bus_subcat_", subcategory_safe, "_method_", scenario)]]
-      if (is.null(method)) method <- "min_rate"
       
-      if (method == "min_rate") {
-        # Check if using slots
-        use_slots <- input[[paste0("bus_subcat_", subcategory_safe, "_use_slots_", scenario)]]
-        
-        if (!is.null(use_slots) && use_slots) {
-          # Collect slots configuration
-          slot_basis <- input[[paste0("bus_subcat_", subcategory_safe, "_slot_basis_", scenario)]]
-          if (is.null(slot_basis)) slot_basis <- "value"
-          
-          slots_config <- list()
-          for (slot in 1:3) {
-            slot_min <- input[[paste0("bus_subcat_", subcategory_safe, "_slot", slot, "_min_", scenario)]]
-            slot_max <- if (slot == 3) Inf else input[[paste0("bus_subcat_", subcategory_safe, "_slot", slot, "_max_", scenario)]]
-            slot_min_tax <- input[[paste0("bus_subcat_", subcategory_safe, "_slot", slot, "_min_tax_", scenario)]]
-            slot_rate <- input[[paste0("bus_subcat_", subcategory_safe, "_slot", slot, "_rate_", scenario)]]
-            
-            slots_config[[paste0("slot", slot)]] <- list(
-              min = if(is.null(slot_min)) 0 else slot_min,
-              max = if(is.null(slot_max) && slot != 3) 100000 else slot_max,
-              minimum = if(is.null(slot_min_tax)) 200 else slot_min_tax,
-              rate = if(is.null(slot_rate)) 0.005 else slot_rate / 100
-            )
-          }
-          
-          config[[subcategory]] <- list(
-            calculation_method = "slots",
-            slot_basis = slot_basis,
-            slots = slots_config
+    } else if (method == "flat_value") {
+      # Method 2: Flat amount based on business value bands
+      config[[subcategory]] <- list(
+        calculation_method = "flat_value_bands",
+        value_bands = list(
+          band1 = list(
+            max = input[[paste0("bus_subcat_", subcategory_safe, "_value_band1_max_", scenario)]] %||% 100000,
+            tax = input[[paste0("bus_subcat_", subcategory_safe, "_value_band1_tax_", scenario)]] %||% 500
+          ),
+          band2 = list(
+            max = input[[paste0("bus_subcat_", subcategory_safe, "_value_band2_max_", scenario)]] %||% 500000,
+            tax = input[[paste0("bus_subcat_", subcategory_safe, "_value_band2_tax_", scenario)]] %||% 1500
+          ),
+          band3 = list(
+            max = Inf,
+            tax = input[[paste0("bus_subcat_", subcategory_safe, "_value_band3_tax_", scenario)]] %||% 3000
           )
-        } else {
-          # Simple minimum + rate
-          minimum <- input[[paste0("bus_subcat_", subcategory_safe, "_min_", scenario)]]
-          rate <- input[[paste0("bus_subcat_", subcategory_safe, "_rate_", scenario)]]
-          
-          config[[subcategory]] <- list(
-            calculation_method = "minimum_rate",
-            minimum = if(is.null(minimum)) 350 else minimum,
-            rate = if(is.null(rate)) 0.035 else rate / 100
-          )
-        }
-      } else if (method == "flat") {
-        # Flat tax amount
-        flat_amount <- input[[paste0("bus_subcat_", subcategory_safe, "_flat_", scenario)]]
-        
-        config[[subcategory]] <- list(
-          calculation_method = "flat",
-          flat_amount = if(is.null(flat_amount)) 1000 else flat_amount
         )
-      }
+      )
+      
+    } else if (method == "flat_area") {
+      # Method 3: Flat amount based on business area bands
+      config[[subcategory]] <- list(
+        calculation_method = "flat_area_bands",
+        area_bands = list(
+          band1 = list(
+            max = input[[paste0("bus_subcat_", subcategory_safe, "_area_band1_max_", scenario)]] %||% 100,
+            tax = input[[paste0("bus_subcat_", subcategory_safe, "_area_band1_tax_", scenario)]] %||% 300
+          ),
+          band2 = list(
+            max = input[[paste0("bus_subcat_", subcategory_safe, "_area_band2_max_", scenario)]] %||% 500,
+            tax = input[[paste0("bus_subcat_", subcategory_safe, "_area_band2_tax_", scenario)]] %||% 800
+          ),
+          band3 = list(
+            max = Inf,
+            tax = input[[paste0("bus_subcat_", subcategory_safe, "_area_band3_tax_", scenario)]] %||% 1200
+          )
+        )
+      )
     }
   }
   
@@ -717,14 +543,15 @@ collect_business_license_config <- function(scenario) {
     observeEvent(input$calculate_preview, {
       req(processed_data())
       
-      withProgress(message = 'Calculating tax preview...', value = 0, {
-        tryCatch({
       data <- processed_data()
       scenario <- input$preview_scenario
       
-      # Sample first 100 rows for performance
-      n_rows <- min(100, nrow(data))
-      preview_data <- data[1:n_rows, ]
+      # Calculate n_rows first
+      n_rows <- min(input$preview_rows %||% 25, nrow(data))
+      
+      withProgress(message = paste('Calculating tax preview for', n_rows, 'properties...'), value = 0, {
+        tryCatch({
+          preview_data <- data[1:n_rows, ]
       
       incProgress(0.2, detail = "Getting configurations...")
       
@@ -908,48 +735,45 @@ collect_business_license_config <- function(scenario) {
       
       business_licenses <- rep(0, n_rows)
       
-# CORRECTED: Business license calculation in preview
-for (i in 1:n_rows) {
-  subcat <- business_subcategories[i]
-  if (!is.na(subcat) && subcat %in% names(business_config)) {
-    subcat_config <- business_config[[subcat]]
-    
-    # CORRECTED: Use calculation_method instead of tax_type
-    if (subcat_config$calculation_method == "minimum_rate") {
-      business_licenses[i] <- max(business_values[i] * subcat_config$rate, 
-                                  subcat_config$minimum)
-                                  
-    } else if (subcat_config$calculation_method == "flat") {
-      # Simple flat amount
-      business_licenses[i] <- subcat_config$flat_amount
-      
-    } else if (subcat_config$calculation_method == "slots") {
-      # Handle slots calculation
-      slot_basis_value <- if (subcat_config$slot_basis == "area") {
-        if("business_area" %in% names(preview_data)) {
-          preview_data$business_area[i]
-        } else {
-          property_areas[i]  # Use property area as fallback
+      # Updated: Business license calculation with new methods
+      for (i in 1:n_rows) {
+        subcat <- business_subcategories[i]
+        if (!is.na(subcat) && subcat %in% names(business_config)) {
+          subcat_config <- business_config[[subcat]]
+          
+          if (subcat_config$calculation_method == "minimum_rate") {
+            # Method 1: Traditional minimum + rate calculation
+            business_licenses[i] <- max(business_values[i] * subcat_config$rate, 
+                                        subcat_config$minimum)
+                                        
+          } else if (subcat_config$calculation_method == "flat_value_bands") {
+            # Method 2: Flat amount based on business value bands
+            business_licenses[i] <- subcat_config$value_bands$band3$tax  # Default to highest band
+            
+            if (business_values[i] <= subcat_config$value_bands$band1$max) {
+              business_licenses[i] <- subcat_config$value_bands$band1$tax
+            } else if (business_values[i] <= subcat_config$value_bands$band2$max) {
+              business_licenses[i] <- subcat_config$value_bands$band2$tax
+            }
+            
+          } else if (subcat_config$calculation_method == "flat_area_bands") {
+            # Method 3: Flat amount based on business area bands
+            area_value <- if("business_area" %in% names(preview_data)) {
+              preview_data$business_area[i]
+            } else {
+              property_areas[i]  # Use property area as fallback
+            }
+            
+            business_licenses[i] <- subcat_config$area_bands$band3$tax  # Default to highest band
+            
+            if (area_value <= subcat_config$area_bands$band1$max) {
+              business_licenses[i] <- subcat_config$area_bands$band1$tax
+            } else if (area_value <= subcat_config$area_bands$band2$max) {
+              business_licenses[i] <- subcat_config$area_bands$band2$tax
+            }
+          }
         }
-      } else {
-        business_values[i]  # Value-based
       }
-      
-      # Find which slot applies
-      slot_num <- 3  # Default to highest slot
-      for (s in 1:3) {
-        slot <- subcat_config$slots[[paste0("slot", s)]]
-        if (slot_basis_value >= slot$min && slot_basis_value < slot$max) {
-          slot_num <- s
-          break
-        }
-      }
-      
-      slot_config <- subcat_config$slots[[paste0("slot", slot_num)]]
-      business_licenses[i] <- max(slot_basis_value * slot_config$rate, slot_config$minimum)
-    }
-  }
-}
       
       incProgress(0.1, detail = "Creating preview table...")
       
@@ -995,6 +819,58 @@ for (i in 1:n_rows) {
     })
   })
 })
+
+# Preview summary output
+output$preview_summary <- renderText({
+  req(values$preview_data)
+  
+  data <- values$preview_data
+  scenario_name <- switch(input$preview_scenario,
+                         "existing" = "Existing Scenario",
+                         "scenario_a" = "Alternative Scenario A", 
+                         "scenario_b" = "Alternative Scenario B")
+  
+  total_properties <- nrow(data)
+  total_property_tax <- sum(data$property_tax, na.rm = TRUE)
+  total_business_license <- sum(data$business_license, na.rm = TRUE)
+  total_revenue <- total_property_tax + total_business_license
+  avg_property_value <- mean(data$property_value, na.rm = TRUE)
+  avg_total_tax <- mean(data$total_tax, na.rm = TRUE)
+  
+  # Count property types
+  prop_type_counts <- table(data$property_type)
+  
+  # Count business subcategories (excluding NAs)
+  business_counts <- sum(!is.na(data$business_subcategory))
+  
+  paste0(
+    "<strong>", scenario_name, "</strong><br/>",
+    "<strong>Properties:</strong> ", format(total_properties, big.mark = ","), "<br/>",
+    "<strong>Property Types:</strong> ",
+    paste(names(prop_type_counts), " (", prop_type_counts, ")", sep = "", collapse = ", "), "<br/>",
+    "<strong>Properties with Business:</strong> ", format(business_counts, big.mark = ","), "<br/>",
+    "<strong>Total Property Tax:</strong> ", format(round(total_property_tax), big.mark = ","), "<br/>",
+    "<strong>Total Business License:</strong> ", format(round(total_business_license), big.mark = ","), "<br/>",
+    "<strong>Total Revenue:</strong> ", format(round(total_revenue), big.mark = ","), "<br/>",
+    "<strong>Avg Property Value:</strong> ", format(round(avg_property_value), big.mark = ","), "<br/>",
+    "<strong>Avg Total Tax:</strong> ", format(round(avg_total_tax), big.mark = ",")
+  )
+})
+
+# Download handler for preview data
+output$download_preview <- downloadHandler(
+  filename = function() {
+    scenario_name <- switch(input$preview_scenario,
+                           "existing" = "existing",
+                           "scenario_a" = "scenario_a",
+                           "scenario_b" = "scenario_b")
+    paste0("tax_preview_", scenario_name, "_", Sys.Date(), ".csv")
+  },
+  content = function(file) {
+    req(values$preview_data)
+    write.csv(values$preview_data, file, row.names = FALSE)
+  }
+)
 
 # Display preview table with enhanced error handling
 output$tax_preview_table <- DT::renderDataTable({
