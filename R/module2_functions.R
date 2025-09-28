@@ -56,9 +56,9 @@ get_default_weights <- function() {
       street_access_Difficult = -7,
       street_access_Easy = 0,
       street_access_NA = 0,
-      street_quality_Average = 0,
-      street_quality_Poor = -10,
-      `street_quality_Like New` = 4,
+      `street_quality_Average Road` = 0,
+      `street_quality_Bad Road` = -10,
+      `street_quality_Good Road` = 4,
       street_lanes_Four = 4,
       street_lanes_None = -15,
       street_lanes_One = 0,
@@ -69,14 +69,14 @@ get_default_weights <- function() {
       old_environmental_hazard_Yes = -15,
       main_road_high_visibility_No = 0,
       main_road_high_visibility_Yes = 18,
-      old_informal_settlement_Yes = 0,
-      old_informal_settlement_No = -21,
+      old_informal_settlement_Yes = -21,
+      old_informal_settlement_No = 0,
       old_commercial_corridor_No = 0,
       old_commercial_corridor_Yes = 25,
       potential_to_build_No = 0,
       potential_to_build_Yes = 3,
-      domestic_use_of_groundfloor_No = 5,
-      domestic_use_of_groundfloor_Yes = 0,
+      domestic_use_groundfloor_No = 5,
+      domestic_use_groundfloor_Yes = 0,
       ward_number_399 = 20,
       ward_number_400 = 30,
       ward_number_401 = 17,
@@ -372,4 +372,64 @@ calculate_property_value <- function(base_value, inflation, area, area_weight, f
   }
   
   return(value)
+}
+
+# Add this debugging version of calculate_property_value to your functions
+calculate_property_value_debug <- function(base_value, inflation, area, area_weight, 
+                                         feature_weights, feature_values, property_id = NULL) {
+  
+  if (!is.null(property_id)) {
+    cat("=== DEBUG for property:", property_id, "===\n")
+  }
+  
+  # Calculate inflation-adjusted base value
+  inflation_adjusted_base <- base_value * (1 + inflation/100)
+  cat("Base value:", base_value, "\n")
+  cat("Inflation:", inflation, "\n")
+  cat("Inflation-adjusted base:", inflation_adjusted_base, "\n")
+  
+  # Calculate area component
+  area_component <- area^area_weight
+  cat("Area:", area, "\n")
+  cat("Area weight:", area_weight, "\n")
+  cat("Area component (area^weight):", area_component, "\n")
+  
+  # Feature weights calculation - this is the key part
+  cat("\n--- Feature Analysis ---\n")
+  
+  # Identify which features have non-zero weights
+  non_zero_weights <- feature_weights[feature_weights != 0]
+  cat("Features with non-zero weights:\n")
+  print(non_zero_weights)
+  
+  # Calculate individual feature contributions
+  feature_contributions <- feature_weights * feature_values
+  non_zero_contributions <- feature_contributions[feature_contributions != 0]
+  cat("\nNon-zero feature contributions (weight * value):\n")
+  print(non_zero_contributions)
+  
+  # Product of all feature weights
+  product_weights <- prod(feature_weights^feature_values)
+  cat("\nProduct of all feature weights:", product_weights, "\n")
+  
+  # Manual verification
+  cat("\nManual calculation check:\n")
+  manual_product <- 1
+  for(i in 1:length(feature_weights)) {
+    if(feature_values[i] != 0) {
+      contribution <- feature_weights[i]^feature_values[i]
+      manual_product <- manual_product * contribution
+      cat("Feature", i, ": weight =", feature_weights[i], 
+          ", value =", feature_values[i], 
+          ", contribution =", contribution, 
+          ", running product =", manual_product, "\n")
+    }
+  }
+  
+  # Final calculation
+  property_value <- inflation_adjusted_base * area_component * product_weights
+  cat("\nFinal calculation:", inflation_adjusted_base, "*", area_component, "*", product_weights, "=", property_value, "\n")
+  cat("===========================\n\n")
+  
+  return(property_value)
 }

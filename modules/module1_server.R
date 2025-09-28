@@ -92,7 +92,7 @@ module1_server <- function(id) {
                             "window_material", "air_conditioning", "has_security",
                             "has_pool", "has_outbuilding", "street_quality",
                             "domestic_use_groundfloor", "street_lanes",
-                            "main_road_high_visibility", 
+                            "main_road_high_visibility", "has_water",
                             # Old prefixed columns
                             "old_tourist_area", "old_environmental_hazard",
                             "old_informal_settlement", "old_commercial_corridor",

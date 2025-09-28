@@ -12,6 +12,15 @@ module1_ui <- function(id) {
         status = "primary",
         solidHeader = TRUE,
         
+        # Beta testing notice
+        div(
+          class = "alert alert-warning",
+          style = "margin-bottom: 20px; background-color: #fff3cd; border-color: #ffeaa7; color: #856404;",
+          HTML("<strong><i class='fa fa-exclamation-triangle'></i> Beta Testing Phase:</strong><br>
+                This tool is currently in a beta testing phase. Reports of errors and suggestions are welcomed. 
+                Please communicate them to Evan.")
+        ),
+        
         # File upload section
         h4("Step 1: Upload Data Files"),
         fluidRow(

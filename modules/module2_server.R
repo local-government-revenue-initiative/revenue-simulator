@@ -479,26 +479,62 @@ generate_feature_ui <- function(scenario_suffix) {
         # Use all feature columns including _na variables for calculations
         all_features <- values$all_feature_columns
         
-        product_weights <- rep(1, n_rows)
-        
-        for (feat in all_features) {
-          input_id <- paste0("weight_", feat, "_", scenario)
-          
-          # Set weight to 0 for _na variables (they won't have inputs since they're hidden)
-          if (grepl("(_na|_NA)$", feat)) {
-            weight <- 0
-          } else {
-            weight <- input[[input_id]]
-          }
-          
-          if (!is.null(weight) && feat %in% names(preview_data)) {
-            # Apply weight where feature = 1
-            feature_multiplier <- ifelse(preview_data[[feat]] == 1, 
-                                         (weight/100 + 1), 
-                                         1)
-            product_weights <- product_weights * feature_multiplier
-          }
-        }
+# Replace the existing product_weights calculation section with this debug version:
+
+product_weights <- rep(1, n_rows)
+
+# Special debugging for property FCC0000001
+debug_property <- preview_data$id_property[1] == "FCC0000001"
+
+if (debug_property) {
+  cat("=== DEBUGGING FEATURE WEIGHTS FOR FCC0000001 ===\n")
+  cat("Only showing features where feature_value = 1 AND weight != 0 (contributing features)\n\n")
+}
+
+for (feat in all_features) {
+  input_id <- paste0("weight_", feat, "_", scenario)
+  
+  # Set weight to 0 for _na variables (they won't have inputs since they're hidden)
+  if (grepl("(_na|_NA)$", feat)) {
+    weight <- 0
+  } else {
+    weight <- input[[input_id]]
+  }
+  
+  if (!is.null(weight) && feat %in% names(preview_data)) {
+    # Only show debug info if feature value is 1 AND weight is not 0
+    if (debug_property && preview_data[[feat]][1] == 1 && weight != 0) {
+      feature_value <- preview_data[[feat]][1]
+      cat("Feature:", feat, "\n")
+      cat("  Weight:", weight, "\n")
+      cat("  Feature value:", feature_value, "\n")
+    }
+    
+    # Apply weight where feature = 1
+    feature_multiplier <- ifelse(preview_data[[feat]] == 1, 
+                                 (weight/100 + 1), 
+                                 1)
+    
+    if (debug_property && preview_data[[feat]][1] == 1 && weight != 0) {
+      cat("  Multiplier calculation: ifelse(1 == 1, (", weight, "/100 + 1), 1) = ", feature_multiplier[1], "\n")
+      cat("  Running product before:", product_weights[1], "\n")
+    }
+    
+    product_weights <- product_weights * feature_multiplier
+    
+    if (debug_property && preview_data[[feat]][1] == 1 && weight != 0) {
+      cat("  Running product after:", product_weights[1], "\n\n")
+    }
+  }
+}
+
+if (debug_property) {
+  cat("FINAL PRODUCT OF FEATURE WEIGHTS:", product_weights[1], "\n")
+  cat("Expected value: 2.2256\n")
+  cat("Actual value: 1.7583\n")
+  cat("Ratio (actual/expected):", product_weights[1] / 2.2256, "\n")
+  cat("============================================\n\n")
+}
         
         # Debug output
         print(paste("Product weights range:", min(product_weights), "-", max(product_weights)))
