@@ -229,66 +229,53 @@ calculate_property_tax <- function(property_value, property_type, tax_config) {
 
 # Function to calculate business license with subcategory-specific configurations
 calculate_business_license <- function(business_value, business_area, business_subcategory, tax_config) {
-  # Get the configuration for this business subcategory
-  subcat_config <- tax_config$business_license$subcategories[[business_subcategory]]
-  
-  if (is.null(subcat_config)) {
-    # Use default configuration if subcategory not found
-    subcat_config <- tax_config$business_license$default_subcategory
-  }
-  
-  # Determine calculation method
-  calc_method <- if (subcat_config$calculation_method == "default") {
-    tax_config$business_license$calculation_method
+  # Check if this subcategory exists in our tax config
+  if (business_subcategory %in% names(tax_config)) {
+    subcat_config <- tax_config[[business_subcategory]]
   } else {
-    subcat_config$calculation_method
+    # Use default configuration if subcategory not found
+    subcat_config <- list(
+      calculation_method = "minimum_rate",
+      minimum = 350,
+      rate = 0.05
+    )
   }
   
-  if (calc_method == "minimum_rate") {
+  if (subcat_config$calculation_method == "minimum_rate") {
     # Traditional calculation: max of (value * rate) or minimum
-    tax_amount <- max(business_value * (subcat_config$rate / 100), subcat_config$minimum)
+    tax_amount <- max(business_value * subcat_config$rate, subcat_config$minimum)
     
-  } else if (calc_method == "flat_value") {
-    # Flat amount based on business value bands
-    if (subcat_config$use_value_bands) {
-      band_num <- 1
-      for (i in 1:3) {
-        band <- tax_config$business_license$value_bands[[paste0("band", i)]]
-        if (business_value >= band$min && business_value < band$max) {
-          band_num <- i
-          break
-        }
+  } else if (subcat_config$calculation_method == "flat") {
+    # Flat amount
+    tax_amount <- subcat_config$flat_amount
+    
+  } else if (subcat_config$calculation_method == "slots") {
+    # Logic slots calculation
+    slot_basis_value <- if (subcat_config$slot_basis == "area") business_area else business_value
+    
+    # Find which slot applies
+    slot_num <- 3  # Default to highest slot
+    for (s in 1:3) {
+      slot <- subcat_config$slots[[paste0("slot", s)]]
+      if (slot_basis_value >= slot$min && slot_basis_value < slot$max) {
+        slot_num <- s
+        break
       }
-      tax_amount <- subcat_config$flat_amounts_value[[paste0("band", band_num)]]
-    } else {
-      # If no bands, use flat amount
-      tax_amount <- subcat_config$flat_amount
     }
     
-  } else if (calc_method == "flat_area") {
-    # Flat amount based on business area bands
-    if (subcat_config$use_area_bands) {
-      band_num <- 1
-      for (i in 1:3) {
-        band <- tax_config$business_license$area_bands[[paste0("band", i)]]
-        if (business_area >= band$min && business_area < band$max) {
-          band_num <- i
-          break
-        }
-      }
-      tax_amount <- subcat_config$flat_amounts_area[[paste0("band", band_num)]]
-    } else {
-      # If no bands, use flat amount
-      tax_amount <- subcat_config$flat_amount
-    }
+    slot_config <- subcat_config$slots[[paste0("slot", slot_num)]]
+    tax_amount <- max(slot_basis_value * slot_config$rate, slot_config$minimum)
+  } else {
+    # Default fallback
+    tax_amount <- max(business_value * 0.05, 350)
   }
   
   return(list(
     license_amount = tax_amount,
-    method_used = calc_method,
-    band_used = if(subcat_config$use_bands || subcat_config$use_value_bands || subcat_config$use_area_bands) band_num else NA
+    method_used = subcat_config$calculation_method
   ))
 }
+
 # Add these helper functions to R/module3_functions.R
 
 # Helper function to create property type configuration UI
