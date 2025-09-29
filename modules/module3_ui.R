@@ -70,56 +70,112 @@ module3_ui <- function(id) {
                              )
                     ),
                     
-                    # Tab 3: Preview
-                    # Replace the existing Preview tabPanel in module3_ui.R with this:
-tabPanel("Preview",
-         br(),
-         fluidRow(
-           column(4,
-                  selectInput(ns("preview_scenario"),
-                              "Select Scenario:",
-                              choices = c("Existing" = "existing",
-                                          "Scenario A" = "scenario_a", 
-                                          "Scenario B" = "scenario_b")),
-                  numericInput(ns("preview_rows"),
-                               "Number of rows to preview:",
-                               value = 25,
-                               min = 1,
-                               max = 1000,
-                               step = 1),
-                  actionButton(ns("calculate_preview"),
-                               "Calculate Tax Preview",
-                               class = "btn-primary")
-           ),
-           column(8,
-                  # Summary info box
-                  conditionalPanel(
-                    condition = paste0("output['", ns("preview_summary"), "']"),
-                    div(
-                      style = "background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;",
-                      h5("Preview Summary", style = "margin-top: 0;"),
-                      htmlOutput(ns("preview_summary"))
-                    )
+          # Tab 3: Preview - Restructured with two sub-tabs
+          tabPanel("Preview",
+                  br(),
+                  tabsetPanel(id = ns("preview_tabs"),
+                              
+                              # Property Tax Preview Sub-tab
+                              tabPanel("Property Tax Preview",
+                                        br(),
+                                        fluidRow(
+                                          column(4,
+                                                selectInput(ns("property_preview_scenario"),
+                                                            "Select Scenario:",
+                                                            choices = c("Existing" = "existing",
+                                                                        "Scenario A" = "scenario_a", 
+                                                                        "Scenario B" = "scenario_b")),
+                                                numericInput(ns("property_preview_rows"),
+                                                              "Number of rows to preview:",
+                                                              value = 25,
+                                                              min = 1,
+                                                              max = 1000,
+                                                              step = 1),
+                                                actionButton(ns("calculate_property_preview"),
+                                                              "Calculate Property Tax Preview",
+                                                              class = "btn-primary")
+                                          ),
+                                          column(8,
+                                                # Summary info box for property tax
+                                                conditionalPanel(
+                                                  condition = paste0("output['", ns("property_preview_summary"), "']"),
+                                                  div(
+                                                    style = "background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;",
+                                                    h5("Property Tax Preview Summary", style = "margin-top: 0;"),
+                                                    htmlOutput(ns("property_preview_summary"))
+                                                  )
+                                                )
+                                          )
+                                        ),
+                                        br(),
+                                        fluidRow(
+                                          column(12,
+                                                div(
+                                                  style = "margin-bottom: 10px;",
+                                                  conditionalPanel(
+                                                    condition = paste0("output['", ns("property_tax_preview_table"), "']"),
+                                                    downloadButton(ns("download_property_preview"), 
+                                                                    "Download Property Tax Preview", 
+                                                                    class = "btn-success btn-sm",
+                                                                    icon = icon("download"))
+                                                  )
+                                                ),
+                                                DT::dataTableOutput(ns("property_tax_preview_table"))
+                                          )
+                                        )
+                              ),
+                              
+                              # Business License Preview Sub-tab
+                              tabPanel("Business License Preview",
+                                        br(),
+                                        fluidRow(
+                                          column(4,
+                                                selectInput(ns("business_preview_scenario"),
+                                                            "Select Scenario:",
+                                                            choices = c("Existing" = "existing",
+                                                                        "Scenario A" = "scenario_a", 
+                                                                        "Scenario B" = "scenario_b")),
+                                                numericInput(ns("business_preview_rows"),
+                                                              "Number of rows to preview:",
+                                                              value = 25,
+                                                              min = 1,
+                                                              max = 1000,
+                                                              step = 1),
+                                                actionButton(ns("calculate_business_preview"),
+                                                              "Calculate Business License Preview",
+                                                              class = "btn-primary")
+                                          ),
+                                          column(8,
+                                                # Summary info box for business license
+                                                conditionalPanel(
+                                                  condition = paste0("output['", ns("business_preview_summary"), "']"),
+                                                  div(
+                                                    style = "background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;",
+                                                    h5("Business License Preview Summary", style = "margin-top: 0;"),
+                                                    htmlOutput(ns("business_preview_summary"))
+                                                  )
+                                                )
+                                          )
+                                        ),
+                                        br(),
+                                        fluidRow(
+                                          column(12,
+                                                div(
+                                                  style = "margin-bottom: 10px;",
+                                                  conditionalPanel(
+                                                    condition = paste0("output['", ns("business_license_preview_table"), "']"),
+                                                    downloadButton(ns("download_business_preview"), 
+                                                                    "Download Business License Preview", 
+                                                                    class = "btn-success btn-sm",
+                                                                    icon = icon("download"))
+                                                  )
+                                                ),
+                                                DT::dataTableOutput(ns("business_license_preview_table"))
+                                          )
+                                        )
+                              )
                   )
-           )
-         ),
-         br(),
-         fluidRow(
-           column(12,
-                  div(
-                    style = "margin-bottom: 10px;",
-                    conditionalPanel(
-                      condition = paste0("output['", ns("tax_preview_table"), "']"),
-                      downloadButton(ns("download_preview"), 
-                                     "Download Preview Data", 
-                                     class = "btn-success btn-sm",
-                                     icon = icon("download"))
-                    )
-                  ),
-                  DT::dataTableOutput(ns("tax_preview_table"))
-           )
-         )
-)
+          )
         )
       )
     )
