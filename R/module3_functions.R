@@ -1,6 +1,6 @@
 # R/module3_functions.R
 
-# Function to get default tax configurations
+# Updated get_default_tax_config function with complete mappings
 get_default_tax_config <- function() {
   list(
     # Property tax defaults (unchanged)
@@ -35,143 +35,346 @@ get_default_tax_config <- function() {
       )
     ),
     
-    # Business license defaults - restructured for categories and subcategories
+    # Business license defaults - complete explicit mappings
     business_license = list(
-      calculation_method = "minimum_rate",  # Global default
-      
-      # Category-specific configurations
-      categories = list(
-        "Communication services" = list(
+      # Complete subcategory mappings with exact names from your CSV
+      subcategories = list(
+        # Communication services
+        "Hardware Equipment and Consumables" = list(
           calculation_method = "minimum_rate",
           minimum = 350,
-          rate = 0.035  # 3.5%
+          rate = 0.035
         ),
-        "Consumer discretionary" = list(
+        "Information Technology" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.035
+        ),
+        "Media Company" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.035
+        ),
+        "Software services" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.035
+        ),
+        "Telecommunications" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.035
+        ),
+        
+        # Consumer discretionary
+        "Barbers/hair or nail saloon" = list(
           calculation_method = "minimum_rate",
           minimum = 500,
-          rate = 0.03   # 3%
+          rate = 0.03
         ),
-        "Consumer staples" = list(
+        "Building materials retail" = list(
+          calculation_method = "minimum_rate",
+          minimum = 500,
+          rate = 0.03
+        ),
+        "Diamond, Jewellery shop" = list(
+          calculation_method = "minimum_rate",
+          minimum = 500,
+          rate = 0.03
+        ),
+        "Hotels" = list(
+          calculation_method = "minimum_rate",
+          minimum = 500,
+          rate = 0.03
+        ),
+        "Household durable products" = list(
+          calculation_method = "minimum_rate",
+          minimum = 500,
+          rate = 0.03
+        ),
+        "Motor Cars and components" = list(
+          calculation_method = "minimum_rate",
+          minimum = 500,
+          rate = 0.03
+        ),
+        "Nursery" = list(
+          calculation_method = "minimum_rate",
+          minimum = 500,
+          rate = 0.03
+        ),
+        "Private Schools" = list(
+          calculation_method = "minimum_rate",
+          minimum = 500,
+          rate = 0.03
+        ),
+        "Private healthcare" = list(
+          calculation_method = "minimum_rate",
+          minimum = 500,
+          rate = 0.03
+        ),
+        "Restaurants Bars" = list(
+          calculation_method = "minimum_rate",
+          minimum = 500,
+          rate = 0.03
+        ),
+        "Security" = list(
+          calculation_method = "minimum_rate",
+          minimum = 500,
+          rate = 0.03
+        ),
+        "Solar retail" = list(
+          calculation_method = "minimum_rate",
+          minimum = 500,
+          rate = 0.03
+        ),
+        "Tailor shop" = list(
+          calculation_method = "minimum_rate",
+          minimum = 500,
+          rate = 0.03
+        ),
+        "Textiles, Clothes, Luxury Goods" = list(
+          calculation_method = "minimum_rate",
+          minimum = 500,
+          rate = 0.03
+        ),
+        "Transport company" = list(
+          calculation_method = "minimum_rate",
+          minimum = 500,
+          rate = 0.03
+        ),
+        
+        # Consumer staples
+        "Drug stores or pharmacies" = list(
           calculation_method = "minimum_rate",
           minimum = 450,
-          rate = 0.02   # 2%
+          rate = 0.02
         ),
-        "Energy" = list(
+        "Foods, Beverages and Staples" = list(
+          calculation_method = "minimum_rate",
+          minimum = 450,
+          rate = 0.02
+        ),
+        "Household and personal products" = list(
+          calculation_method = "minimum_rate",
+          minimum = 450,
+          rate = 0.02
+        ),
+        "Typical provision shop" = list(
+          calculation_method = "minimum_rate",
+          minimum = 450,
+          rate = 0.02
+        ),
+        "Wholesaler of consumer staples" = list(
+          calculation_method = "minimum_rate",
+          minimum = 450,
+          rate = 0.02
+        ),
+        
+        # Energy
+        "Consumer Fuels" = list(
           calculation_method = "minimum_rate",
           minimum = 350,
-          rate = 0.065  # 6.5%
+          rate = 0.065
         ),
-        "Financials" = list(
+        "Oil and Gas" = list(
           calculation_method = "minimum_rate",
           minimum = 350,
-          rate = 0.055  # 5.5%
+          rate = 0.065
         ),
-        "Materials Manufacturing/Industrials/Services" = list(
+        "Petrol station" = list(
           calculation_method = "minimum_rate",
           minimum = 350,
-          rate = 0.05   # 5%
+          rate = 0.065
         ),
-        "Portfolio" = list(
-          calculation_method = "subcategory_specific",  # Use subcategory configs
-          # Subcategory-specific configurations
-          subcategories = list(
-            "Clearing and forwarding companies" = list(
-              calculation_method = "flat",
-              flat_amount = 4000
-            ),
-            "Clinic" = list(
-              calculation_method = "flat",
-              flat_amount = 1350
-            ),
-            "Construction Ministry of Works - Class I" = list(
-              calculation_method = "flat",
-              flat_amount = 6000
-            ),
-            "Construction Ministry of Works - Class II" = list(
-              calculation_method = "flat",
-              flat_amount = 4000
-            ),
-            "Construction Ministry of Works - Class III" = list(
-              calculation_method = "flat",
-              flat_amount = 2500
-            ),
-            "Construction Ministry of Works - Premium" = list(
-              calculation_method = "flat",
-              flat_amount = 10000
-            ),
-            "Consumer Discretionary (certificate)" = list(
-              calculation_method = "flat",
-              flat_amount = 10000
-            ),
-            "Consumer Staples (certificate)" = list(
-              calculation_method = "flat",
-              flat_amount = 500
-            ),
-            "Cool Room" = list(
-              calculation_method = "flat",
-              flat_amount = 5500
-            ),
-            "Funeral Parlour" = list(
-              calculation_method = "flat",
-              flat_amount = 2000
-            ),
-            "General Merchandise (Limited Company)" = list(
-              calculation_method = "flat",
-              flat_amount = 1350
-            ),
-            "General Merchandise /Services" = list(
-              calculation_method = "flat",
-              flat_amount = 4000
-            ),
-            "General Supplies (Limited company)" = list(
-              calculation_method = "flat",
-              flat_amount = 1350
-            ),
-            "Hospital" = list(
-              calculation_method = "flat",
-              flat_amount = 2700
-            ),
-            "Logistics" = list(
-              calculation_method = "flat",
-              flat_amount = 4000
-            ),
-            "Orange & Africell Money Agents" = list(
-              calculation_method = "flat",
-              flat_amount = 500
-            ),
-            "Pharmaceutical" = list(
-              calculation_method = "flat",
-              flat_amount = 1350
-            ),
-            "Pharmacy (certificate)" = list(
-              calculation_method = "flat",
-              flat_amount = 500
-            ),
-            "Procurement Suppliers" = list(
-              calculation_method = "flat",
-              flat_amount = 4000
-            ),
-            "Production Factory (Limited Company)" = list(
-              calculation_method = "flat",
-              flat_amount = 5500
-            ),
-            "Recruitment and Training companies" = list(
-              calculation_method = "flat",
-              flat_amount = 1350
-            ),
-            "Shipping Company" = list(
-              calculation_method = "flat",
-              flat_amount = 3900
-            ),
-            "Suppliers" = list(
-              calculation_method = "flat",
-              flat_amount = 2500
-            ),
-            "Transport Company" = list(
-              calculation_method = "flat",
-              flat_amount = 3900
-            )
-          )
+        "Solar Energy Provider" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.065
+        ),
+        
+        # Financials
+        "Banks" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.055
+        ),
+        "Currency exchange" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.055
+        ),
+        "Discount house" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.055
+        ),
+        "Insurance company" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.055
+        ),
+        "Microcredit" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.055
+        ),
+        
+        # Materials Manufacturing/Industrials/Services
+        "Agri producers, processor, dealer or exporter" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.05
+        ),
+        "Biotech, Pharmaceuticals, Life Sciences" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.05
+        ),
+        "Building Materials production" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.05
+        ),
+        "Construction company" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.05
+        ),
+        "Consulting & Legal Services and other professional services" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.05
+        ),
+        "Fishing" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.05
+        ),
+        "Industrial plant or processor" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.05
+        ),
+        "Media/TV/newspaper" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.05
+        ),
+        "Mining or natural extraction (incl. Exporter)" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.05
+        ),
+        "Warehousing" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.05
+        ),
+        "Workshop or repair contractor" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.05
+        ),
+        
+        # Portfolio - flat amounts as specified
+        "Clearing and forwarding companies" = list(
+          calculation_method = "flat",
+          flat_amount = 4000
+        ),
+        "Clinic" = list(
+          calculation_method = "flat",
+          flat_amount = 1350
+        ),
+        "Construction Ministry of Works - Class I" = list(
+          calculation_method = "flat",
+          flat_amount = 6000
+        ),
+        "Construction Ministry of Works - Class II" = list(
+          calculation_method = "flat",
+          flat_amount = 4000
+        ),
+        "Construction Ministry of Works - Class III" = list(
+          calculation_method = "flat",
+          flat_amount = 2500
+        ),
+        "Construction Ministry of Works - Premium" = list(
+          calculation_method = "flat",
+          flat_amount = 10000
+        ),
+        "Consultancy" = list(
+          calculation_method = "flat",
+          flat_amount = 4000
+        ),
+        "Consumer Discretionary (certificate)" = list(
+          calculation_method = "flat",
+          flat_amount = 10000
+        ),
+        "Consumer Staples (certificate)" = list(
+          calculation_method = "flat",
+          flat_amount = 500
+        ),
+        "Funeral Parlour" = list(
+          calculation_method = "flat",
+          flat_amount = 2000
+        ),
+        "General Merchandise (Limited Company)" = list(
+          calculation_method = "flat",
+          flat_amount = 1350
+        ),
+        "General Merchandise /Services" = list(
+          calculation_method = "flat",
+          flat_amount = 4000
+        ),
+        "General Supplies (Limited company)" = list(
+          calculation_method = "flat",
+          flat_amount = 1350
+        ),
+        "Hospital" = list(
+          calculation_method = "flat",
+          flat_amount = 2700
+        ),
+        "Logistics" = list(
+          calculation_method = "flat",
+          flat_amount = 4000
+        ),
+        "Pharmaceutical" = list(
+          calculation_method = "flat",
+          flat_amount = 1350
+        ),
+        "Pharmacy (certificate)" = list(
+          calculation_method = "flat",
+          flat_amount = 500
+        ),
+        "Procurement Suppliers" = list(
+          calculation_method = "flat",
+          flat_amount = 4000
+        ),
+        "Production Factory (Limited Company)" = list(
+          calculation_method = "flat",
+          flat_amount = 5500
+        ),
+        "Recruitment and Training companies" = list(
+          calculation_method = "flat",
+          flat_amount = 1350
+        ),
+        "Shipping Company" = list(
+          calculation_method = "flat",
+          flat_amount = 3900
+        ),
+        "Suppliers" = list(
+          calculation_method = "flat",
+          flat_amount = 2500
+        ),
+        "Transport Company" = list(
+          calculation_method = "flat",
+          flat_amount = 3900
+        ),
+        
+        # Handle "Other" subcategories - use category defaults
+        "Other" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.035
         )
       ),
       
@@ -183,7 +386,89 @@ get_default_tax_config <- function() {
         flat_amount = 0
       )
     )
-  )
+  ) # <- Add this closing parenthesis for wellPanel
+}
+
+# Simplified calculate_business_license function
+calculate_business_license <- function(business_value, business_area, business_subcategory, tax_config) {
+  # Get the business license configuration from tax_config
+  business_config <- tax_config$business_license
+  
+  # Look up the exact subcategory configuration
+  if (business_subcategory %in% names(business_config$subcategories)) {
+    subcat_config <- business_config$subcategories[[business_subcategory]]
+  } else {
+    # Use default fallback if subcategory not found
+    subcat_config <- business_config$default_subcategory
+  }
+  
+  # Calculate tax based on the method
+  if (subcat_config$calculation_method == "minimum_rate") {
+    # Method 1: Traditional calculation (minimum tax or percentage of value, whichever is higher)
+    tax_amount <- max(business_value * subcat_config$rate, subcat_config$minimum)
+    
+  } else if (subcat_config$calculation_method == "flat") {
+    # Method 2: Flat amount
+    tax_amount <- subcat_config$flat_amount
+    
+  } else if (subcat_config$calculation_method == "flat_value_bands") {
+    # Method 3: Flat amount based on business value bands
+    tax_amount <- subcat_config$value_bands$band3$tax  # Default to highest band
+    
+    if (business_value <= subcat_config$value_bands$band1$max) {
+      tax_amount <- subcat_config$value_bands$band1$tax
+    } else if (business_value <= subcat_config$value_bands$band2$max) {
+      tax_amount <- subcat_config$value_bands$band2$tax
+    }
+    
+  } else if (subcat_config$calculation_method == "flat_area_bands") {
+    # Method 4: Flat amount based on business area bands
+    tax_amount <- subcat_config$area_bands$band3$tax  # Default to highest band
+    
+    if (business_area <= subcat_config$area_bands$band1$max) {
+      tax_amount <- subcat_config$area_bands$band1$tax
+    } else if (business_area <= subcat_config$area_bands$band2$max) {
+      tax_amount <- subcat_config$area_bands$band2$tax
+    }
+    
+  } else {
+    # Default fallback
+    tax_amount <- max(business_value * 0.035, 350)
+  }
+  
+  return(list(
+    license_amount = tax_amount,
+    method_used = subcat_config$calculation_method,
+    rate_used = ifelse(is.null(subcat_config$rate), 0, subcat_config$rate),
+    minimum_used = ifelse(is.null(subcat_config$minimum), 0, subcat_config$minimum),
+    flat_amount_used = ifelse(is.null(subcat_config$flat_amount), 0, subcat_config$flat_amount)
+  ))
+}
+
+get_subcategory_defaults <- function(subcategory) {
+  # Get the default configuration
+  defaults <- get_default_tax_config()
+  
+  # Look up the exact subcategory configuration
+  if (subcategory %in% names(defaults$business_license$subcategories)) {
+    subcat_config <- defaults$business_license$subcategories[[subcategory]]
+    
+    return(list(
+      minimum = ifelse(is.null(subcat_config$minimum), 0, subcat_config$minimum),
+      rate = ifelse(is.null(subcat_config$rate), 0, subcat_config$rate * 100),
+      flat_amount = ifelse(is.null(subcat_config$flat_amount), 0, subcat_config$flat_amount),
+      calculation_method = subcat_config$calculation_method
+    ))
+  }
+  
+  # Use default fallback if subcategory not found
+  default_config <- defaults$business_license$default_subcategory
+  return(list(
+    minimum = default_config$minimum,
+    rate = default_config$rate * 100,
+    flat_amount = default_config$flat_amount,
+    calculation_method = default_config$calculation_method
+  ))
 }
 
 # Function to calculate property tax with individual property type bands
@@ -224,55 +509,6 @@ calculate_property_tax <- function(property_value, property_type, tax_config) {
     rate_used = rate,
     minimum_used = minimum,
     band_used = if(type_config$use_bands) band_num else NA
-  ))
-}
-
-# Function to calculate business license with subcategory-specific configurations
-calculate_business_license <- function(business_value, business_area, business_subcategory, tax_config) {
-  # Check if this subcategory exists in our tax config
-  if (business_subcategory %in% names(tax_config)) {
-    subcat_config <- tax_config[[business_subcategory]]
-  } else {
-    # Use default configuration if subcategory not found
-    subcat_config <- list(
-      calculation_method = "minimum_rate",
-      minimum = 350,
-      rate = 0.035
-    )
-  }
-  
-  if (subcat_config$calculation_method == "minimum_rate") {
-    # Method 1: Traditional calculation
-    tax_amount <- max(business_value * subcat_config$rate, subcat_config$minimum)
-    
-  } else if (subcat_config$calculation_method == "flat_value_bands") {
-    # Method 2: Flat amount based on business value bands
-    tax_amount <- subcat_config$value_bands$band3$tax  # Default to highest band
-    
-    if (business_value <= subcat_config$value_bands$band1$max) {
-      tax_amount <- subcat_config$value_bands$band1$tax
-    } else if (business_value <= subcat_config$value_bands$band2$max) {
-      tax_amount <- subcat_config$value_bands$band2$tax
-    }
-    
-  } else if (subcat_config$calculation_method == "flat_area_bands") {
-    # Method 3: Flat amount based on business area bands
-    tax_amount <- subcat_config$area_bands$band3$tax  # Default to highest band
-    
-    if (business_area <= subcat_config$area_bands$band1$max) {
-      tax_amount <- subcat_config$area_bands$band1$tax
-    } else if (business_area <= subcat_config$area_bands$band2$max) {
-      tax_amount <- subcat_config$area_bands$band2$tax
-    }
-    
-  } else {
-    # Default fallback
-    tax_amount <- max(business_value * 0.035, 350)
-  }
-  
-  return(list(
-    license_amount = tax_amount,
-    method_used = subcat_config$calculation_method
   ))
 }
 
@@ -443,52 +679,6 @@ create_business_license_scenario_column <- function(ns, scenario_name, scenario_
   )
 }
 
-# Add this function to R/module3_functions.R
-get_subcategory_defaults <- function(subcategory) {
-  # Get the default configuration
-  defaults <- get_default_tax_config()
-  
-  # Check if this subcategory has specific Portfolio configuration
-  portfolio_subcats <- defaults$business_license$categories$Portfolio$subcategories
-  
-  if (subcategory %in% names(portfolio_subcats)) {
-    # Portfolio subcategory with flat amount
-    subcat_config <- portfolio_subcats[[subcategory]]
-    return(list(
-      minimum = subcat_config$flat_amount,
-      rate = 0, # Portfolio items typically don't use rates
-      flat_amount = subcat_config$flat_amount,
-      calculation_method = subcat_config$calculation_method
-    ))
-  }
-  
-  # Check if this subcategory matches a category pattern
-  for (category_name in names(defaults$business_license$categories)) {
-    if (category_name == "Portfolio") next # Already handled above
-    
-    category_config <- defaults$business_license$categories[[category_name]]
-    
-    # Simple pattern matching - you can make this more sophisticated
-    if (grepl(tolower(gsub(" ", "", category_name)), tolower(gsub(" ", "", subcategory)), fixed = TRUE)) {
-      return(list(
-        minimum = category_config$minimum,
-        rate = category_config$rate * 100, # Convert to percentage for display
-        flat_amount = category_config$minimum,
-        calculation_method = category_config$calculation_method
-      ))
-    }
-  }
-  
-  # Use default fallback
-  default_config <- defaults$business_license$default_subcategory
-  return(list(
-    minimum = default_config$minimum,
-    rate = default_config$rate * 100, # Convert to percentage for display
-    flat_amount = default_config$flat_amount,
-    calculation_method = default_config$calculation_method
-  ))
-}
-
 # Replace the existing create_business_subcategory_ui function
 create_business_subcategory_ui <- function(ns, subcategory, scenario_suffix) {
   subcategory_safe <- gsub("[^A-Za-z0-9_]", "_", subcategory)
@@ -504,33 +694,43 @@ create_business_subcategory_ui <- function(ns, subcategory, scenario_suffix) {
     selectInput(ns(paste0("bus_subcat_", subcategory_safe, "_method_", scenario_suffix)),
                 "Tax Calculation Method:",
                 choices = c(
-                  "Tax from minimum and rate" = "min_rate",
-                  "Flat amount from business value calculation" = "flat_value", 
-                  "Flat amount from business area" = "flat_area"
+                  "Tax from minimum and rate" = "minimum_rate",
+                  "Flat amount (fixed)" = "flat",
+                  "Flat amount from business value calculation" = "flat_value_bands",
+                  "Flat amount from business area" = "flat_area_bands"
                 ),
-                selected = "min_rate"),
+                selected = defaults$calculation_method), # Use subcategory-specific default
     
     # Method 1: Minimum + Rate configuration
     conditionalPanel(
-      condition = paste0("input['", ns(paste0("bus_subcat_", subcategory_safe, "_method_", scenario_suffix)), "'] == 'min_rate'"),
+      condition = paste0("input['", ns(paste0("bus_subcat_", subcategory_safe, "_method_", scenario_suffix)), "'] == 'minimum_rate'"),
       fluidRow(
         column(6,
                numericInput(ns(paste0("bus_subcat_", subcategory_safe, "_min_", scenario_suffix)),
                            "Minimum Tax:",
-                           value = defaults$minimum,  # Use subcategory-specific default
+                           value = defaults$minimum,
                            min = 0)),
         column(6,
                numericInput(ns(paste0("bus_subcat_", subcategory_safe, "_rate_", scenario_suffix)),
                            "Rate (%):",
-                           value = defaults$rate,     # Use subcategory-specific default
+                           value = defaults$rate,
                            min = 0,
                            step = 0.1))
       )
     ),
     
-    # Method 2: Flat amount from business value (with up to 3 value bands)
+    # Method 2: Flat amount (fixed)
     conditionalPanel(
-      condition = paste0("input['", ns(paste0("bus_subcat_", subcategory_safe, "_method_", scenario_suffix)), "'] == 'flat_value'"),
+      condition = paste0("input['", ns(paste0("bus_subcat_", subcategory_safe, "_method_", scenario_suffix)), "'] == 'flat'"),
+      numericInput(ns(paste0("bus_subcat_", subcategory_safe, "_flat_", scenario_suffix)),
+                   "Flat Tax Amount:",
+                   value = defaults$flat_amount,
+                   min = 0)
+    ),
+    
+    # Method 3: Flat amount from business value (with up to 3 value bands)
+    conditionalPanel(
+      condition = paste0("input['", ns(paste0("bus_subcat_", subcategory_safe, "_method_", scenario_suffix)), "'] == 'flat_value_bands'"),
       h6("Value-Based Flat Tax (up to 3 bands):"),
       # Band 1
       fluidRow(
@@ -557,9 +757,9 @@ create_business_subcategory_ui <- function(ns, subcategory, scenario_suffix) {
       )
     ),
     
-    # Method 3: Flat amount from business area (with up to 3 area bands)
+    # Method 4: Flat amount from business area (with up to 3 area bands)
     conditionalPanel(
-      condition = paste0("input['", ns(paste0("bus_subcat_", subcategory_safe, "_method_", scenario_suffix)), "'] == 'flat_area'"),
+      condition = paste0("input['", ns(paste0("bus_subcat_", subcategory_safe, "_method_", scenario_suffix)), "'] == 'flat_area_bands'"),
       h6("Area-Based Flat Tax (up to 3 bands):"),
       # Band 1
       fluidRow(
@@ -585,7 +785,7 @@ create_business_subcategory_ui <- function(ns, subcategory, scenario_suffix) {
                               "Flat Tax:", value = 1200, min = 0))
       )
     )
-  )
+  ) # <- This closes the wellPanel
 }
 
 # Helper function to create business license slot ranges UI

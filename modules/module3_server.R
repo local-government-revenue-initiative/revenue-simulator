@@ -33,11 +33,11 @@ observe({
   })
 })
     
-# Simplified UI generation that uses actual data
 generate_business_subcategories_ui <- function(scenario_suffix) {
   renderUI({
     tryCatch({
-      # Use subcategories from actual data
+      # Use both categories and subcategories from actual data
+      categories <- values$business_categories
       subcategories <- values$business_subcategories
       
       if (is.null(subcategories) || length(subcategories) == 0) {
@@ -48,16 +48,83 @@ generate_business_subcategories_ui <- function(scenario_suffix) {
         ))
       }
       
-      # Create UI for each subcategory found in the data
-      category_configs <- lapply(subcategories, function(subcategory) {
-        create_business_subcategory_ui(ns, subcategory, scenario_suffix)
+      # Group subcategories by category
+      data <- processed_data()
+      category_groups <- data |>
+        filter(!is.na(business_sub_category), !is.na(business_category)) |>
+        select(business_category, business_sub_category) |>
+        distinct() |>
+        group_by(business_category) |>
+        summarise(subcategories = list(unique(business_sub_category)), .groups = "drop")
+      
+      # Create collapsible sections for each category
+      category_sections <- map(1:nrow(category_groups), function(i) {
+        category <- category_groups$business_category[i]
+        subcats <- category_groups$subcategories[[i]]
+        
+        # Create UI for subcategories in this category
+        subcat_configs <- map(subcats, function(subcategory) {
+          create_business_subcategory_ui(ns, subcategory, scenario_suffix)
+        })
+        
+        # Create collapsible section
+        div(
+          style = "margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px;",
+          # Category header (clickable)
+          div(
+            id = paste0("category_header_", gsub("[^A-Za-z0-9_]", "_", category), "_", scenario_suffix),
+            class = "category-header",
+            style = "background-color: #f8f9fa; padding: 10px; cursor: pointer; border-bottom: 1px solid #ddd;",
+            onclick = paste0("toggleCategory('", gsub("[^A-Za-z0-9_]", "_", category), "_", scenario_suffix, "')"),
+            h5(category, style = "margin: 0; color: #2c3e50;"),
+            span(paste0(" (", length(subcats), " subcategories)"), 
+                 style = "color: #6c757d; font-size: 0.9em;"),
+            icon("chevron-down", style = "float: right; margin-top: 2px;")
+          ),
+          # Category content (collapsible)
+          div(
+            id = paste0("category_content_", gsub("[^A-Za-z0-9_]", "_", category), "_", scenario_suffix),
+            style = "padding: 10px; display: none;", # Initially collapsed
+            do.call(tagList, subcat_configs)
+          )
+        )
       })
       
-      do.call(tagList, c(
-        list(p(paste("Configuring", length(subcategories), "business subcategories found in your data:"), 
-               style = "font-weight: bold; margin-bottom: 15px;")),
-        category_configs
-      ))
+      tagList(
+        # Add JavaScript for collapsible functionality
+        tags$script(HTML("
+          function toggleCategory(categoryId) {
+            var content = document.getElementById('category_content_' + categoryId);
+            var header = document.getElementById('category_header_' + categoryId);
+            var icon = header.querySelector('i');
+            
+            if (content.style.display === 'none') {
+              content.style.display = 'block';
+              icon.className = icon.className.replace('fa-chevron-down', 'fa-chevron-up');
+            } else {
+              content.style.display = 'none';
+              icon.className = icon.className.replace('fa-chevron-up', 'fa-chevron-down');
+            }
+          }
+        ")),
+        
+        p(paste("Configuring", length(subcategories), "business subcategories organized into", 
+                nrow(category_groups), "categories:"), 
+          style = "font-weight: bold; margin-bottom: 15px;"),
+        
+        # Add "Expand All" / "Collapse All" buttons
+        div(
+          style = "margin-bottom: 15px;",
+          actionButton(paste0("expand_all_", scenario_suffix), "Expand All", 
+                      class = "btn-sm btn-outline-primary",
+                      onclick = paste0("toggleAllCategories('", scenario_suffix, "', true)")),
+          actionButton(paste0("collapse_all_", scenario_suffix), "Collapse All", 
+                      class = "btn-sm btn-outline-secondary",
+                      onclick = paste0("toggleAllCategories('", scenario_suffix, "', false)"))
+        ),
+        
+        do.call(tagList, category_sections)
+      )
       
     }, error = function(e) {
       showNotification(paste("Error generating business UI:", e$message), type = "error")

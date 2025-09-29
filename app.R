@@ -8,9 +8,11 @@ library(DT)
 library(dplyr)
 library(tidyr)
 library(readr)
+library(purrr)
 library(fastDummies)
 library(ggplot2)
 library(scales)
+
 
 # Set options
 options(shiny.maxRequestSize = 30*1024^2)  # 30MB max file size
@@ -139,8 +141,38 @@ ui <- dashboardPage(
             margin-left: 0 !important;
           }
         }
-      "))
+
+      /* Enhanced Business License Category Styles */
+      .category-header:hover {
+        background-color: #e9ecef !important;
+      }
+      .category-header {
+        transition: background-color 0.2s ease;
+      }        
+      ")
     ),
+
+    # NEW: Enhanced JavaScript functionality
+    tags$script(HTML("
+      function toggleAllCategories(scenario, expand) {
+        var contents = document.querySelectorAll('[id*=\"category_content_\"][id*=\"_' + scenario + '\"]');
+        var headers = document.querySelectorAll('[id*=\"category_header_\"][id*=\"_' + scenario + '\"]');
+        
+        contents.forEach(function(content, index) {
+          var header = headers[index];
+          var icon = header.querySelector('i');
+          
+          if (expand) {
+            content.style.display = 'block';
+            icon.className = icon.className.replace('fa-chevron-down', 'fa-chevron-up');
+          } else {
+            content.style.display = 'none';
+            icon.className = icon.className.replace('fa-chevron-up', 'fa-chevron-down');
+          }
+        });
+      }
+    "))
+  ),
     
     tabItems(
       module1_ui("module1"),

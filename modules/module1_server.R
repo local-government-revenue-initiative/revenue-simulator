@@ -129,8 +129,8 @@ module1_server <- function(id) {
     output$business_mapping_ui <- renderUI({
       req(values$business_data)
       
-      business_columns <- c("id_property", "business_name", "business_area", 
-                            "business_category", "business_sub_category")  # Added business_sub_category
+      business_columns <- c("id_property", "id_business", "business_name", "business_area", 
+                      "business_category", "business_sub_category")  # Added business_sub_category
       suggestions <- suggest_column_mapping(values$business_data, business_columns)
       
       tagList(
