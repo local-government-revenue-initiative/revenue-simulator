@@ -483,11 +483,14 @@ generate_feature_ui <- function(scenario_suffix) {
 
 product_weights <- rep(1, n_rows)
 
-# Special debugging for property FCC0000001
-debug_property <- preview_data$id_property[1] == "FCC0000001"
+# Find the row index for the target property
+target_property_id <- "FCC0136047"
+debug_row_index <- which(preview_data$id_property == target_property_id)
+debug_property <- length(debug_row_index) > 0
 
 if (debug_property) {
-  cat("=== DEBUGGING FEATURE WEIGHTS FOR FCC0000001 ===\n")
+  cat("=== DEBUGGING FEATURE WEIGHTS FOR", target_property_id, "===\n")
+  cat("Property found at row index:", debug_row_index[1], "\n")
   cat("Only showing features where feature_value = 1 AND weight != 0 (contributing features)\n\n")
 }
 
@@ -503,8 +506,8 @@ for (feat in all_features) {
   
   if (!is.null(weight) && feat %in% names(preview_data)) {
     # Only show debug info if feature value is 1 AND weight is not 0
-    if (debug_property && preview_data[[feat]][1] == 1 && weight != 0) {
-      feature_value <- preview_data[[feat]][1]
+    if (debug_property && preview_data[[feat]][debug_row_index[1]] == 1 && weight != 0) {
+      feature_value <- preview_data[[feat]][debug_row_index[1]]
       cat("Feature:", feat, "\n")
       cat("  Weight:", weight, "\n")
       cat("  Feature value:", feature_value, "\n")
@@ -515,25 +518,17 @@ for (feat in all_features) {
                                  (weight/100 + 1), 
                                  1)
     
-    if (debug_property && preview_data[[feat]][1] == 1 && weight != 0) {
-      cat("  Multiplier calculation: ifelse(1 == 1, (", weight, "/100 + 1), 1) = ", feature_multiplier[1], "\n")
-      cat("  Running product before:", product_weights[1], "\n")
+    if (debug_property && preview_data[[feat]][debug_row_index[1]] == 1 && weight != 0) {
+      cat("  Multiplier calculation: ifelse(1 == 1, (", weight, "/100 + 1), 1) = ", feature_multiplier[debug_row_index[1]], "\n")
+      cat("  Running product before:", product_weights[debug_row_index[1]], "\n")
     }
     
     product_weights <- product_weights * feature_multiplier
     
-    if (debug_property && preview_data[[feat]][1] == 1 && weight != 0) {
-      cat("  Running product after:", product_weights[1], "\n\n")
+    if (debug_property && preview_data[[feat]][debug_row_index[1]] == 1 && weight != 0) {
+      cat("  Running product after:", product_weights[debug_row_index[1]], "\n\n")
     }
   }
-}
-
-if (debug_property) {
-  cat("FINAL PRODUCT OF FEATURE WEIGHTS:", product_weights[1], "\n")
-  cat("Expected value: 2.2256\n")
-  cat("Actual value: 1.7583\n")
-  cat("Ratio (actual/expected):", product_weights[1] / 2.2256, "\n")
-  cat("============================================\n\n")
 }
         
         # Debug output
