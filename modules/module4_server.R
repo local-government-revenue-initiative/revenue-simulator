@@ -127,8 +127,36 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
         business_category = if("business_category" %in% names(data)) data$business_category else NA,
         business_sub_category = if("business_sub_category" %in% names(data)) data$business_sub_category else NA,
         property_area = if("property_area" %in% names(data)) data$property_area else NA,
-        business_area = if("business_area" %in% names(data)) data$business_area else NA
+        business_area = business_areas,
+        stringsAsFactors = FALSE
       )
+      
+      # CRITICAL FIX: Deduplicate to prevent double-counting in revenue calculations
+      # This follows the same approach as Module 3's preview calculation
+      
+      # Step 1: Separate properties with and without businesses
+      has_business <- !is.na(result$business_sub_category) & result$business_value > 0
+      
+      # Step 2: For rows WITHOUT businesses, keep unique id_property + property_type
+      no_business_rows <- result[!has_business, ]
+      if (nrow(no_business_rows) > 0) {
+        no_business_rows <- no_business_rows %>%
+          dplyr::group_by(id_property, property_type) %>%
+          dplyr::slice(1) %>%
+          dplyr::ungroup()
+      }
+      
+      # Step 3: For rows WITH businesses, keep unique id_property + property_type + business_sub_category
+      business_rows <- result[has_business, ]
+      if (nrow(business_rows) > 0) {
+        business_rows <- business_rows %>%
+          dplyr::group_by(id_property, property_type, business_sub_category) %>%
+          dplyr::slice(1) %>%
+          dplyr::ungroup()
+      }
+      
+      # Step 4: Combine back together
+      result <- dplyr::bind_rows(no_business_rows, business_rows)
       
       return(result)
     }
