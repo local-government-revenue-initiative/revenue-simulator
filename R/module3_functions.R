@@ -553,7 +553,7 @@ calculate_property_taxes_with_deduplication <- function(data, property_values, p
     }
     
     # Use the existing calculate_property_tax function - FIXED: pass tax_config directly
-    tax_result <- calculate_property_tax(prop_value, prop_type, tax_config)
+    tax_result <- calculate_property_tax(prop_value, prop_type, list(property_tax = tax_config))
     unique_taxes[i] <- tax_result$tax_amount
   }
   
