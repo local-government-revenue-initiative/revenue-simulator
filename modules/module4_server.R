@@ -112,7 +112,7 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       # Extract structure type info for filtering
       structure_types <- get_structure_types_from_data(data)
       
-      # Combine into result dataframe
+      # Create initial result dataframe with ALL rows
       result <- data.frame(
         id_property = data$id_property,
         scenario = scenario_name,
@@ -131,32 +131,54 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
         stringsAsFactors = FALSE
       )
       
-      # CRITICAL FIX: Deduplicate to prevent double-counting in revenue calculations
-      # This follows the same approach as Module 3's preview calculation
+      # DIAGNOSTIC OUTPUT
+      cat("\n=== BEFORE DEDUPLICATION ===\n")
+      cat("Total rows:", nrow(result), "\n")
+      cat("Rows with businesses:", sum(!is.na(result$business_sub_category)), "\n")
+      cat("Sum of property_tax:", sum(result$property_tax, na.rm = TRUE), "\n")
+      cat("Sum of business_license:", sum(result$business_license, na.rm = TRUE), "\n")
       
-      # Step 1: Separate properties with and without businesses
-      has_business <- !is.na(result$business_sub_category) & result$business_value > 0
+      # CORRECT DEDUPLICATION LOGIC:
+      # 1. Create property tax rows: unique by id_property + property_type, with business_license = 0
+      # 2. Create business license rows: rows with businesses, with property_tax = 0
+      # 3. Combine them
       
-      # Step 2: For rows WITHOUT businesses, keep unique id_property + property_type
-      no_business_rows <- result[!has_business, ]
-      if (nrow(no_business_rows) > 0) {
-        no_business_rows <- no_business_rows %>%
-          dplyr::group_by(id_property, property_type) %>%
-          dplyr::slice(1) %>%
-          dplyr::ungroup()
-      }
+      # Step 1: Property tax rows (deduplicate by id_property + property_type)
+      property_rows <- result
+      property_rows$business_license <- 0  # Zero out business license for property tax rows
+      property_rows$total_tax <- property_rows$property_tax
       
-      # Step 3: For rows WITH businesses, keep unique id_property + property_type + business_sub_category
-      business_rows <- result[has_business, ]
+      # Deduplicate by id_property + property_type
+      property_key <- paste(property_rows$id_property, property_rows$property_type, sep = "_")
+      property_rows <- property_rows[!duplicated(property_key), ]
+      
+      # Step 2: Business license rows (only rows with businesses)
+      business_rows <- result[!is.na(result$business_sub_category), ]
+      
       if (nrow(business_rows) > 0) {
-        business_rows <- business_rows %>%
-          dplyr::group_by(id_property, property_type, business_sub_category) %>%
-          dplyr::slice(1) %>%
-          dplyr::ungroup()
+        business_rows$property_tax <- 0  # Zero out property tax for business license rows
+        business_rows$total_tax <- business_rows$business_license
+        
+        # Optional: deduplicate businesses if there are true duplicates
+        # Assuming each row with a business_sub_category represents a unique business
+        # If you need to deduplicate, uncomment the following:
+        # business_key <- paste(business_rows$id_property, business_rows$business_sub_category, sep = "_")
+        # business_rows <- business_rows[!duplicated(business_key), ]
+      } else {
+        business_rows <- data.frame()  # Empty dataframe if no businesses
       }
       
-      # Step 4: Combine back together
-      result <- dplyr::bind_rows(no_business_rows, business_rows)
+      # Step 3: Combine property and business rows
+      result <- rbind(property_rows, business_rows)
+      
+      # DIAGNOSTIC OUTPUT
+      cat("\n=== AFTER DEDUPLICATION ===\n")
+      cat("Total rows:", nrow(result), "\n")
+      cat("Property tax rows:", nrow(property_rows), "\n")
+      cat("Business license rows:", nrow(business_rows), "\n")
+      cat("Sum of property_tax:", sum(result$property_tax, na.rm = TRUE), "\n")
+      cat("Sum of business_license:", sum(result$business_license, na.rm = TRUE), "\n")
+      cat("============================\n\n")
       
       return(result)
     }
