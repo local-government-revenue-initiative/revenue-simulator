@@ -471,16 +471,17 @@ get_subcategory_defaults <- function(subcategory) {
   ))
 }
 
-# Function to calculate property tax with individual property type bands
+# Function to calculate property tax with individual property type slots
 calculate_property_tax <- function(property_value, property_type, tax_config) {
   # Add defensive checks
   if (length(property_value) == 0 || is.null(property_value)) {
-    return(list(tax_amount = 0, rate_used = 0, minimum_used = 0, band_used = NA))
+    return(list(tax_amount = 0, rate_used = 0, minimum_used = 0, slot_used = NA))
   }
   
   if (length(property_type) == 0 || is.null(property_type)) {
     property_type <- "domestic"  # default fallback
-  }  
+  }
+  
   # Get the configuration for this property type
   type_config <- tax_config$property_tax[[tolower(property_type)]]
   
@@ -489,34 +490,54 @@ calculate_property_tax <- function(property_value, property_type, tax_config) {
     type_config <- tax_config$property_tax$domestic
   }
   
-  if (type_config$use_bands) {
-    # Find which band this property falls into
-    band_num <- 1
+  # Add additional null check
+  if (is.null(type_config)) {
+    return(list(tax_amount = 0, rate_used = 0, minimum_used = 0, slot_used = NA))
+  }
+  
+  # FIXED: Changed from use_bands to use_slots to match the actual configuration
+  if (!is.null(type_config$use_slots) && type_config$use_slots) {
+    # Find which slot this property falls into
+    slot_num <- 3  # Default to highest slot
     for (i in 1:3) {
-      band <- tax_config$property_tax$bands[[paste0("band", i)]]
-      if (property_value >= band$min && property_value < band$max) {
-        band_num <- i
+      # FIXED: Access slots directly from type_config, not from tax_config$property_tax$bands
+      slot <- type_config$slots[[paste0("slot", i)]]
+      if (!is.null(slot) && property_value >= slot$min && property_value < slot$max) {
+        slot_num <- i
         break
       }
     }
     
-    # Get band-specific rate and minimum
-    rate <- type_config$band_rates[[paste0("rate", band_num)]]
-    minimum <- type_config$band_minimums[[paste0("min", band_num)]]
+    # Get slot-specific rate and minimum
+    slot_config <- type_config$slots[[paste0("slot", slot_num)]]
+    
+    if (!is.null(slot_config)) {
+      rate <- slot_config$rate
+      minimum <- slot_config$minimum
+    } else {
+      # Fallback if slot config is missing
+      rate <- type_config$rate
+      minimum <- type_config$minimum
+    }
   } else {
     # Use flat rate and minimum
     rate <- type_config$rate
     minimum <- type_config$minimum
   }
   
+  # Handle null values
+  if (is.null(rate)) rate <- 0
+  if (is.null(minimum)) minimum <- 0
+  
   # Calculate tax: max of (value * rate) or minimum
-  tax_amount <- max(property_value * (rate / 100), minimum)
+  # Note: rate is already in decimal form (e.g., 0.025 for 2.5%)
+  tax_amount <- max(property_value * rate, minimum)
   
   return(list(
     tax_amount = tax_amount,
     rate_used = rate,
     minimum_used = minimum,
-    band_used = if(type_config$use_bands) band_num else NA
+    slot_used = if(!is.null(type_config$use_slots) && type_config$use_slots) slot_num else NA
   ))
 }
 
