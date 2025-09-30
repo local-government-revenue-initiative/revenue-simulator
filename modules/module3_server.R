@@ -1214,6 +1214,7 @@ collect_business_license_config <- function(scenario) {
           
           for (i in 1:n_rows) {
             subcat <- business_subcategories[i]
+            # Inside the loop calculating business licenses:
             if (!is.na(subcat) && subcat %in% names(business_config)) {
               subcat_config <- business_config[[subcat]]
               
@@ -1222,8 +1223,12 @@ collect_business_license_config <- function(scenario) {
                 business_licenses[i] <- max(business_values[i] * subcat_config$rate, 
                                             subcat_config$minimum)
                                             
+              } else if (subcat_config$calculation_method == "flat") {
+                # Method 2: Flat amount (THIS WAS MISSING!)
+                business_licenses[i] <- subcat_config$flat_amount
+                
               } else if (subcat_config$calculation_method == "flat_value_bands") {
-                # Method 2: Flat amount based on business value bands
+                # Method 3: Flat amount based on business value bands
                 business_licenses[i] <- subcat_config$value_bands$band3$tax  # Default to highest band
                 
                 if (business_values[i] <= subcat_config$value_bands$band1$max) {
@@ -1233,7 +1238,7 @@ collect_business_license_config <- function(scenario) {
                 }
                 
               } else if (subcat_config$calculation_method == "flat_area_bands") {
-                # Method 3: Flat amount based on business area bands
+                # Method 4: Flat amount based on business area bands
                 area_value <- business_areas[i]
                 
                 business_licenses[i] <- subcat_config$area_bands$band3$tax  # Default to highest band

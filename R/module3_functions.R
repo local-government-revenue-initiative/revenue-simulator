@@ -483,11 +483,11 @@ calculate_property_tax <- function(property_value, property_type, tax_config) {
   }
   
   # Get the configuration for this property type
-  type_config <- tax_config$property_tax[[tolower(property_type)]]
-  
+  type_config <- tax_config[[tolower(property_type)]]
+
   if (is.null(type_config)) {
     # Default to domestic if type not found
-    type_config <- tax_config$property_tax$domestic
+    type_config <- tax_config$domestic
   }
   
   # Add additional null check
