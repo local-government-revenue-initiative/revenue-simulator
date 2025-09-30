@@ -473,6 +473,14 @@ get_subcategory_defaults <- function(subcategory) {
 
 # Function to calculate property tax with individual property type bands
 calculate_property_tax <- function(property_value, property_type, tax_config) {
+  # Add defensive checks
+  if (length(property_value) == 0 || is.null(property_value)) {
+    return(list(tax_amount = 0, rate_used = 0, minimum_used = 0, band_used = NA))
+  }
+  
+  if (length(property_type) == 0 || is.null(property_type)) {
+    property_type <- "domestic"  # default fallback
+  }  
   # Get the configuration for this property type
   type_config <- tax_config$property_tax[[tolower(property_type)]]
   
@@ -544,7 +552,7 @@ calculate_property_taxes_with_deduplication <- function(data, property_values, p
     }
     
     # Use the existing calculate_property_tax function
-    tax_result <- calculate_property_tax(prop_value, prop_type, tax_config)
+    tax_result <- calculate_property_tax(prop_value, prop_type, list(property_tax = tax_config))
     unique_taxes[i] <- tax_result$tax_amount
   }
   

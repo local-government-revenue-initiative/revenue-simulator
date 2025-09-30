@@ -748,8 +748,17 @@ collect_business_license_config <- function(scenario) {
         rep("domestic", n_rows)  # Default to domestic
       })
       
+      # Add debugging here:
+      cat("Debug: property_values length:", length(property_values), "\n")
+      cat("Debug: property_types length:", length(property_types), "\n") 
+      cat("Debug: first few property_values:", head(property_values, 3), "\n")
+      cat("Debug: first few property_types:", head(property_types, 3), "\n")
+      
       # Calculate property taxes with error handling
       tax_config <- collect_property_tax_config(scenario)
+      
+      cat("Debug: tax_config structure:\n")
+      str(tax_config)
       property_taxes <- numeric(n_rows)
       tax_rates <- numeric(n_rows)
       tax_slots <- numeric(n_rows)
@@ -1013,6 +1022,14 @@ collect_business_license_config <- function(scenario) {
           
           # Calculate property taxes with deduplication - same approach as Module 4
           tax_config <- list(property_tax = collect_property_tax_config(scenario))
+          
+          # Add this debugging before calling calculate_property_taxes_with_deduplication
+          cat("Debug: property_values length:", length(property_values), "\n")
+          cat("Debug: property_types length:", length(property_types), "\n") 
+          cat("Debug: tax_config structure:\n")
+          str(tax_config$property_tax)
+          cat("Debug: first few property_values:", head(property_values, 3), "\n")
+          cat("Debug: first few property_types:", head(property_types, 3), "\n")
 
           # Use the deduplication function from module3_functions.R
           property_taxes <- calculate_property_taxes_with_deduplication(
