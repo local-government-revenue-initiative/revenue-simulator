@@ -90,8 +90,9 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       # Get property types
       property_types <- get_property_types(data)
       
-      # Calculate property taxes using Module 3 configurations
-      property_taxes <- calculate_property_taxes_module3(
+      # Calculate property taxes using Module 3 configurations with deduplication
+      property_taxes <- calculate_property_taxes_with_deduplication(
+        data,
         property_values, 
         property_types, 
         tax_config$property_tax
@@ -310,78 +311,6 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
         # No property type information, default all to domestic
         return(rep("domestic", n_rows))
       }
-    }
-    
-    # Calculate property taxes using Module 3 logic
-    calculate_property_taxes_module3 <- function(property_values, property_types, tax_config) {
-      n <- length(property_values)
-      taxes <- numeric(n)
-      
-      # Handle case where no tax config exists
-      if (is.null(tax_config) || length(tax_config) == 0) {
-        # Use default rates
-        for (i in 1:n) {
-          if (!is.na(property_values[i]) && property_values[i] > 0) {
-            taxes[i] <- max(property_values[i] * 0.0015, 100000)  # Default: 0.15% with 100k minimum
-          }
-        }
-        return(taxes)
-      }
-      
-      for (i in 1:n) {
-        prop_type <- property_types[i]
-        prop_value <- property_values[i]
-        
-        if (is.na(prop_value) || prop_value <= 0) {
-          taxes[i] <- 0
-          next
-        }
-        
-        type_config <- tax_config[[prop_type]]
-        if (is.null(type_config)) {
-          type_config <- tax_config[["domestic"]]  # Default to domestic
-          if (is.null(type_config)) {
-            # Final fallback
-            taxes[i] <- max(prop_value * 0.0015, 100000)
-            next
-          }
-        }
-        
-        if (!is.null(type_config$use_slots) && !type_config$use_slots) {
-          # Simple calculation
-          rate <- if(!is.null(type_config$rate)) type_config$rate else 0.15
-          minimum <- if(!is.null(type_config$minimum)) type_config$minimum else 100000
-          taxes[i] <- max(prop_value * (rate / 100), minimum)
-        } else if (!is.null(type_config$use_slots) && type_config$use_slots) {
-          # Find which slot applies
-          slot_num <- 3  # Default to highest slot
-          for (s in 1:3) {
-            slot <- type_config$slots[[paste0("slot", s)]]
-            if (!is.null(slot) && !is.null(slot$min) && !is.null(slot$max) &&
-                prop_value >= slot$min && prop_value < slot$max) {
-              slot_num <- s
-              break
-            }
-          }
-          
-          slot_config <- type_config$slots[[paste0("slot", slot_num)]]
-          if (!is.null(slot_config)) {
-            rate <- if(!is.null(slot_config$rate)) slot_config$rate else 0.15
-            minimum <- if(!is.null(slot_config$minimum)) slot_config$minimum else 100000
-            taxes[i] <- max(prop_value * (rate / 100), minimum)
-          } else {
-            # Fallback
-            taxes[i] <- max(prop_value * 0.0015, 100000)
-          }
-        } else {
-          # No use_slots specified, use simple calculation
-          rate <- if(!is.null(type_config$rate)) type_config$rate else 0.15
-          minimum <- if(!is.null(type_config$minimum)) type_config$minimum else 100000
-          taxes[i] <- max(prop_value * (rate / 100), minimum)
-        }
-      }
-      
-      return(taxes)
     }
     
     # Calculate business licenses using Module 3 logic

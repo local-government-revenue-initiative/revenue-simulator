@@ -512,6 +512,51 @@ calculate_property_tax <- function(property_value, property_type, tax_config) {
   ))
 }
 
+# Function to calculate property taxes handling duplicates from Module 1
+calculate_property_taxes_with_deduplication <- function(data, property_values, property_types, tax_config) {
+  # Create a unique identifier for property-type combinations
+  property_key <- paste(data$id_property, property_types, sep = "_")
+  
+  # Create dataframe with all necessary information
+  calc_data <- data.frame(
+    row_id = 1:length(property_values),
+    property_key = property_key,
+    id_property = data$id_property,
+    property_type = property_types,
+    property_value = property_values,
+    stringsAsFactors = FALSE
+  )
+  
+  # Find unique property-type combinations and keep track of first occurrence
+  unique_indices <- !duplicated(calc_data$property_key)
+  unique_data <- calc_data[unique_indices, ]
+  
+  # Calculate tax for unique properties only
+  unique_taxes <- numeric(nrow(unique_data))
+  
+  for (i in 1:nrow(unique_data)) {
+    prop_type <- unique_data$property_type[i]
+    prop_value <- unique_data$property_value[i]
+    
+    if (is.na(prop_value) || prop_value <= 0) {
+      unique_taxes[i] <- 0
+      next
+    }
+    
+    # Use the existing calculate_property_tax function
+    tax_result <- calculate_property_tax(prop_value, prop_type, tax_config)
+    unique_taxes[i] <- tax_result$tax_amount
+  }
+  
+  # Create lookup table mapping property_key to tax amount
+  tax_lookup <- setNames(unique_taxes, unique_data$property_key)
+  
+  # Apply the calculated taxes back to all rows (including duplicates)
+  final_taxes <- tax_lookup[calc_data$property_key]
+  
+  return(final_taxes)
+}
+
 # Add these helper functions to R/module3_functions.R
 
 # Helper function to create property type configuration UI

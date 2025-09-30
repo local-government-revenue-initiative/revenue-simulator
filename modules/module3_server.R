@@ -1011,54 +1011,55 @@ collect_business_license_config <- function(scenario) {
             rep("domestic", n_rows)  # Default to domestic
           })
           
-          # Calculate property taxes with error handling
-          tax_config <- collect_property_tax_config(scenario)
-          property_taxes <- numeric(n_rows)
+          # Calculate property taxes with deduplication - same approach as Module 4
+          tax_config <- list(property_tax = collect_property_tax_config(scenario))
+
+          # Use the deduplication function from module3_functions.R
+          property_taxes <- calculate_property_taxes_with_deduplication(
+            preview_data,
+            property_values,
+            property_types,
+            tax_config$property_tax
+          )
+
+          # Initialize display arrays
           tax_rates <- numeric(n_rows)
           tax_slots <- numeric(n_rows)
-          
+
+          # Calculate display values for each row (rates and slots for display purposes)
           for (i in 1:n_rows) {
-            tryCatch({
-              prop_type <- property_types[i]
-              prop_value <- property_values[i]
-              
-              if (is.na(prop_value) || prop_value <= 0) {
-                property_taxes[i] <- 0
-                tax_rates[i] <- 0
-                tax_slots[i] <- NA
-                next
-              }
-              
-              type_config <- tax_config[[prop_type]]
-              
-              if (!type_config$use_slots) {
-                # Simple calculation
-                property_taxes[i] <- max(prop_value * type_config$rate, type_config$minimum)
-                tax_rates[i] <- type_config$rate * 100  # Convert to percentage for display
-                tax_slots[i] <- NA
-              } else {
-                # Find which slot applies
-                slot_num <- 3  # Default to highest slot
-                for (s in 1:3) {
-                  slot <- type_config$slots[[paste0("slot", s)]]
-                  if (prop_value >= slot$min && prop_value < slot$max) {
-                    slot_num <- s
-                    break
-                  }
-                }
-                
-                slot_config <- type_config$slots[[paste0("slot", slot_num)]]
-                property_taxes[i] <- max(prop_value * slot_config$rate, slot_config$minimum)
-                tax_rates[i] <- slot_config$rate * 100  # Convert to percentage for display
-                tax_slots[i] <- slot_num
-              }
-            }, error = function(e) {
-              warning(paste("Error calculating property tax for row", i, ":", e$message))
-              property_taxes[i] <- 0
+            prop_type <- property_types[i]
+            prop_value <- property_values[i]
+            
+            if (is.na(prop_value) || prop_value <= 0) {
               tax_rates[i] <- 0
               tax_slots[i] <- NA
-            })
+              next
+            }
+            
+            type_config <- tax_config$property_tax[[prop_type]]
+            
+            if (!type_config$use_slots) {
+              tax_rates[i] <- type_config$rate * 100
+              tax_slots[i] <- NA
+            } else {
+              # Find which slot applies for display
+              slot_num <- 3
+              for (s in 1:3) {
+                slot <- type_config$slots[[paste0("slot", s)]]
+                if (prop_value >= slot$min && prop_value < slot$max) {
+                  slot_num <- s
+                  break
+                }
+              }
+              
+              slot_config <- type_config$slots[[paste0("slot", slot_num)]]
+              tax_rates[i] <- slot_config$rate * 100
+              tax_slots[i] <- slot_num
+            }
           }
+         
+
           
           incProgress(0.1, detail = "Creating preview table...")
           
