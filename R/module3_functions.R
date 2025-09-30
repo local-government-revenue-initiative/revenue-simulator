@@ -542,7 +542,6 @@ calculate_property_tax <- function(property_value, property_type, tax_config) {
 }
 
 # Function to calculate property taxes handling duplicates from Module 1
-
 calculate_property_taxes_with_deduplication <- function(data, property_values, property_types, tax_config) {
   # Create a unique identifier for property-type combinations
   property_key <- paste(data$id_property, property_types, sep = "_")
@@ -574,7 +573,7 @@ calculate_property_taxes_with_deduplication <- function(data, property_values, p
     }
     
     # Use the existing calculate_property_tax function - FIXED: pass tax_config directly
-    tax_result <- calculate_property_tax(prop_value, prop_type, list(property_tax = tax_config))
+    tax_result <- calculate_property_tax(prop_value, prop_type, tax_config)
     unique_taxes[i] <- tax_result$tax_amount
   }
   

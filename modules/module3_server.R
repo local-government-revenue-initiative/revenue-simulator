@@ -1081,7 +1081,7 @@ collect_business_license_config <- function(scenario) {
           incProgress(0.1, detail = "Creating preview table...")
           
           # Create property-only preview dataframe
-          values$property_preview_data <- data.frame(
+          preview_df <- data.frame(
             id_property = preview_data$id_property,
             property_type = property_types,
             property_value = round(property_values, 2),
@@ -1090,6 +1090,13 @@ collect_business_license_config <- function(scenario) {
             tax_slot = tax_slots,
             stringsAsFactors = FALSE
           )
+
+          # DEDUPLICATE: Keep only unique combinations of id_property + property_type
+          # This removes duplicate rows that may exist in the input data from Module 1
+          values$property_preview_data <- preview_df %>%
+            group_by(id_property, property_type) %>%
+            slice(1) %>%  # Keep only the first occurrence of each combination
+            ungroup()
           
           showNotification("Property tax preview calculated successfully", type = "message")
           
