@@ -10,7 +10,9 @@ module3_server <- function(id, processed_data, property_configs) {
       scenario_a_config = get_default_tax_config(),
       scenario_b_config = get_default_tax_config(),
       business_subcategories = NULL,
-      preview_data = NULL
+      preview_data = NULL,
+      property_preview_data = NULL,  # Add this
+      business_preview_data = NULL   # Add this
     )
     
 # Replace the existing observe block with this simpler version
@@ -548,9 +550,9 @@ collect_business_license_config <- function(scenario) {
     
     # Get method selection
     method <- input[[paste0("bus_subcat_", subcategory_safe, "_method_", scenario)]]
-    if (is.null(method)) method <- "min_rate"
+    if (is.null(method)) method <- "minimum_rate"
     
-    if (method == "min_rate") {
+    if (method == "minimum_rate") {
       # Method 1: Minimum + rate
       minimum <- input[[paste0("bus_subcat_", subcategory_safe, "_min_", scenario)]]
       rate <- input[[paste0("bus_subcat_", subcategory_safe, "_rate_", scenario)]]
@@ -561,8 +563,17 @@ collect_business_license_config <- function(scenario) {
         rate = if(is.null(rate)) 0.035 else rate / 100
       )
       
-    } else if (method == "flat_value") {
-      # Method 2: Flat amount based on business value bands
+    } else if (method == "flat") {
+      # Method 2: Flat amount (fixed)
+      flat_amount <- input[[paste0("bus_subcat_", subcategory_safe, "_flat_", scenario)]]
+      
+      config[[subcategory]] <- list(
+        calculation_method = "flat",
+        flat_amount = if(is.null(flat_amount)) 1000 else flat_amount
+      )
+      
+    } else if (method == "flat_value_bands") {
+      # Method 3: Flat amount based on business value bands
       config[[subcategory]] <- list(
         calculation_method = "flat_value_bands",
         value_bands = list(
@@ -581,8 +592,8 @@ collect_business_license_config <- function(scenario) {
         )
       )
       
-    } else if (method == "flat_area") {
-      # Method 3: Flat amount based on business area bands
+    } else if (method == "flat_area_bands") {
+      # Method 4: Flat amount based on business area bands
       config[[subcategory]] <- list(
         calculation_method = "flat_area_bands",
         area_bands = list(
@@ -886,6 +897,461 @@ collect_business_license_config <- function(scenario) {
     })
   })
 })
+
+    # Property Tax Preview calculation
+    observeEvent(input$calculate_property_preview, {
+      req(processed_data())
+      
+      data <- processed_data()
+      scenario <- input$property_preview_scenario
+      n_rows <- min(input$property_preview_rows %||% 25, nrow(data))
+      
+      withProgress(message = paste('Calculating property tax preview for', n_rows, 'properties...'), value = 0, {
+        tryCatch({
+          preview_data <- data[1:n_rows, ]
+          
+          incProgress(0.2, detail = "Getting configurations...")
+          
+          # Get property values from Module 2 (same as existing code)
+          if (!is.null(property_configs)) {
+            tryCatch({
+              module2_config <- property_configs()[[scenario]]
+              
+              # Calculate inflation-adjusted base value
+              inflation_adjusted_base <- module2_config$base_value * (1 + module2_config$inflation)
+              area_weight <- module2_config$area_weight
+              
+              # Get property areas
+              property_areas <- if("property_area" %in% names(preview_data)) {
+                preview_data$property_area
+              } else {
+                rep(1000, n_rows)  # Default area
+              }
+              
+              incProgress(0.2, detail = "Calculating feature weights...")
+              
+              # Calculate feature weights product for each property
+              all_features <- names(module2_config$feature_weights)
+              product_weights <- rep(1, n_rows)
+              
+              for (feat in all_features) {
+                tryCatch({
+                  if (feat %in% names(preview_data)) {
+                    weight <- module2_config$feature_weights[[feat]]
+                    if (!is.null(weight) && !is.na(weight)) {
+                      feature_multiplier <- ifelse(preview_data[[feat]] == 1, 
+                                                   (weight/100 + 1), 
+                                                   1)
+                      product_weights <- product_weights * feature_multiplier
+                    }
+                  }
+                }, error = function(e) {
+                  warning(paste("Error processing feature", feat, ":", e$message))
+                })
+              }
+              
+              incProgress(0.1, detail = "Calculating structure weights...")
+              
+              # Calculate structure type weights
+              all_structures <- names(module2_config$structure_weights)
+              structure_matrix <- matrix(0, nrow = n_rows, ncol = length(all_structures))
+              weight_vector <- numeric(length(all_structures))
+              
+              for (j in seq_along(all_structures)) {
+                tryCatch({
+                  struct <- all_structures[j]
+                  
+                  if (struct %in% names(preview_data)) {
+                    col_values <- preview_data[[struct]]
+                    structure_matrix[, j] <- ifelse(!is.na(col_values) & col_values == 1, 1, 0)
+                    
+                    weight <- module2_config$structure_weights[[struct]]
+                    if (is.null(weight)) weight <- 0
+                    weight_vector[j] <- weight
+                  }
+                }, error = function(e) {
+                  warning(paste("Error processing structure", struct, ":", e$message))
+                })
+              }
+              
+              structure_weights <- structure_matrix %*% weight_vector
+              structure_weights <- as.vector(structure_weights)
+              structure_multipliers <- (structure_weights/100 + 1)
+              
+              # Calculate property values
+              property_values <- ifelse(is.na(property_areas) | property_areas <= 0,
+                                        NA,
+                                        inflation_adjusted_base * 
+                                          (property_areas ^ area_weight) * 
+                                          product_weights * 
+                                          structure_multipliers)
+              
+            }, error = function(e) {
+              showNotification(paste("Error calculating property values:", e$message), type = "warning")
+              # Fallback values
+              property_values <- rep(100000, n_rows)  # Default property value
+            })
+          } else {
+            # No property configs available - use defaults
+            property_values <- rep(100000, n_rows)
+          }
+          
+          incProgress(0.2, detail = "Calculating property taxes...")
+          
+          # Get property types with error handling
+          property_types <- tryCatch({
+            if("property_type_Domestic" %in% names(preview_data)) {
+              ifelse(preview_data$property_type_Domestic == 1, "domestic",
+                     ifelse(preview_data$property_type_Commercial == 1, "commercial",
+                            ifelse(preview_data$property_type_Institutional == 1, "institutional", "domestic")))
+            } else {
+              rep("domestic", n_rows)
+            }
+          }, error = function(e) {
+            rep("domestic", n_rows)  # Default to domestic
+          })
+          
+          # Calculate property taxes with error handling
+          tax_config <- collect_property_tax_config(scenario)
+          property_taxes <- numeric(n_rows)
+          tax_rates <- numeric(n_rows)
+          tax_slots <- numeric(n_rows)
+          
+          for (i in 1:n_rows) {
+            tryCatch({
+              prop_type <- property_types[i]
+              prop_value <- property_values[i]
+              
+              if (is.na(prop_value) || prop_value <= 0) {
+                property_taxes[i] <- 0
+                tax_rates[i] <- 0
+                tax_slots[i] <- NA
+                next
+              }
+              
+              type_config <- tax_config[[prop_type]]
+              
+              if (!type_config$use_slots) {
+                # Simple calculation
+                property_taxes[i] <- max(prop_value * type_config$rate, type_config$minimum)
+                tax_rates[i] <- type_config$rate * 100  # Convert to percentage for display
+                tax_slots[i] <- NA
+              } else {
+                # Find which slot applies
+                slot_num <- 3  # Default to highest slot
+                for (s in 1:3) {
+                  slot <- type_config$slots[[paste0("slot", s)]]
+                  if (prop_value >= slot$min && prop_value < slot$max) {
+                    slot_num <- s
+                    break
+                  }
+                }
+                
+                slot_config <- type_config$slots[[paste0("slot", slot_num)]]
+                property_taxes[i] <- max(prop_value * slot_config$rate, slot_config$minimum)
+                tax_rates[i] <- slot_config$rate * 100  # Convert to percentage for display
+                tax_slots[i] <- slot_num
+              }
+            }, error = function(e) {
+              warning(paste("Error calculating property tax for row", i, ":", e$message))
+              property_taxes[i] <- 0
+              tax_rates[i] <- 0
+              tax_slots[i] <- NA
+            })
+          }
+          
+          incProgress(0.1, detail = "Creating preview table...")
+          
+          # Create property-only preview dataframe
+          values$property_preview_data <- data.frame(
+            id_property = preview_data$id_property,
+            property_type = property_types,
+            property_value = round(property_values, 2),
+            property_tax = round(property_taxes, 2),
+            tax_rate_used = round(tax_rates, 2),
+            tax_slot = tax_slots,
+            stringsAsFactors = FALSE
+          )
+          
+          showNotification("Property tax preview calculated successfully", type = "message")
+          
+        }, error = function(e) {
+          showNotification(paste("Error calculating property tax preview:", e$message), type = "error")
+          values$property_preview_data <- NULL
+        })
+      })
+    })   
+
+    # Business License Preview calculation  
+    observeEvent(input$calculate_business_preview, {
+      req(processed_data())
+      
+      data <- processed_data()
+      scenario <- input$business_preview_scenario
+      n_rows <- min(input$business_preview_rows %||% 25, nrow(data))
+      
+      withProgress(message = paste('Calculating business license preview for', n_rows, 'properties...'), value = 0, {
+        tryCatch({
+          preview_data <- data[1:n_rows, ]
+          
+          incProgress(0.3, detail = "Getting configurations...")
+          
+          # Calculate business values (reuse logic from existing calculate_preview)
+          if (!is.null(property_configs)) {
+            tryCatch({
+              module2_config <- property_configs()[[scenario]]
+              
+              # Calculate inflation-adjusted base value
+              inflation_adjusted_base <- module2_config$base_value * (1 + module2_config$inflation)
+              area_weight <- module2_config$area_weight
+              
+              # Get business areas
+              business_areas <- if("business_area" %in% names(preview_data)) {
+                preview_data$business_area
+              } else if("property_area" %in% names(preview_data)) {
+                preview_data$property_area  # Use property area as fallback
+              } else {
+                rep(1000, n_rows)  # Default area
+              }
+              
+              # Calculate feature weights product for each property
+              all_features <- names(module2_config$feature_weights)
+              product_weights <- rep(1, n_rows)
+              
+              for (feat in all_features) {
+                if (feat %in% names(preview_data)) {
+                  weight <- module2_config$feature_weights[[feat]]
+                  if (!is.null(weight) && !is.na(weight)) {
+                    feature_multiplier <- ifelse(preview_data[[feat]] == 1, 
+                                                 (weight/100 + 1), 
+                                                 1)
+                    product_weights <- product_weights * feature_multiplier
+                  }
+                }
+              }
+              
+              # Calculate structure type weights
+              all_structures <- names(module2_config$structure_weights)
+              structure_matrix <- matrix(0, nrow = n_rows, ncol = length(all_structures))
+              weight_vector <- numeric(length(all_structures))
+              
+              for (j in seq_along(all_structures)) {
+                struct <- all_structures[j]
+                if (struct %in% names(preview_data)) {
+                  col_values <- preview_data[[struct]]
+                  structure_matrix[, j] <- ifelse(!is.na(col_values) & col_values == 1, 1, 0)
+                  
+                  weight <- module2_config$structure_weights[[struct]]
+                  if (is.null(weight)) weight <- 0
+                  weight_vector[j] <- weight
+                }
+              }
+              
+              structure_weights <- structure_matrix %*% weight_vector
+              structure_weights <- as.vector(structure_weights)
+              structure_multipliers <- (structure_weights/100 + 1)
+              
+              # Calculate business values
+              business_values <- ifelse(is.na(business_areas) | business_areas <= 0,
+                                        NA,
+                                        inflation_adjusted_base * 
+                                          (business_areas ^ area_weight) * 
+                                          product_weights * 
+                                          structure_multipliers)
+              
+            }, error = function(e) {
+              showNotification(paste("Error calculating business values:", e$message), type = "warning")
+              business_values <- rep(50000, n_rows)   # Default business value
+              business_areas <- rep(1000, n_rows)     # Default area
+            })
+          } else {
+            # No property configs available - use defaults
+            business_values <- rep(50000, n_rows)
+            business_areas <- rep(1000, n_rows)
+          }
+          
+          incProgress(0.4, detail = "Calculating business licenses...")
+          
+          # Get business subcategories
+          business_subcategories <- tryCatch({
+            if("business_sub_category" %in% names(preview_data)) {
+              preview_data$business_sub_category
+            } else {
+              rep(NA, n_rows)
+            }
+          }, error = function(e) {
+            rep(NA, n_rows)
+          })
+          
+          # Calculate business licenses using the existing logic
+          business_config <- collect_business_license_config(scenario)
+          business_licenses <- rep(0, n_rows)
+          
+          for (i in 1:n_rows) {
+            subcat <- business_subcategories[i]
+            if (!is.na(subcat) && subcat %in% names(business_config)) {
+              subcat_config <- business_config[[subcat]]
+              
+              if (subcat_config$calculation_method == "minimum_rate") {
+                # Method 1: Traditional minimum + rate calculation
+                business_licenses[i] <- max(business_values[i] * subcat_config$rate, 
+                                            subcat_config$minimum)
+                                            
+              } else if (subcat_config$calculation_method == "flat_value_bands") {
+                # Method 2: Flat amount based on business value bands
+                business_licenses[i] <- subcat_config$value_bands$band3$tax  # Default to highest band
+                
+                if (business_values[i] <= subcat_config$value_bands$band1$max) {
+                  business_licenses[i] <- subcat_config$value_bands$band1$tax
+                } else if (business_values[i] <= subcat_config$value_bands$band2$max) {
+                  business_licenses[i] <- subcat_config$value_bands$band2$tax
+                }
+                
+              } else if (subcat_config$calculation_method == "flat_area_bands") {
+                # Method 3: Flat amount based on business area bands
+                area_value <- business_areas[i]
+                
+                business_licenses[i] <- subcat_config$area_bands$band3$tax  # Default to highest band
+                
+                if (area_value <= subcat_config$area_bands$band1$max) {
+                  business_licenses[i] <- subcat_config$area_bands$band1$tax
+                } else if (area_value <= subcat_config$area_bands$band2$max) {
+                  business_licenses[i] <- subcat_config$area_bands$band2$tax
+                }
+              }
+            }
+          }
+          
+          incProgress(0.2, detail = "Creating preview table...")
+                    
+          # Create business-only preview dataframe and filter out rows without businesses
+          values$business_preview_data <- data.frame(
+            id_property = preview_data$id_property,
+            business_subcategory = business_subcategories,
+            business_value = round(business_values, 2),
+            business_area = round(business_areas, 2),
+            business_license = round(business_licenses, 2),
+            stringsAsFactors = FALSE
+          ) |>
+            filter(!is.na(business_value) & business_value > 0 & !is.na(business_subcategory))
+
+
+          showNotification("Business license preview calculated successfully", type = "message")
+          
+        }, error = function(e) {
+          showNotification(paste("Error calculating business license preview:", e$message), type = "error")
+          values$business_preview_data <- NULL
+        })
+      })
+    })
+
+# Property Tax Preview outputs
+output$property_preview_summary <- renderText({
+  req(values$property_preview_data)
+  
+  data <- values$property_preview_data
+  scenario_name <- switch(input$property_preview_scenario,
+                         "existing" = "Existing Scenario",
+                         "scenario_a" = "Alternative Scenario A", 
+                         "scenario_b" = "Alternative Scenario B")
+  
+  total_properties <- nrow(data)
+  total_property_tax <- sum(data$property_tax, na.rm = TRUE)
+  avg_property_value <- mean(data$property_value, na.rm = TRUE)
+  avg_property_tax <- mean(data$property_tax, na.rm = TRUE)
+  
+  paste0(
+    "<strong>", scenario_name, " - Property Taxes</strong><br/>",
+    "<strong>Total Properties:</strong> ", format(total_properties, big.mark = ","), "<br/>",
+    "<strong>Total Property Tax Revenue:</strong> ", format(round(total_property_tax), big.mark = ","), "<br/>",
+    "<strong>Avg Property Value:</strong> ", format(round(avg_property_value), big.mark = ","), "<br/>",
+    "<strong>Avg Property Tax:</strong> ", format(round(avg_property_tax), big.mark = ",")
+  )
+})
+
+output$property_tax_preview_table <- DT::renderDataTable({
+  req(values$property_preview_data)
+  
+  DT::datatable(
+    values$property_preview_data,
+    options = list(
+      scrollX = TRUE,
+      pageLength = 25,
+      dom = 'Bfrtip',
+      buttons = c('copy', 'csv', 'excel')
+    ),
+    extensions = 'Buttons'
+  ) %>%
+    DT::formatCurrency(columns = c('property_value', 'property_tax'), 
+                       currency = "", 
+                       interval = 3, 
+                       mark = ",") %>%
+    DT::formatRound(columns = 'tax_rate_used', digits = 2)
+})
+
+output$download_property_preview <- downloadHandler(
+  filename = function() {
+    paste0("property_tax_preview_", input$property_preview_scenario, "_", Sys.Date(), ".csv")
+  },
+  content = function(file) {
+    req(values$property_preview_data)
+    write.csv(values$property_preview_data, file, row.names = FALSE)
+  }
+)
+
+# Business License Preview outputs
+output$business_preview_summary <- renderText({
+  req(values$business_preview_data)
+  
+  data <- values$business_preview_data
+  scenario_name <- switch(input$business_preview_scenario,
+                         "existing" = "Existing Scenario",
+                         "scenario_a" = "Alternative Scenario A", 
+                         "scenario_b" = "Alternative Scenario B")
+  
+  total_businesses <- nrow(data)  # Now only businesses
+  total_business_license <- sum(data$business_license, na.rm = TRUE)
+  avg_business_value <- mean(data$business_value, na.rm = TRUE)
+  avg_business_license <- mean(data$business_license, na.rm = TRUE)
+  
+  paste0(
+    "<strong>", scenario_name, " - Business Licenses</strong><br/>",
+    "<strong>Properties with Business:</strong> ", format(total_businesses, big.mark = ","), "<br/>",
+    "<strong>Total Business License Revenue:</strong> ", format(round(total_business_license), big.mark = ","), "<br/>",
+    "<strong>Avg Business Value:</strong> ", format(round(avg_business_value), big.mark = ","), "<br/>",
+    "<strong>Avg Business License:</strong> ", format(round(avg_business_license), big.mark = ",")
+  )
+})
+
+output$business_license_preview_table <- DT::renderDataTable({
+  req(values$business_preview_data)
+  
+  DT::datatable(
+    values$business_preview_data,
+    options = list(
+      scrollX = TRUE,
+      pageLength = 25,
+      dom = 'Bfrtip',
+      buttons = c('copy', 'csv', 'excel')
+    ),
+    extensions = 'Buttons'
+  ) %>%
+    DT::formatCurrency(columns = c('business_value', 'business_license'), 
+                       currency = "", 
+                       interval = 3, 
+                       mark = ",") %>%
+    DT::formatRound(columns = 'business_area', digits = 2)
+})
+
+output$download_business_preview <- downloadHandler(
+  filename = function() {
+    paste0("business_license_preview_", input$business_preview_scenario, "_", Sys.Date(), ".csv")
+  },
+  content = function(file) {
+    req(values$business_preview_data)
+    write.csv(values$business_preview_data, file, row.names = FALSE)
+  }
+)
 
 # Preview summary output
 output$preview_summary <- renderText({

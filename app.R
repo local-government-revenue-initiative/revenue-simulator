@@ -152,26 +152,26 @@ ui <- dashboardPage(
       ")
     ),
 
-    # NEW: Enhanced JavaScript functionality
-    tags$script(HTML("
-      function toggleAllCategories(scenario, expand) {
-        var contents = document.querySelectorAll('[id*=\"category_content_\"][id*=\"_' + scenario + '\"]');
-        var headers = document.querySelectorAll('[id*=\"category_header_\"][id*=\"_' + scenario + '\"]');
-        
-        contents.forEach(function(content, index) {
-          var header = headers[index];
-          var icon = header.querySelector('i');
-          
-          if (expand) {
-            content.style.display = 'block';
-            icon.className = icon.className.replace('fa-chevron-down', 'fa-chevron-up');
-          } else {
-            content.style.display = 'none';
-            icon.className = icon.className.replace('fa-chevron-up', 'fa-chevron-down');
-          }
-        });
+    # Add missing JavaScript function for toggling all categories
+tags$script(HTML("
+  function toggleAllCategories(scenarioSuffix, expand) {
+    var categories = document.querySelectorAll('[id^=\"category_content_\"][id$=\"_' + scenarioSuffix + '\"]');
+    var headers = document.querySelectorAll('[id^=\"category_header_\"][id$=\"_' + scenarioSuffix + '\"]');
+    
+    categories.forEach(function(content, index) {
+      var header = headers[index];
+      var icon = header.querySelector('i');
+      
+      if (expand) {
+        content.style.display = 'block';
+        if (icon) icon.className = icon.className.replace('fa-chevron-down', 'fa-chevron-up');
+      } else {
+        content.style.display = 'none';
+        if (icon) icon.className = icon.className.replace('fa-chevron-up', 'fa-chevron-down');
       }
-    "))
+    });
+  }
+"))
   ),
     
     tabItems(
