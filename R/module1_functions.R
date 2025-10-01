@@ -220,12 +220,6 @@ merge_datasets <- function(property_data, payment_data, business_data,
   payment_data[[payment_id_col]] <- as.character(payment_data[[payment_id_col]])
   business_data[[business_id_col]] <- as.character(business_data[[business_id_col]])
   
-  # Add unique business ID to track each business through the merge
-  if (nrow(business_data) > 0) {
-    business_data <- business_data %>%
-      mutate(business_unique_id = row_number())
-  }
-  
   # Deduplicate payment data (in case of duplicates)
   payment_data_unique <- payment_data %>%
     distinct(!!sym(payment_id_col), .keep_all = TRUE)
@@ -280,12 +274,12 @@ merge_datasets <- function(property_data, payment_data, business_data,
       
       # Step 6: Left join businesses to ALL property rows
       # This ensures we keep all property rows, but businesses only attach to designated rows
-      props_with_businesses_final <- props_with_businesses %>%
+      props_with_businesses_final <- props_with_businesses |> 
         left_join(
           business_assignments,
           by = c("property_row_id" = "best_row_id")
         ) %>%
-        select(-property_row_id, -type_priority, -business_unique_id)
+        select(-property_row_id, -type_priority)  # Keep id_business!
       
       # Step 7: Combine everything back together
       merged_data <- bind_rows(props_without_businesses, props_with_businesses_final)
@@ -298,7 +292,7 @@ merge_datasets <- function(property_data, payment_data, business_data,
   } else if (nrow(business_data) > 0) {
     # Simple case: No property_type column, just do the join
     merged_data <- merged_data %>%
-      left_join(business_data %>% select(-business_unique_id), 
+      left_join(business_data,  # Keep all columns including id_business!
                 by = setNames(business_id_col, property_id_col),
                 relationship = "many-to-many")
   }
