@@ -16,6 +16,8 @@ aggregate_properties <- function(data) {
       n_property_types = n_distinct(property_type),
       property_types = paste(unique(property_type), collapse = "+"),
       business_categories = paste(unique(business_category[!is.na(business_category)]), collapse = "+"),
+      # ADD THIS LINE:
+      business_subcategories = paste(unique(business_sub_category[!is.na(business_sub_category)]), collapse = "+"),
       
       # Area information
       total_property_area = sum(property_area, na.rm = TRUE),
@@ -46,21 +48,32 @@ create_value_quantiles <- function(aggregated_data, n_quantiles = 5) {
     )
 }
 
-# Function to calculate progressivity metrics by quantile
+# Function to calculate progressivity metrics by quantile - FIXED VERSION
 calculate_progressivity <- function(data_with_quantiles) {
-  data_with_quantiles %>%
+  
+  # First, ensure we have the required columns
+  required_cols <- c("value_quantile", "total_property_value", "total_tax", 
+                     "total_property_tax", "total_business_license", "has_business")
+  missing_cols <- setdiff(required_cols, names(data_with_quantiles))
+  if (length(missing_cols) > 0) {
+    stop(paste("Missing required columns:", paste(missing_cols, collapse = ", ")))
+  }
+  
+  # Calculate metrics by quantile with explicit average calculations
+  progressivity_results <- data_with_quantiles %>%
     dplyr::group_by(value_quantile) %>%
     dplyr::summarise(
+      # Count
       n_properties = n(),
       
-      # Value metrics
+      # VALUE METRICS
       total_value = sum(total_property_value, na.rm = TRUE),
-      avg_property_value = mean(total_property_value, na.rm = TRUE),
+      avg_property_value = sum(total_property_value, na.rm = TRUE) / n(),  # Explicit calculation
       median_property_value = median(total_property_value, na.rm = TRUE),
       
-      # Tax metrics
+      # TAX METRICS - EXPLICIT CALCULATION TO FIX ISSUE
       total_tax = sum(total_tax, na.rm = TRUE),
-      avg_tax = mean(total_tax, na.rm = TRUE),
+      avg_tax = sum(total_tax, na.rm = TRUE) / n(),  # EXPLICIT: total divided by count
       median_tax = median(total_tax, na.rm = TRUE),
       
       # Property tax only
@@ -75,10 +88,24 @@ calculate_progressivity <- function(data_with_quantiles) {
       
       # Business properties
       n_with_business = sum(has_business, na.rm = TRUE),
-      pct_with_business = (n_with_business / n()) * 100,
+      pct_with_business = (sum(has_business, na.rm = TRUE) / n()) * 100,
       
       .groups = 'drop'
-    ) %>%
+    )
+  
+  # Verify calculations worked correctly
+  cat("=== PROGRESSIVITY CALCULATION VERIFICATION ===\n")
+  cat("Checking if avg_tax ≠ total_tax:\n")
+  for (i in 1:nrow(progressivity_results)) {
+    cat(sprintf("  %s: total_tax = %.2f, avg_tax = %.2f, n = %d\n",
+                progressivity_results$value_quantile[i],
+                progressivity_results$total_tax[i],
+                progressivity_results$avg_tax[i],
+                progressivity_results$n_properties[i]))
+  }
+  
+  # Add share calculations and progressivity index
+  progressivity_results <- progressivity_results %>%
     dplyr::mutate(
       # Calculate shares
       value_share = (total_value / sum(total_value)) * 100,
@@ -91,6 +118,8 @@ calculate_progressivity <- function(data_with_quantiles) {
       cumulative_value_share = cumsum(value_share),
       cumulative_tax_share = cumsum(tax_share)
     )
+  
+  return(progressivity_results)
 }
 
 # Function to identify overtaxed properties
@@ -131,7 +160,8 @@ identify_overtaxed <- function(data_with_quantiles, threshold_pct = 5) {
       effective_rate,
       risk_category,
       has_business,
-      business_categories
+      business_categories,
+      business_subcategories  # ADD THIS LINE
     )
 }
 

@@ -790,96 +790,115 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
     output$revenue_filtered_plot <- renderPlot({
       req(values$revenue_data)
       
-      plot_data <- list()
-      for (scenario in names(values$revenue_data)) {
-        scenario_data <- values$revenue_data[[scenario]]
-        
-        # Apply all filters
-        # Structure type filter
-        if (!is.null(input$filter_structure_types) && !"All" %in% input$filter_structure_types) {
-          scenario_data <- scenario_data[scenario_data$structure_type %in% input$filter_structure_types, ]
-        }
-        
-        # Property type filter  
-        if (!is.null(input$filter_property_types) && !"All" %in% input$filter_property_types) {
-          scenario_data <- scenario_data[scenario_data$property_type %in% input$filter_property_types, ]
-        }
-        
-        # License category filter
-        if (!is.null(input$filter_license_categories) && !"All" %in% input$filter_license_categories) {
-          scenario_data <- scenario_data[scenario_data$business_category %in% input$filter_license_categories |
-                                           is.na(scenario_data$business_category), ]
-        }
-        
-        # License subcategory filter
-        if (!is.null(input$filter_license_subcategories) && !"All" %in% input$filter_license_subcategories) {
-          scenario_data <- scenario_data[scenario_data$business_sub_category %in% input$filter_license_subcategories |
-                                           is.na(scenario_data$business_sub_category), ]
-        }
-        
-        type_summary <- data.frame(
-          scenario = scenario,
-          Property_Tax = sum(scenario_data$property_tax, na.rm = TRUE),
-          Business_License = sum(scenario_data$business_license, na.rm = TRUE)
-        )
-        
-        plot_data[[scenario]] <- type_summary
+      # Check if any actual filters are applied (not just "All")
+      has_active_filter <- FALSE
+      
+      if (!is.null(input$filter_structure_types) && !"All" %in% input$filter_structure_types && length(input$filter_structure_types) > 0) {
+        has_active_filter <- TRUE
+      }
+      if (!is.null(input$filter_property_types) && !"All" %in% input$filter_property_types && length(input$filter_property_types) > 0) {
+        has_active_filter <- TRUE
+      }
+      if (!is.null(input$filter_license_categories) && !"All" %in% input$filter_license_categories && length(input$filter_license_categories) > 0) {
+        has_active_filter <- TRUE
+      }
+      if (!is.null(input$filter_license_subcategories) && !"All" %in% input$filter_license_subcategories && length(input$filter_license_subcategories) > 0) {
+        has_active_filter <- TRUE
       }
       
-      combined_data <- do.call(rbind, plot_data)
-      
-      combined_long <- combined_data %>%
-        tidyr::pivot_longer(cols = c(Property_Tax, Business_License),
-                            names_to = "Type",
-                            values_to = "Revenue")
-      
-      # Format labels for display
-      combined_long$label <- scales::comma(round(combined_long$Revenue, 0))
-      
-      # Build filter text
-      filter_text <- ""
-      active_filters <- c()
-      
-      if (!is.null(input$filter_structure_types) && !"All" %in% input$filter_structure_types) {
-        active_filters <- c(active_filters, paste("Structure:", length(input$filter_structure_types), "selected"))
-      }
-      if (!is.null(input$filter_property_types) && !"All" %in% input$filter_property_types) {
-        active_filters <- c(active_filters, paste("Property:", length(input$filter_property_types), "selected"))
-      }
-      if (!is.null(input$filter_license_categories) && !"All" %in% input$filter_license_categories) {
-        active_filters <- c(active_filters, paste("Category:", length(input$filter_license_categories), "selected"))
-      }
-      if (!is.null(input$filter_license_subcategories) && !"All" %in% input$filter_license_subcategories) {
-        active_filters <- c(active_filters, paste("Subcategory:", length(input$filter_license_subcategories), "selected"))
-      }
-      
-      if (length(active_filters) > 0) {
-        filter_text <- paste(" - Filtered by", paste(active_filters, collapse = ", "))
+      # If no active filters, show empty plot with message
+      if (!has_active_filter) {
+        ggplot() +
+          annotate("text", x = 0, y = 0, 
+                  label = "Please select at least one filter option to display revenue data", 
+                  size = 6, hjust = 0.5) +
+          theme_void() +
+          labs(title = "Total Revenue by Type - No Filters Selected")
       } else {
-        filter_text <- " - No Filters Applied"
+        # Proceed with normal filtering and plotting
+        plot_data <- list()
+        for (scenario in names(values$revenue_data)) {
+          scenario_data <- values$revenue_data[[scenario]]
+          
+          # Apply all filters
+          # Structure type filter
+          if (!is.null(input$filter_structure_types) && !"All" %in% input$filter_structure_types) {
+            scenario_data <- scenario_data[scenario_data$structure_type %in% input$filter_structure_types, ]
+          }
+          
+          # Property type filter  
+          if (!is.null(input$filter_property_types) && !"All" %in% input$filter_property_types) {
+            scenario_data <- scenario_data[scenario_data$property_type %in% input$filter_property_types, ]
+          }
+          
+          # License category filter
+          if (!is.null(input$filter_license_categories) && !"All" %in% input$filter_license_categories) {
+            scenario_data <- scenario_data[scenario_data$business_category %in% input$filter_license_categories, ]
+          }
+          
+          # License subcategory filter
+          if (!is.null(input$filter_license_subcategories) && !"All" %in% input$filter_license_subcategories) {
+            scenario_data <- scenario_data[scenario_data$business_sub_category %in% input$filter_license_subcategories, ]
+          }
+          
+          type_summary <- data.frame(
+            scenario = scenario,
+            Property_Tax = sum(scenario_data$property_tax, na.rm = TRUE),
+            Business_License = sum(scenario_data$business_license, na.rm = TRUE)
+          )
+          
+          plot_data[[scenario]] <- type_summary
+        }
+        
+        combined_data <- do.call(rbind, plot_data)
+        
+        combined_long <- combined_data %>%
+          tidyr::pivot_longer(cols = c(Property_Tax, Business_License),
+                              names_to = "Type",
+                              values_to = "Revenue")
+        
+        # Format labels for display
+        combined_long$label <- scales::comma(round(combined_long$Revenue, 0))
+        
+        # Build active filters text
+        active_filters <- c()
+        if (!is.null(input$filter_structure_types) && !"All" %in% input$filter_structure_types) {
+          active_filters <- c(active_filters, paste("Structure:", length(input$filter_structure_types), "selected"))
+        }
+        if (!is.null(input$filter_property_types) && !"All" %in% input$filter_property_types) {
+          active_filters <- c(active_filters, paste("Property:", length(input$filter_property_types), "selected"))
+        }
+        if (!is.null(input$filter_license_categories) && !"All" %in% input$filter_license_categories) {
+          active_filters <- c(active_filters, paste("Category:", length(input$filter_license_categories), "selected"))
+        }
+        if (!is.null(input$filter_license_subcategories) && !"All" %in% input$filter_license_subcategories) {
+          active_filters <- c(active_filters, paste("Subcategory:", length(input$filter_license_subcategories), "selected"))
+        }
+        
+        filter_text <- paste(" - Filtered by", paste(active_filters, collapse = ", "))
+        
+        # Chart 1C colors
+        chart_colors <- c("Property_Tax" = "#e74c3c",      # Bright red
+                          "Business_License" = "#3498db")   # Bright blue
+        
+        ggplot(combined_long, aes(x = scenario, y = Revenue, fill = Type)) +
+          geom_bar(stat = "identity", position = "dodge") +
+          geom_text(aes(label = label), 
+                    position = position_dodge(width = 0.9),
+                    vjust = -0.5,
+                    size = 3.5) +
+          scale_fill_manual(
+            values = c("Property_Tax" = "#e74c3c", "Business_License" = "#3498db"),
+            labels = c("Property_Tax" = "Property Tax", "Business_License" = "Business License")) +
+          scale_y_continuous(labels = scales::comma,
+                            expand = expansion(mult = c(0, 0.1))) +
+          labs(title = paste0("Total Revenue by Type", filter_text),
+              x = "Scenario",
+              y = "Total Revenue",
+              fill = "Revenue Type") +
+          theme_minimal() +
+          theme(legend.position = "bottom")
       }
-      
-      # Chart 1C colors: Steel blue and Indian red
-      chart_colors <- c("Property_Tax" = "#e74c3c",      # Bright red
-                        "Business_License" = "#3498db")   # Bright blue
-      
-      ggplot(combined_long, aes(x = scenario, y = Revenue, fill = Type)) +
-        geom_bar(stat = "identity", position = "dodge") +
-        geom_text(aes(label = label), 
-                  position = position_dodge(width = 0.9),
-                  vjust = -0.5,
-                  size = 3.5) +
-        scale_fill_manual(
-          values = c("Property_Tax" = "#e74c3c", "Business_License" = "#3498db"),
-          labels = c("Property_Tax" = "Property Tax", "Business_License" = "Business License")) +
-        scale_y_continuous(labels = scales::comma,
-                           expand = expansion(mult = c(0, 0.1))) +  # Add space for labels
-        labs(title = paste0("Total Revenue by Type", filter_text),
-             x = "Scenario",
-             y = "Total Revenue",
-             fill = "Revenue Type") +
-        theme_minimal() +
-        theme(legend.position = "bottom")
     })
     
     # Download handler for detailed data

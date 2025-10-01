@@ -1113,7 +1113,8 @@ collect_business_license_config <- function(scenario) {
       
       data <- processed_data()
       scenario <- input$business_preview_scenario
-      n_rows <- min(input$business_preview_rows %||% 25, nrow(data))
+      n_preview <- input$business_preview_rows %||% 25  # Store desired preview count
+      n_rows <- nrow(data)  # Calculate for ALL rows instead of just first n
       
       withProgress(message = paste('Calculating business license preview for', n_rows, 'properties...'), value = 0, {
         tryCatch({
@@ -1263,8 +1264,8 @@ collect_business_license_config <- function(scenario) {
             business_license = round(business_licenses, 2),
             stringsAsFactors = FALSE
           ) |>
-            filter(!is.na(business_value) & business_value > 0 & !is.na(business_subcategory))
-
+            filter(!is.na(business_value) & business_value > 0 & !is.na(business_subcategory)) |> 
+            head(n_preview)  
 
           showNotification("Business license preview calculated successfully", type = "message")
           
