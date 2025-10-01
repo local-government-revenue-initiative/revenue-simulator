@@ -80,7 +80,6 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
     })
     
     # Helper function to calculate values and taxes for a scenario
-    # Helper function to calculate values and taxes for a scenario
     calculate_values_and_taxes <- function(data, prop_config, tax_config, scenario_name) {
       n_rows <- nrow(data)
       
@@ -91,7 +90,7 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       # Get property types
       property_types <- get_property_types(data)
       
-      # Calculate property taxes using Module 3 configurations with deduplication
+      # Calculate property taxes using Module 3 configurations
       property_taxes <- calculate_property_taxes_with_deduplication(
         data,
         property_values, 
@@ -141,9 +140,12 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       
       # CORRECT DEDUPLICATION LOGIC:
       # Step 1: Create property tax rows (unique by id_property + property_type)
-      property_rows <- result
-      property_key <- paste(property_rows$id_property, property_rows$property_type, sep = "_")
-      property_rows <- property_rows[!duplicated(property_key), ]
+      # Create a unique key for property rows
+      property_key <- paste(result$id_property, result$property_type, sep = "_")
+      
+      # Find unique property rows
+      unique_property_indices <- !duplicated(property_key)
+      property_rows <- result[unique_property_indices, ]
       
       # Zero out business fields in property rows to avoid double-counting
       property_rows$business_license <- 0
@@ -153,15 +155,10 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       property_rows$business_area <- NA
       property_rows$total_tax <- property_rows$property_tax
       
-      # Step 2: Create business license rows with optional deduplication by id_business
+      # Step 2: Create business license rows
       business_rows <- result[!is.na(result$business_sub_category) & result$business_license > 0, ]
-
+      
       if (nrow(business_rows) > 0) {
-        # Optional: deduplicate by id_business if available
-        if ("id_business" %in% names(business_rows)) {
-          business_rows <- business_rows[!duplicated(business_rows$id_business), ]
-        }
-        
         # Zero out property fields in business rows to avoid double-counting
         business_rows$property_tax <- 0
         business_rows$property_value <- 0
@@ -169,7 +166,11 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       }
       
       # Step 3: Combine property and business rows
-      result <- rbind(property_rows, business_rows)
+      if (nrow(business_rows) > 0) {
+        result <- rbind(property_rows, business_rows)
+      } else {
+        result <- property_rows
+      }
       
       # DIAGNOSTIC OUTPUT
       cat("\n=== AFTER DEDUPLICATION ===\n")
@@ -180,6 +181,10 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       cat("Sum of business_license:", sum(result$business_license, na.rm = TRUE), "\n")
       cat("Sum of total_tax:", sum(result$total_tax, na.rm = TRUE), "\n")
       cat("============================\n\n")
+      
+      # Verify the property tax total matches expected value
+      unique_prop_types <- unique(property_key)
+      cat("Unique id_property + property_type combinations:", length(unique_prop_types), "\n")
       
       return(result)
     }
