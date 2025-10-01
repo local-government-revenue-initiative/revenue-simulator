@@ -307,12 +307,16 @@ get_default_tax_config <- function() {
         ),
         "Consumer Discretionary (certificate)" = list(
           calculation_method = "flat",
-          flat_amount = 10000
+          flat_amount = 500
         ),
         "Consumer Staples (certificate)" = list(
           calculation_method = "flat",
           flat_amount = 500
         ),
+        "Cool Room" = list(
+          calculation_method = "flat",
+          flat_amount = 5500
+        ),        
         "Funeral Parlour" = list(
           calculation_method = "flat",
           flat_amount = 2000
