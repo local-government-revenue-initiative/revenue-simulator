@@ -80,6 +80,7 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
     })
     
     # Helper function to calculate values and taxes for a scenario
+    # Helper function to calculate values and taxes for a scenario
     calculate_values_and_taxes <- function(data, prop_config, tax_config, scenario_name) {
       n_rows <- nrow(data)
       
@@ -134,38 +135,37 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       # DIAGNOSTIC OUTPUT
       cat("\n=== BEFORE DEDUPLICATION ===\n")
       cat("Total rows:", nrow(result), "\n")
-      cat("Rows with businesses:", sum(!is.na(result$business_sub_category)), "\n")
+      cat("Rows with businesses:", sum(!is.na(result$business_sub_category) & result$business_license > 0), "\n")
       cat("Sum of property_tax:", sum(result$property_tax, na.rm = TRUE), "\n")
       cat("Sum of business_license:", sum(result$business_license, na.rm = TRUE), "\n")
       
       # CORRECT DEDUPLICATION LOGIC:
-      # 1. Create property tax rows: unique by id_property + property_type, with business_license = 0
-      # 2. Create business license rows: rows with businesses, with property_tax = 0
-      # 3. Combine them
-      
-      # Step 1: Property tax rows (deduplicate by id_property + property_type)
+      # Step 1: Create property tax rows (unique by id_property + property_type)
       property_rows <- result
-      property_rows$business_license <- 0  # Zero out business license for property tax rows
-      property_rows$total_tax <- property_rows$property_tax
-      
-      # Deduplicate by id_property + property_type
       property_key <- paste(property_rows$id_property, property_rows$property_type, sep = "_")
       property_rows <- property_rows[!duplicated(property_key), ]
       
-      # Step 2: Business license rows (only rows with businesses)
-      business_rows <- result[!is.na(result$business_sub_category), ]
+      # Zero out business fields in property rows to avoid double-counting
+      property_rows$business_license <- 0
+      property_rows$business_value <- 0
+      property_rows$business_sub_category <- NA
+      property_rows$business_category <- NA
+      property_rows$business_area <- NA
+      property_rows$total_tax <- property_rows$property_tax
       
+      # Step 2: Create business license rows with optional deduplication by id_business
+      business_rows <- result[!is.na(result$business_sub_category) & result$business_license > 0, ]
+
       if (nrow(business_rows) > 0) {
-        business_rows$property_tax <- 0  # Zero out property tax for business license rows
-        business_rows$total_tax <- business_rows$business_license
+        # Optional: deduplicate by id_business if available
+        if ("id_business" %in% names(business_rows)) {
+          business_rows <- business_rows[!duplicated(business_rows$id_business), ]
+        }
         
-        # Optional: deduplicate businesses if there are true duplicates
-        # Assuming each row with a business_sub_category represents a unique business
-        # If you need to deduplicate, uncomment the following:
-        # business_key <- paste(business_rows$id_property, business_rows$business_sub_category, sep = "_")
-        # business_rows <- business_rows[!duplicated(business_key), ]
-      } else {
-        business_rows <- data.frame()  # Empty dataframe if no businesses
+        # Zero out property fields in business rows to avoid double-counting
+        business_rows$property_tax <- 0
+        business_rows$property_value <- 0
+        business_rows$total_tax <- business_rows$business_license
       }
       
       # Step 3: Combine property and business rows
@@ -178,6 +178,7 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       cat("Business license rows:", nrow(business_rows), "\n")
       cat("Sum of property_tax:", sum(result$property_tax, na.rm = TRUE), "\n")
       cat("Sum of business_license:", sum(result$business_license, na.rm = TRUE), "\n")
+      cat("Sum of total_tax:", sum(result$total_tax, na.rm = TRUE), "\n")
       cat("============================\n\n")
       
       return(result)
