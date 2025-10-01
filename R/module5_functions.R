@@ -141,9 +141,8 @@ calculate_gini <- function(aggregated_data) {
   sorted_data <- aggregated_data %>%
     dplyr::arrange(total_property_value) %>%
     dplyr::mutate(
-      n = n(),
       # Calculate cumulative proportions
-      cum_prop_pop = (1:n) / n,
+      cum_prop_pop = row_number() / n(),
       cum_prop_value = cumsum(total_property_value) / sum(total_property_value),
       cum_prop_tax = cumsum(total_tax) / sum(total_tax)
     )

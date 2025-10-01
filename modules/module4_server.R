@@ -712,8 +712,8 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       combined_long$label <- scales::comma(round(combined_long$Revenue, 0))
       
       # Chart 1A colors: Standard blue and red - FIXED ORDER
-      chart_colors <- c("Property_Tax" = "#3498db",      # Bright blue
-                        "Business_License" = "#e74c3c")   # Bright red
+      chart_colors <- c("Property_Tax" = "#e74c3c",      # Bright red
+                        "Business_License" = "#3498db")   # Bright blue
           
       ggplot(combined_long, aes(x = scenario, y = Revenue, fill = Type)) +
         geom_bar(stat = "identity", position = "dodge") +
@@ -763,8 +763,8 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       combined_long$label <- scales::comma(round(combined_long$Revenue, 0))
       
       # Chart 1B colors: Darker blue and red
-      chart_colors <- c("Property_Tax" = "#3498db",      # Bright blue
-                        "Business_License" = "#e74c3c")   # Bright red
+      chart_colors <- c("Property_Tax" = "#e74c3c",      # Bright red
+                        "Business_License" = "#3498db")   # Bright blue
       
       ggplot(combined_long, aes(x = scenario, y = Revenue, fill = Type)) +
         geom_bar(stat = "identity", position = "dodge") +
@@ -858,8 +858,8 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       }
       
       # Chart 1C colors: Steel blue and Indian red
-      chart_colors <- c("Property_Tax" = "#3498db",      # Bright blue
-                        "Business_License" = "#e74c3c")   # Bright red
+      chart_colors <- c("Property_Tax" = "#e74c3c",      # Bright red
+                        "Business_License" = "#3498db")   # Bright blue
       
       ggplot(combined_long, aes(x = scenario, y = Revenue, fill = Type)) +
         geom_bar(stat = "identity", position = "dodge") +

@@ -179,44 +179,44 @@ module5_server <- function(id, revenue_data) {
         )
     })
     
-    output$lorenz_curve_plot <- renderPlot({
-      req(values$gini_results)
+    # output$lorenz_curve_plot <- renderPlot({
+    #   req(values$gini_results)
       
-      lorenz_data <- values$gini_results$lorenz_data
+    #   lorenz_data <- values$gini_results$lorenz_data
       
-      # Add perfect equality line points
-      equality_data <- data.frame(
-        cum_prop_pop = c(0, 1),
-        cum_prop_tax = c(0, 1)
-      )
+    #   # Add perfect equality line points
+    #   equality_data <- data.frame(
+    #     cum_prop_pop = c(0, 1),
+    #     cum_prop_tax = c(0, 1)
+    #   )
       
-      ggplot() +
-        # Perfect equality line
-        geom_line(data = equality_data,
-                  aes(x = cum_prop_pop, y = cum_prop_tax),
-                  color = "gray50", linetype = "dashed", size = 1) +
-        # Lorenz curve
-        geom_line(data = lorenz_data,
-                  aes(x = cum_prop_pop, y = cum_prop_tax),
-                  color = "darkblue", size = 1.5) +
-        geom_point(data = lorenz_data %>%
-                     dplyr::filter(row_number() %% (n()/10) == 0),
-                   aes(x = cum_prop_pop, y = cum_prop_tax),
-                   color = "darkblue", size = 3) +
-        # Fill area between curves
-        geom_ribbon(data = lorenz_data,
-                    aes(x = cum_prop_pop, ymin = cum_prop_pop, ymax = cum_prop_tax),
-                    alpha = 0.2, fill = "blue") +
-        scale_x_continuous(labels = scales::percent) +
-        scale_y_continuous(labels = scales::percent) +
-        labs(title = paste0("Lorenz Curve (Gini = ", 
-                            round(values$gini_results$gini_coefficient, 3), ")"),
-             x = "Cumulative % of Properties (by value)",
-             y = "Cumulative % of Tax Revenue",
-             caption = "Deviation from diagonal indicates inequality") +
-        theme_minimal() +
-        theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold"))
-    })
+    #   ggplot() +
+    #     # Perfect equality line
+    #     geom_line(data = equality_data,
+    #               aes(x = cum_prop_pop, y = cum_prop_tax),
+    #               color = "gray50", linetype = "dashed", linewidth = 1) +
+    #     # Lorenz curve
+    #     geom_line(data = lorenz_data,
+    #               aes(x = cum_prop_pop, y = cum_prop_tax),
+    #               color = "darkblue", linewidth = 1.5) +
+    #     geom_point(data = lorenz_data %>%
+    #                  dplyr::filter(row_number() %% (n()/10) == 0),
+    #                aes(x = cum_prop_pop, y = cum_prop_tax),
+    #                color = "darkblue", size = 3) +
+    #     # Fill area between curves
+    #     geom_ribbon(data = lorenz_data,
+    #                 aes(x = cum_prop_pop, ymin = cum_prop_pop, ymax = cum_prop_tax),
+    #                 alpha = 0.2, fill = "blue") +
+    #     scale_x_continuous(labels = scales::percent) +
+    #     scale_y_continuous(labels = scales::percent) +
+    #     labs(title = paste0("Lorenz Curve (Gini = ", 
+    #                         round(values$gini_results$gini_coefficient, 3), ")"),
+    #          x = "Cumulative % of Properties (by value)",
+    #          y = "Cumulative % of Tax Revenue",
+    #          caption = "Deviation from diagonal indicates inequality") +
+    #     theme_minimal() +
+    #     theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold"))
+    # })
     
     output$progressivity_index_plot <- renderPlot({
       req(values$progressivity_results)
@@ -224,7 +224,7 @@ module5_server <- function(id, revenue_data) {
       ggplot(values$progressivity_results, 
              aes(x = value_quantile, y = progressivity_index, fill = progressivity_index)) +
         geom_bar(stat = "identity") +
-        geom_hline(yintercept = 1, linetype = "dashed", color = "red", size = 1) +
+        geom_hline(yintercept = 1, linetype = "dashed", color = "red", linewidth = 1) +
         scale_fill_gradient2(low = "red", mid = "gray90", high = "darkgreen", 
                              midpoint = 1, limits = c(0, 2)) +
         scale_y_continuous(breaks = seq(0, 2, 0.25)) +
@@ -301,8 +301,8 @@ module5_server <- function(id, revenue_data) {
                  color = value_quantile)) +
         geom_point(aes(shape = has_business), alpha = 0.6, size = 2) +
         geom_hline(yintercept = input$overtax_threshold, 
-                   linetype = "dashed", color = "red", size = 1) +
-        geom_smooth(method = "loess", se = TRUE, color = "black", size = 0.8) +
+                   linetype = "dashed", color = "red", linewidth = 1) +
+        geom_smooth(method = "loess", se = FALSE, color = "black", linewidth = 0.8) +
         scale_x_log10(labels = scales::comma) +
         scale_color_brewer(palette = "RdYlBu", direction = -1) +
         scale_shape_manual(values = c(16, 17),
@@ -327,7 +327,7 @@ module5_server <- function(id, revenue_data) {
                  fill = value_quantile)) +
         geom_boxplot(alpha = 0.7, outlier.shape = 21, outlier.size = 2) +
         geom_hline(yintercept = input$overtax_threshold,
-                   linetype = "dashed", color = "red", size = 1) +
+                   linetype = "dashed", color = "red", linewidth = 1) +
         scale_fill_brewer(palette = "RdYlBu", direction = -1) +
         labs(title = "Distribution of Effective Tax Rates by Quantile",
              x = "Property Value Quantile",

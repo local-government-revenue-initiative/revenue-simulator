@@ -86,19 +86,13 @@ module5_ui <- function(id) {
                              
                              br(),
                              
-                             fluidRow(
-                               column(6,
-                                      h4("Lorenz Curve - Tax Burden Distribution"),
-                                      p("Curve shows cumulative tax share vs. cumulative property share. 
-                  Closer to diagonal = more equal distribution."),
-                                      plotOutput(ns("lorenz_curve_plot"), height = "400px")
-                               ),
-                               column(6,
-                                      h4("Progressivity Index by Quantile"),
-                                      p("Index > 1 means quantile pays more than proportional share of taxes."),
-                                      plotOutput(ns("progressivity_index_plot"), height = "400px")
-                               )
-                             ),
+                            fluidRow(
+                              column(12,
+                                    h4("Progressivity Index by Quantile"),
+                                    p("Index > 1 means quantile pays more than proportional share of taxes."),
+                                    plotOutput(ns("progressivity_index_plot"), height = "400px")
+                              )
+                            ),
                              
                              br(),
                              
