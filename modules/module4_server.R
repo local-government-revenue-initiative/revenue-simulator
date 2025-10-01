@@ -150,9 +150,9 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
         property_type = property_types,
         structure_type = structure_types,
         property_value = property_values,
-        property_tax = property_taxes,
+        property_tax = property_taxes,                
         business_value = business_values,
-        business_license = business_licenses,
+        business_license = business_licenses,              
         total_tax = property_taxes + business_licenses,
         made_payment = if("made_payment" %in% names(data)) data$made_payment else TRUE,
         business_category = if("business_category" %in% names(data)) data$business_category else NA,
@@ -721,8 +721,9 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
                   position = position_dodge(width = 0.9),
                   vjust = -0.5,
                   size = 3.5) +
-        scale_fill_manual(values = chart_colors,
-                          labels = c("Property Tax", "Business License")) +
+        scale_fill_manual(
+          values = c("Property_Tax" = "#e74c3c", "Business_License" = "#3498db"),
+          labels = c("Property_Tax" = "Property Tax", "Business_License" = "Business License")) +
         scale_y_continuous(labels = scales::comma,
                            expand = expansion(mult = c(0, 0.1))) +  # Add space for labels
         labs(title = "Total Revenue by Type - All Properties",
@@ -772,8 +773,9 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
                   position = position_dodge(width = 0.9),
                   vjust = -0.5,
                   size = 3.5) +
-        scale_fill_manual(values = chart_colors,
-                          labels = c("Property Tax", "Business License")) +
+        scale_fill_manual(
+          values = c("Property_Tax" = "#e74c3c", "Business_License" = "#3498db"),
+          labels = c("Property_Tax" = "Property Tax", "Business_License" = "Business License")) +
         scale_y_continuous(labels = scales::comma,
                            expand = expansion(mult = c(0, 0.1))) +  # Add space for labels
         labs(title = "Total Revenue by Type - Filtered to Compliers",
@@ -867,8 +869,9 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
                   position = position_dodge(width = 0.9),
                   vjust = -0.5,
                   size = 3.5) +
-        scale_fill_manual(values = chart_colors,
-                          labels = c("Property Tax", "Business License")) +
+        scale_fill_manual(
+          values = c("Property_Tax" = "#e74c3c", "Business_License" = "#3498db"),
+          labels = c("Property_Tax" = "Property Tax", "Business_License" = "Business License")) +
         scale_y_continuous(labels = scales::comma,
                            expand = expansion(mult = c(0, 0.1))) +  # Add space for labels
         labs(title = paste0("Total Revenue by Type", filter_text),
