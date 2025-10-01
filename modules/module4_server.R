@@ -115,6 +115,7 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       # Create initial result dataframe with ALL rows
       result <- data.frame(
         id_property = data$id_property,
+        id_business = if("id_business" %in% names(data)) data$id_business else NA,
         scenario = scenario_name,
         property_type = property_types,
         structure_type = structure_types,
@@ -153,12 +154,20 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       property_rows$business_sub_category <- NA
       property_rows$business_category <- NA
       property_rows$business_area <- NA
+      property_rows$id_business <- NA
       property_rows$total_tax <- property_rows$property_tax
       
-      # Step 2: Create business license rows
+      # Step 2: Create business license rows (deduplicated by id_business)
       business_rows <- result[!is.na(result$business_sub_category) & result$business_license > 0, ]
       
       if (nrow(business_rows) > 0) {
+        # Deduplicate by id_business if the column exists
+        if("id_business" %in% names(data) && !all(is.na(business_rows$id_business))) {
+          # Keep only unique businesses by id_business
+          unique_business_indices <- !duplicated(business_rows$id_business)
+          business_rows <- business_rows[unique_business_indices, ]
+        }
+        
         # Zero out property fields in business rows to avoid double-counting
         business_rows$property_tax <- 0
         business_rows$property_value <- 0
@@ -180,6 +189,13 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       cat("Sum of property_tax:", sum(result$property_tax, na.rm = TRUE), "\n")
       cat("Sum of business_license:", sum(result$business_license, na.rm = TRUE), "\n")
       cat("Sum of total_tax:", sum(result$total_tax, na.rm = TRUE), "\n")
+      
+      # Additional diagnostic for businesses
+      if("id_business" %in% names(data)) {
+        cat("Unique businesses in original data:", length(unique(data$id_business[!is.na(data$id_business)])), "\n")
+        cat("Business rows after deduplication:", nrow(business_rows), "\n")
+      }
+      
       cat("============================\n\n")
       
       # Verify the property tax total matches expected value
@@ -599,10 +615,10 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       # Format labels for display
       combined_long$label <- scales::comma(round(combined_long$Revenue, 0))
       
-      # Chart 1A colors: Standard blue and red
+      # Chart 1A colors: Standard blue and red - FIXED ORDER
       chart_colors <- c("Property_Tax" = "#3498db",      # Bright blue
                         "Business_License" = "#e74c3c")   # Bright red
-      
+          
       ggplot(combined_long, aes(x = scenario, y = Revenue, fill = Type)) +
         geom_bar(stat = "identity", position = "dodge") +
         geom_text(aes(label = label), 
@@ -651,8 +667,8 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       combined_long$label <- scales::comma(round(combined_long$Revenue, 0))
       
       # Chart 1B colors: Darker blue and red
-      chart_colors <- c("Property_Tax" = "#2874a6",      # Darker blue
-                        "Business_License" = "#c0392b")   # Darker red
+      chart_colors <- c("Property_Tax" = "#3498db",      # Bright blue
+                        "Business_License" = "#e74c3c")   # Bright red
       
       ggplot(combined_long, aes(x = scenario, y = Revenue, fill = Type)) +
         geom_bar(stat = "identity", position = "dodge") +
@@ -746,8 +762,8 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       }
       
       # Chart 1C colors: Steel blue and Indian red
-      chart_colors <- c("Property_Tax" = "#4682b4",      # Steel blue
-                        "Business_License" = "#cd5c5c")   # Indian red
+      chart_colors <- c("Property_Tax" = "#3498db",      # Bright blue
+                        "Business_License" = "#e74c3c")   # Bright red
       
       ggplot(combined_long, aes(x = scenario, y = Revenue, fill = Type)) +
         geom_bar(stat = "identity", position = "dodge") +
