@@ -111,7 +111,29 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       
       # Extract structure type info for filtering
       structure_types <- get_structure_types_from_data(data)
-      
+
+      # ============================================
+      # DIAGNOSTIC BLOCK 1: Check id_business in source data
+      # ============================================
+      cat("\n=== DIAGNOSTIC: id_business in source data ===\n")
+      cat("Columns in data:", paste(names(data), collapse=", "), "\n")
+      cat("Has id_business column?", "id_business" %in% names(data), "\n")
+
+      if ("id_business" %in% names(data)) {
+        cat("Sample id_business values (first 10):", paste(head(data$id_business, 10), collapse=", "), "\n")
+        cat("Number of NA id_business:", sum(is.na(data$id_business)), "out of", nrow(data), "\n")
+        cat("Number of non-NA id_business:", sum(!is.na(data$id_business)), "\n")
+        cat("Unique id_business count:", length(unique(data$id_business[!is.na(data$id_business)])), "\n")
+        
+        # Check if businesses have id_business
+        has_business <- !is.na(data$business_sub_category)
+        cat("Rows with business_sub_category:", sum(has_business), "\n")
+        cat("Of those, how many have id_business?", sum(!is.na(data$id_business[has_business])), "\n")
+      } else {
+        cat("❌ ERROR: id_business column NOT FOUND in data!\n")
+      }
+      cat("==========================================\n\n")
+
       # Create initial result dataframe with ALL rows
       result <- data.frame(
         id_property = data$id_property,
@@ -131,8 +153,30 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
         business_area = business_areas,
         stringsAsFactors = FALSE
       )
-      
-      # DIAGNOSTIC OUTPUT
+
+      # ============================================
+      # DIAGNOSTIC BLOCK 2: Check id_business in result
+      # ============================================
+      cat("\n=== DIAGNOSTIC: id_business in result dataframe ===\n")
+      cat("Has id_business column in result?", "id_business" %in% names(result), "\n")
+
+      if ("id_business" %in% names(result)) {
+        cat("Sample id_business in result (first 10):", paste(head(result$id_business, 10), collapse=", "), "\n")
+        cat("Number of NA id_business in result:", sum(is.na(result$id_business)), "\n")
+        cat("Number of non-NA id_business in result:", sum(!is.na(result$id_business)), "\n")
+        
+        # Check id_business for business rows
+        biz_rows <- !is.na(result$business_sub_category) & result$business_license > 0
+        cat("Business rows in result:", sum(biz_rows), "\n")
+        cat("Of those, how many have id_business?", sum(!is.na(result$id_business[biz_rows])), "\n")
+        
+        if (sum(!is.na(result$id_business[biz_rows])) > 0) {
+          cat("Unique id_business in business rows:", 
+              length(unique(result$id_business[biz_rows & !is.na(result$id_business)])), "\n")
+        }
+      }
+      cat("==========================================\n\n")
+
       cat("\n=== BEFORE DEDUPLICATION ===\n")
       cat("Total rows:", nrow(result), "\n")
       cat("Rows with businesses:", sum(!is.na(result$business_sub_category) & result$business_license > 0), "\n")
@@ -157,22 +201,72 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       property_rows$id_business <- NA
       property_rows$total_tax <- property_rows$property_tax
       
-      # Step 2: Create business license rows (deduplicated by id_business)
+      # Step 2: Create business license rows
       business_rows <- result[!is.na(result$business_sub_category) & result$business_license > 0, ]
-      
+
+      cat("\n=== DIAGNOSTIC: Business deduplication ===\n")
+      cat("Business rows before deduplication:", nrow(business_rows), "\n")
+
       if (nrow(business_rows) > 0) {
-        # Deduplicate by id_business if the column exists
-        if("id_business" %in% names(data) && !all(is.na(business_rows$id_business))) {
+        cat("Has id_business column in business_rows?", "id_business" %in% names(business_rows), "\n")
+        
+        if ("id_business" %in% names(business_rows)) {
+          cat("Number of NA id_business:", sum(is.na(business_rows$id_business)), "\n")
+          cat("Number of non-NA id_business:", sum(!is.na(business_rows$id_business)), "\n")
+          cat("Sample id_business (first 20):", 
+              paste(head(business_rows$id_business, 20), collapse=", "), "\n")
+          
+          if (!all(is.na(business_rows$id_business))) {
+            non_na_ids <- business_rows$id_business[!is.na(business_rows$id_business)]
+            cat("Unique id_business count:", length(unique(non_na_ids)), "\n")
+            cat("Total rows with id_business:", length(non_na_ids), "\n")
+            cat("Duplicates present?", length(non_na_ids) > length(unique(non_na_ids)), "\n")
+            
+            if (length(non_na_ids) > length(unique(non_na_ids))) {
+              dup_ids <- non_na_ids[duplicated(non_na_ids)]
+              cat("Example duplicate id_business (first 5):", paste(head(dup_ids, 5), collapse=", "), "\n")
+            }
+          }
+        }
+        
+        # Actual deduplication
+        cat("\n>>> RUNNING DEDUPLICATION <<<\n")
+        if("id_business" %in% names(business_rows) && !all(is.na(business_rows$id_business))) {
+          cat("Deduplication condition met! Running deduplication...\n")
+          
+          before_count <- nrow(business_rows)
+          before_sum <- sum(business_rows$business_license, na.rm = TRUE)
+          
           # Keep only unique businesses by id_business
           unique_business_indices <- !duplicated(business_rows$id_business)
           business_rows <- business_rows[unique_business_indices, ]
+          
+          after_count <- nrow(business_rows)
+          after_sum <- sum(business_rows$business_license, na.rm = TRUE)
+          
+          cat("Rows before:", before_count, "\n")
+          cat("Rows after:", after_count, "\n")
+          cat("Rows removed:", before_count - after_count, "\n")
+          cat("Business license sum before:", formatC(before_sum, format="f", big.mark=",", digits=0), "\n")
+          cat("Business license sum after:", formatC(after_sum, format="f", big.mark=",", digits=0), "\n")
+        } else {
+          cat("❌ Deduplication NOT running because:\n")
+          if (!"id_business" %in% names(business_rows)) {
+            cat("  - id_business column not found in business_rows\n")
+          }
+          if (all(is.na(business_rows$id_business))) {
+            cat("  - All id_business values are NA\n")
+          }
         }
         
-        # Zero out property fields in business rows to avoid double-counting
+        # Zero out property fields
         business_rows$property_tax <- 0
         business_rows$property_value <- 0
         business_rows$total_tax <- business_rows$business_license
       }
+
+      cat("Business rows after deduplication:", nrow(business_rows), "\n")
+      cat("==========================================\n\n")
       
       # Step 3: Combine property and business rows
       if (nrow(business_rows) > 0) {

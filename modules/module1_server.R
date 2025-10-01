@@ -298,6 +298,36 @@ module1_server <- function(id) {
           "id_property", "id_property", "id_property"
         )
         
+        # ============================================
+        # DIAGNOSTIC: Check if id_business made it through
+        # ============================================
+        cat("\n=== MODULE 1 DIAGNOSTIC: id_business after merge ===\n")
+        cat("Columns in processed_data:", paste(names(values$processed_data), collapse=", "), "\n")
+        cat("Has id_business?", "id_business" %in% names(values$processed_data), "\n")
+
+        if ("id_business" %in% names(values$processed_data)) {
+          cat("Total rows:", nrow(values$processed_data), "\n")
+          cat("Rows with id_business (non-NA):", sum(!is.na(values$processed_data$id_business)), "\n")
+          cat("Unique id_business count:", length(unique(values$processed_data$id_business[!is.na(values$processed_data$id_business)])), "\n")
+          cat("Sample id_business values (first 10):", 
+              paste(head(values$processed_data$id_business[!is.na(values$processed_data$id_business)], 10), collapse=", "), "\n")
+          
+          # Check if businesses have id_business
+          has_biz <- !is.na(values$processed_data$business_name)
+          cat("Rows with business_name:", sum(has_biz), "\n")
+          cat("Of those, rows with id_business:", sum(!is.na(values$processed_data$id_business[has_biz])), "\n")
+        } else {
+          cat("❌ ERROR: id_business NOT found in merged data!\n")
+          cat("Checking processed_business before merge...\n")
+          if ("id_business" %in% names(processed_business)) {
+            cat("✓ id_business WAS in processed_business\n")
+            cat("Sample values:", paste(head(processed_business$id_business, 10), collapse=", "), "\n")
+          } else {
+            cat("❌ id_business NOT in processed_business either!\n")
+          }
+        }
+        cat("===============================================\n\n")
+
         incProgress(0.2, detail = "Complete!")
       })
       
