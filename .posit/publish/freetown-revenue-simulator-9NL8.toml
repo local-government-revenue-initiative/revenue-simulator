@@ -9,7 +9,16 @@ validate = true
 files = [
   '/app.R',
   '/.posit/publish/freetown-revenue-simulator-9NL8.toml',
-  '/.posit/publish/deployments/deployment-LMM1.toml'
+  '/.posit/publish/deployments/deployment-LMM1.toml',
+  '/-p',
+  '/.gitignore',
+  '/.posit',
+  '/R',
+  '/README.md',
+  '/configs',
+  '/modules',
+  '/tests',
+  '/www'
 ]
 title = 'freetown-revenue-simulator'
 
