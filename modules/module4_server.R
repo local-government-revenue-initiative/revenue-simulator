@@ -112,6 +112,14 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       # Extract structure type info for filtering
       structure_types <- get_structure_types_from_data(data)
 
+      cat("\n=== DIAGNOSTIC: Business License Calculation ===\n")
+      cat("Sample business_licenses (first 20):", paste(head(business_licenses[business_licenses > 0], 20), collapse=", "), "\n")
+      cat("Min business_license:", min(business_licenses[business_licenses > 0], na.rm=TRUE), "\n")
+      cat("Max business_license:", max(business_licenses, na.rm=TRUE), "\n")
+      cat("Median business_license:", median(business_licenses[business_licenses > 0], na.rm=TRUE), "\n")
+      cat("Mean business_license:", mean(business_licenses[business_licenses > 0], na.rm=TRUE), "\n")
+      cat("===========================================\n\n")
+
       # ============================================
       # DIAGNOSTIC BLOCK 1: Check id_business in source data
       # ============================================
