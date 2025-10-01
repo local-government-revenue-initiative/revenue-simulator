@@ -487,7 +487,9 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       }
     }
     
-    # Calculate business licenses using Module 3 logic
+    # Fixed calculate_business_licenses_module3 function for module4_server.R
+    # Replace the existing incomplete function with this complete version
+
     calculate_business_licenses_module3 <- function(business_values, business_areas, 
                                                     business_subcategories, license_config) {
       n <- length(business_values)
@@ -504,66 +506,58 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
         return(licenses)
       }
       
+      # Loop through each business and calculate license
       for (i in 1:n) {
         if (is.na(business_subcategories[i]) || is.na(business_values[i]) || business_values[i] <= 0) {
           licenses[i] <- 0
           next
         }
         
+        # Get the configuration for this subcategory
         subcat_config <- license_config[[business_subcategories[i]]]
+        
+        # If no config exists for this subcategory, skip
         if (is.null(subcat_config)) {
-          # Use default configuration
-          licenses[i] <- max(business_values[i] * 0.001, 50000)  # Default: 0.1% with 50k minimum
+          licenses[i] <- 0
           next
         }
         
-        # Handle different tax types with better error checking
-        if (!is.null(subcat_config$tax_type)) {
-          if (subcat_config$tax_type == "minimum_rate" && !is.null(subcat_config$use_slots) && !subcat_config$use_slots) {
-            rate <- if(!is.null(subcat_config$rate)) subcat_config$rate else 0.1
-            minimum <- if(!is.null(subcat_config$minimum)) subcat_config$minimum else 50000
-            licenses[i] <- max(business_values[i] * (rate / 100), minimum)
-          } else if (subcat_config$tax_type == "flat_tax" && !is.null(subcat_config$use_slots) && !subcat_config$use_slots) {
-            licenses[i] <- if(!is.null(subcat_config$flat_amount)) subcat_config$flat_amount else 50000
-          } else if (!is.null(subcat_config$use_slots) && subcat_config$use_slots) {
-            # Handle slots
-            value_to_check <- if(!is.null(subcat_config$slot_basis) && subcat_config$slot_basis == "value") {
-              business_values[i]
-            } else {
-              business_areas[i]
+        # Calculate based on the calculation method
+        if (subcat_config$calculation_method == "minimum_rate") {
+          # Method 1: Traditional minimum + rate calculation
+          licenses[i] <- max(business_values[i] * subcat_config$rate, 
+                            subcat_config$minimum)
+                            
+        } else if (subcat_config$calculation_method == "flat") {
+          # Method 2: Flat amount (fixed)
+          licenses[i] <- subcat_config$flat_amount
+          
+        } else if (subcat_config$calculation_method == "flat_value_bands") {
+          # Method 3: Flat amount based on business value bands
+          licenses[i] <- subcat_config$value_bands$band3$tax  # Default to highest band
+          
+          if (business_values[i] <= subcat_config$value_bands$band1$max) {
+            licenses[i] <- subcat_config$value_bands$band1$tax
+          } else if (business_values[i] <= subcat_config$value_bands$band2$max) {
+            licenses[i] <- subcat_config$value_bands$band2$tax
+          }
+          
+        } else if (subcat_config$calculation_method == "flat_area_bands") {
+          # Method 4: Flat amount based on business area bands
+          area_value <- business_areas[i]
+          
+          licenses[i] <- subcat_config$area_bands$band3$tax  # Default to highest band
+          
+          if (!is.na(area_value)) {
+            if (area_value <= subcat_config$area_bands$band1$max) {
+              licenses[i] <- subcat_config$area_bands$band1$tax
+            } else if (area_value <= subcat_config$area_bands$band2$max) {
+              licenses[i] <- subcat_config$area_bands$band2$tax
             }
-            
-            if (!is.na(value_to_check)) {
-              slot_num <- 3
-              for (s in 1:3) {
-                slot <- subcat_config$slots[[paste0("slot", s)]]
-                if (!is.null(slot) && !is.null(slot$min) && !is.null(slot$max) && 
-                    value_to_check >= slot$min && value_to_check < slot$max) {
-                  slot_num <- s
-                  break
-                }
-              }
-              
-              slot_config <- subcat_config$slots[[paste0("slot", slot_num)]]
-              if (!is.null(slot_config)) {
-                if (!is.null(subcat_config$tax_type) && subcat_config$tax_type == "minimum_rate") {
-                  rate <- if(!is.null(slot_config$rate)) slot_config$rate else 0.1
-                  minimum <- if(!is.null(slot_config$minimum)) slot_config$minimum else 50000
-                  licenses[i] <- max(business_values[i] * (rate / 100), minimum)
-                } else {
-                  licenses[i] <- if(!is.null(slot_config$flat_amount)) slot_config$flat_amount else 50000
-                }
-              } else {
-                licenses[i] <- 50000  # Default fallback
-              }
-            }
-          } else {
-            # Default fallback
-            licenses[i] <- max(business_values[i] * 0.001, 50000)
           }
         } else {
-          # No tax type specified, use default
-          licenses[i] <- max(business_values[i] * 0.001, 50000)
+          # Fallback for unknown methods
+          licenses[i] <- 0
         }
       }
       
