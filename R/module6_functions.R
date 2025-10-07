@@ -27,7 +27,7 @@ load_gis_layers <- function(gis_directory = "gis_layers") {
       
       layers[[layer_name]] <- layer_data
       
-      message(paste("Loaded GIS layer:", layer_name))
+      toastr_success(paste("Loaded GIS layer:", layer_name))
       
     }, error = function(e) {
       warning(paste("Error loading", layer_name, ":", e$message))

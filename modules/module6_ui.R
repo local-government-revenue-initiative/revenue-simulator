@@ -1,12 +1,16 @@
 # modules/module6_ui.R
 # Module 6: GIS Layer Revenue Filtering with Interactive Map
 
+add_busy_bar(color = "#3c8dbc", height = "3px")
+
 module6_ui <- function(id) {
   ns <- NS(id)
   
   tabItem(
     tabName = "module6",
     
+    useToastr()
+
     # Header
     h2("Module 6: GIS Layer Revenue Analysis"),
     p("Filter and analyze revenue by geographic layers and ward boundaries"),
@@ -147,7 +151,12 @@ module6_ui <- function(id) {
               "Revenue Map",
               icon = icon("map"),
               br(),
-              leafletOutput(ns("revenue_map"), height = "600px"),
+              withSpinner(
+                leafletOutput(ns("revenue_map"), height = "600px"),
+                type = 6,  # Different spinner types: 1-8
+                color = "#3c8dbc",  # Match your theme color
+                size = 1.5
+              ),
               br(),
               
               # Map Controls
@@ -189,7 +198,7 @@ module6_ui <- function(id) {
               "Layer Comparison",
               icon = icon("chart-bar"),
               br(),
-              plotOutput(ns("layer_comparison_plot"), height = "500px"),
+              withSpinner(plotOutput(ns("layer_comparison_plot")), height = "500px")),
               br(),
               DT::dataTableOutput(ns("layer_comparison_table"))
             ),
@@ -199,9 +208,14 @@ module6_ui <- function(id) {
               "Ward Analysis",
               icon = icon("building"),
               br(),
-              plotOutput(ns("ward_revenue_plot"), height = "400px"),
-              br(),
-              DT::dataTableOutput(ns("ward_details_table"))
+              withSpinner(
+                plotOutput(ns("ward_revenue_plot"), height = "400px"),
+                type = 4,
+                color = "#3c8dbc"
+              )
+                br(),
+              withSpinner(DT::dataTableOutput(ns("ward_details_table")))
+
             )
           )
         )

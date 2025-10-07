@@ -11,10 +11,11 @@ library(readr)
 library(purrr)
 library(fastDummies)
 library(ggplot2)
-library(scales)
 library(sf)
 library(leaflet)
-
+library(shinycssloaders)
+library(shinybusy)
+library(shinytoastr)
 
 # Set options
 options(shiny.maxRequestSize = 30*1024^2)  # 30MB max file size

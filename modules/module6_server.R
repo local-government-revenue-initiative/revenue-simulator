@@ -74,6 +74,10 @@ module6_server <- function(id, revenue_data) {
     
     # Apply filters when button clicked
     observeEvent(input$apply_filters, {
+        show_modal_spinner(
+          spin = "circle",
+          text = "Applying GIS filters..."
+        )
       req(revenue_data())
       
       # Get the selected scenario data
@@ -156,6 +160,7 @@ module6_server <- function(id, revenue_data) {
         type = "success",
         duration = 3
       )
+      remove_modal_spinner()
     })
     
     # Clear all filters
