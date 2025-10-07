@@ -12,6 +12,8 @@ library(purrr)
 library(fastDummies)
 library(ggplot2)
 library(scales)
+library(sf)
+library(leaflet)
 
 
 # Set options
@@ -28,6 +30,7 @@ source("R/module2_functions.R")
 source("R/module3_functions.R")
 source("R/module4_functions.R")
 source("R/module5_functions.R")  # Added for Module 5
+source("R/module6_functions.R")
 
 # Source UI and server modules
 source("modules/module1_ui.R")
@@ -40,6 +43,8 @@ source("modules/module4_ui.R")
 source("modules/module4_server.R")
 source("modules/module5_ui.R")     # Added for Module 5
 source("modules/module5_server.R")  # Added for Module 5
+source("modules/module6_ui.R")
+source("modules/module6_server.R")
 
 # Define UI
 ui <- dashboardPage(
@@ -180,9 +185,7 @@ tags$script(HTML("
       module3_ui("module3"),
       module4_ui("module4"),
       module5_ui("module5"),  # Now using actual module instead of placeholder
-      
-      # Placeholder for Module 6
-      tabItem(tabName = "module6", h2("Module 6: GIS Visualization - Coming Soon"))
+      module6_ui("module6")
     )
   )
 )
@@ -204,7 +207,8 @@ server <- function(input, output, session) {
   # Module 5 server - tax burden analysis
   analysis_results <- module5_server("module5", revenue_data)
   
-  # Analysis results can be used in Module 6 for GIS visualization if needed
+  # Module 6 server - GIS layer filtering
+  gis_results <- module6_server("module6", revenue_data)
 }
 
 # Run the application
