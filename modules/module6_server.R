@@ -212,7 +212,7 @@ module6_server <- function(id, revenue_data) {
           value = "N/A",
           subtitle = "Total Revenue",
           icon = icon("coins"),
-          color = "gray"
+          color = "black"
         )
       } else {
         total_revenue <- sum(data$total_tax, na.rm = TRUE)
@@ -234,7 +234,7 @@ module6_server <- function(id, revenue_data) {
           value = "N/A",
           subtitle = "Property Tax",
           icon = icon("home"),
-          color = "gray"
+          color = "black"
         )
       } else {
         property_tax <- sum(data$property_tax, na.rm = TRUE)
@@ -256,7 +256,7 @@ module6_server <- function(id, revenue_data) {
           value = "N/A",
           subtitle = "Business License",
           icon = icon("building"),
-          color = "gray"
+          color = "black"
         )
       } else {
         business_license <- sum(data$business_license, na.rm = TRUE)

@@ -143,24 +143,17 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       cat("==========================================\n\n")
 
       # Create initial result dataframe with ALL rows
-      result <- data.frame(
-        id_property = data$id_property,
-        id_business = if("id_business" %in% names(data)) data$id_business else NA,
-        scenario = scenario_name,
-        property_type = property_types,
-        structure_type = structure_types,
-        property_value = property_values,
-        property_tax = property_taxes,                
-        business_value = business_values,
-        business_license = business_licenses,              
-        total_tax = property_taxes + business_licenses,
-        made_payment = if("made_payment" %in% names(data)) data$made_payment else TRUE,
-        business_category = if("business_category" %in% names(data)) data$business_category else NA,
-        business_sub_category = if("business_sub_category" %in% names(data)) data$business_sub_category else NA,
-        property_area = if("property_area" %in% names(data)) data$property_area else NA,
-        business_area = business_areas,
-        stringsAsFactors = FALSE
-      )
+      result <- data
+
+      # Add/update the revenue-related columns
+      result$scenario <- scenario_name
+      result$property_type <- property_types
+      result$structure_type <- structure_types
+      result$property_value <- property_values
+      result$property_tax <- property_taxes
+      result$business_value <- business_values
+      result$business_license <- business_licenses
+      result$total_tax <- property_taxes + business_licenses
 
       # ============================================
       # DIAGNOSTIC BLOCK 2: Check id_business in result
