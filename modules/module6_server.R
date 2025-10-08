@@ -175,6 +175,9 @@ module6_server <- function(id, revenue_data) {
       observeEvent(input$apply_filters, {
           show_modal_spinner(spin = "circle", text = "Applying GIS filters...")
         
+          # Ensure spinner is removed even if errors occur
+          on.exit(remove_modal_spinner(), add = TRUE)
+        
         req(revenue_data())
         
         values$map_status <- "loading"  # ADD THIS
@@ -592,6 +595,5 @@ module6_server <- function(id, revenue_data) {
         filtered_data = reactive(values$filtered_data),
         current_filters = reactive(values$current_filters)
       ))
-      values$map_status <- "ready"  # ADD THIS at the end
-    })
+  })
 }
