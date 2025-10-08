@@ -1,16 +1,18 @@
 # modules/module6_ui.R
 # Module 6: GIS Layer Revenue Filtering with Interactive Map
 
-add_busy_bar(color = "#3c8dbc", height = "3px")
-
 module6_ui <- function(id) {
   ns <- NS(id)
   
   tabItem(
     tabName = "module6",
     
-    useToastr()
-
+    # Add toastr notifications
+    useToastr(),  # <- Fixed: Added comma here
+    
+    # Add busy bar
+    add_busy_bar(color = "#3c8dbc", height = "3px"),
+    
     # Header
     h2("Module 6: GIS Layer Revenue Analysis"),
     p("Filter and analyze revenue by geographic layers and ward boundaries"),
@@ -32,6 +34,27 @@ module6_ui <- function(id) {
             label = "Select Scenario:",
             choices = c("Existing", "Scenario A", "Scenario B"),
             selected = "Existing"
+          )
+        ),
+        
+        # Status and Debug Information - NEW ADDITION
+        box(
+          title = "System Status",
+          width = NULL,
+          status = "info",
+          solidHeader = FALSE,
+          collapsible = TRUE,
+          collapsed = FALSE,
+          
+          uiOutput(ns("status_message")),
+          
+          # Debug panel (collapsible)
+          tags$details(
+            tags$summary(
+              icon("bug"),
+              "Debug Information (click to expand)"
+            ),
+            verbatimTextOutput(ns("debug_info"))
           )
         ),
         
@@ -84,7 +107,7 @@ module6_ui <- function(id) {
           selectizeInput(
             ns("ward_select"),
             label = NULL,
-            choices = NULL,  # Will be populated dynamically
+            choices = NULL,
             multiple = TRUE,
             options = list(
               placeholder = "Select wards...",
@@ -153,8 +176,8 @@ module6_ui <- function(id) {
               br(),
               withSpinner(
                 leafletOutput(ns("revenue_map"), height = "600px"),
-                type = 6,  # Different spinner types: 1-8
-                color = "#3c8dbc",  # Match your theme color
+                type = 6,
+                color = "#3c8dbc",
                 size = 1.5
               ),
               br(),
@@ -186,7 +209,7 @@ module6_ui <- function(id) {
                       "Ward Level" = "ward",
                       "Heat Map" = "heat"
                     ),
-                    selected = "ward",
+                    selected = "property",  # Changed default to property
                     inline = TRUE
                   )
                 )
@@ -198,7 +221,7 @@ module6_ui <- function(id) {
               "Layer Comparison",
               icon = icon("chart-bar"),
               br(),
-              withSpinner(plotOutput(ns("layer_comparison_plot")), height = "500px")),
+              plotOutput(ns("layer_comparison_plot"), height = "500px"),
               br(),
               DT::dataTableOutput(ns("layer_comparison_table"))
             ),
@@ -208,14 +231,9 @@ module6_ui <- function(id) {
               "Ward Analysis",
               icon = icon("building"),
               br(),
-              withSpinner(
-                plotOutput(ns("ward_revenue_plot"), height = "400px"),
-                type = 4,
-                color = "#3c8dbc"
-              )
-                br(),
-              withSpinner(DT::dataTableOutput(ns("ward_details_table")))
-
+              plotOutput(ns("ward_revenue_plot"), height = "400px"),
+              br(),
+              DT::dataTableOutput(ns("ward_details_table"))
             )
           )
         )
