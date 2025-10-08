@@ -391,22 +391,31 @@ module6_server <- function(id, revenue_data) {
             
           } else if (input$map_aggregation == "ward" && !is.null(values$ward_boundaries)) {
             # Ward-level aggregation
-            
-            # Aggregate by ward
-            ward_summary <- data %>%
-              filter(!is.na(ward_number)) %>%
-              group_by(ward_number) %>%
-              summarise(
-                total_revenue = sum(total_tax, na.rm = TRUE),
-                property_tax = sum(property_tax, na.rm = TRUE),
-                business_license = sum(business_license, na.rm = TRUE),
-                n_properties = n(),
-                .groups = "drop"
+            if ("ward_number" %in% names(data)) {
+              # Aggregate by ward
+              ward_summary <- data %>%
+                filter(!is.na(ward_number)) %>%
+                group_by(ward_number) %>%
+                summarise(
+                  total_revenue = sum(total_tax, na.rm = TRUE),
+                  property_tax = sum(property_tax, na.rm = TRUE),
+                  business_license = sum(business_license, na.rm = TRUE),
+                  n_properties = n(),
+                  .groups = "drop"
+                )
+              
+              # Join with ward boundaries
+              ward_data <- values$ward_boundaries %>%
+                left_join(ward_summary, by = "ward_number")
+            } else {
+              # Handle case where ward_number doesn't exist
+              showNotification(
+                "Ward number column not found in data. Cannot display ward-level aggregation.",
+                type = "warning",
+                duration = 5
               )
-            
-            # Join with ward boundaries
-            ward_data <- values$ward_boundaries %>%
-              left_join(ward_summary, by = "ward_number")
+              return()
+            }
             
             # Select metric for coloring
             metric_col <- switch(input$map_metric,
