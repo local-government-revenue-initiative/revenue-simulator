@@ -100,8 +100,10 @@ observe({
       )
       
       for (feat in all_features) {
-        source_id <- paste0("weight_", feat, "_existing")
-        target_id <- paste0("weight_", feat, "_scenario_a")
+        # Sanitize the feature name for use in input IDs
+        feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
+        source_id <- paste0("weight_", feat_safe, "_existing")
+        target_id <- paste0("weight_", feat_safe, "_scenario_a")
         
         if (!is.null(input[[source_id]])) {
           updateNumericInput(session, target_id, value = input[[source_id]])
@@ -115,8 +117,10 @@ observe({
       )
       
       for (struct in all_structures) {
-        source_id <- paste0("weight_", struct, "_existing")
-        target_id <- paste0("weight_", struct, "_scenario_a")
+        # Sanitize the structure type name for use in input IDs
+        struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
+        source_id <- paste0("weight_", struct_safe, "_existing")
+        target_id <- paste0("weight_", struct_safe, "_scenario_a")
         
         if (!is.null(input[[source_id]])) {
           updateNumericInput(session, target_id, value = input[[source_id]])
@@ -146,8 +150,10 @@ observe({
       )
       
       for (feat in all_features) {
-        source_id <- paste0("weight_", feat, "_existing")
-        target_id <- paste0("weight_", feat, "_scenario_b")
+        # Sanitize the feature name for use in input IDs
+        feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
+        source_id <- paste0("weight_", feat_safe, "_existing")
+        target_id <- paste0("weight_", feat_safe, "_scenario_b")
         
         if (!is.null(input[[source_id]])) {
           updateNumericInput(session, target_id, value = input[[source_id]])
@@ -161,8 +167,10 @@ observe({
       )
       
       for (struct in all_structures) {
-        source_id <- paste0("weight_", struct, "_existing")
-        target_id <- paste0("weight_", struct, "_scenario_b")
+        # Sanitize the structure type name for use in input IDs
+        struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
+        source_id <- paste0("weight_", struct_safe, "_existing")
+        target_id <- paste0("weight_", struct_safe, "_scenario_b")
         
         if (!is.null(input[[source_id]])) {
           updateNumericInput(session, target_id, value = input[[source_id]])
@@ -192,8 +200,10 @@ observe({
       )
       
       for (feat in all_features) {
-        source_id <- paste0("weight_", feat, "_scenario_a")
-        target_id <- paste0("weight_", feat, "_scenario_b")
+        # Sanitize the feature name for use in input IDs
+        feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
+        source_id <- paste0("weight_", feat_safe, "_scenario_a")
+        target_id <- paste0("weight_", feat_safe, "_scenario_b")
         
         if (!is.null(input[[source_id]])) {
           updateNumericInput(session, target_id, value = input[[source_id]])
@@ -207,8 +217,10 @@ observe({
       )
       
       for (struct in all_structures) {
-        source_id <- paste0("weight_", struct, "_scenario_a")
-        target_id <- paste0("weight_", struct, "_scenario_b")
+        # Sanitize the structure type name for use in input IDs
+        struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
+        source_id <- paste0("weight_", struct_safe, "_scenario_a")
+        target_id <- paste0("weight_", struct_safe, "_scenario_b")
         
         if (!is.null(input[[source_id]])) {
           updateNumericInput(session, target_id, value = input[[source_id]])
@@ -461,14 +473,15 @@ generate_feature_ui <- function(scenario_suffix) {
       if (is.null(x)) y else x
     }    
     
-    # Update the generate_structure_ui function similarly:
+    
+    # Generate Structure UI Function -----------------------------------------
     generate_structure_ui <- function(scenario_suffix) {
       renderUI({
         # Get the config for this scenario
         config <- switch(scenario_suffix,
-                         "existing" = values$existing_config,
-                         "scenario_a" = values$scenario_a_config,
-                         "scenario_b" = values$scenario_b_config
+                        "existing" = values$existing_config,
+                        "scenario_a" = values$scenario_a_config,
+                        "scenario_b" = values$scenario_b_config
         )
         
         tagList(
@@ -483,10 +496,14 @@ generate_feature_ui <- function(scenario_suffix) {
                 
                 # Clean up the display name
                 display_name <- gsub("commercial_type_", "", struct)
+                
+                # CRITICAL FIX: Sanitize the struct name for use in input IDs
+                struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
+                
                 fluidRow(
                   column(8, p(display_name, style = "margin-top: 5px;")),
                   column(4,
-                         numericInput(ns(paste0("weight_", struct, "_", scenario_suffix)),
+                        numericInput(ns(paste0("weight_", struct_safe, "_", scenario_suffix)),
                                       label = NULL,
                                       value = default_val,
                                       step = 10,
@@ -509,10 +526,14 @@ generate_feature_ui <- function(scenario_suffix) {
                 
                 # Clean up the display name
                 display_name <- gsub("institutional_type_", "", struct)
+                
+                # CRITICAL FIX: Sanitize the struct name for use in input IDs
+                struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
+                
                 fluidRow(
                   column(8, p(display_name, style = "margin-top: 5px;")),
                   column(4,
-                         numericInput(ns(paste0("weight_", struct, "_", scenario_suffix)),
+                        numericInput(ns(paste0("weight_", struct_safe, "_", scenario_suffix)),
                                       label = NULL,
                                       value = default_val,
                                       step = 10,
@@ -666,7 +687,9 @@ for (feat in all_features) {
             if (grepl("(_na|_NA)$", struct)) {
               weight <- 0
             } else {
-              input_id <- paste0("weight_", struct, "_", scenario)
+              # CRITICAL FIX: Sanitize the struct name before creating input_id
+              struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
+              input_id <- paste0("weight_", struct_safe, "_", scenario)
               weight <- input[[input_id]]
               
               if (is.null(weight)) {
@@ -871,7 +894,9 @@ for (feat in all_features) {
             # Set _na variables to weight 0
             config$structure_weights[[struct]] <- 0
           } else {
-            input_id <- paste0("weight_", struct, "_", scenario)
+            # CRITICAL FIX: Sanitize the struct name before creating input_id
+            struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
+            input_id <- paste0("weight_", struct_safe, "_", scenario)
             if (!is.null(input[[input_id]])) {
               config$structure_weights[[struct]] <- input[[input_id]]
             }
