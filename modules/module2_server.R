@@ -83,32 +83,139 @@ observe({
     })
     
     # Copy functions
+    # ==================== Copy Existing to Scenario A ====================
     observeEvent(input$copy_existing_to_a, {
+      # Copy base parameters
       updateNumericInput(session, "base_value_scenario_a", value = input$base_value_existing)
       updateNumericInput(session, "inflation_scenario_a", value = input$inflation_existing)
       updateNumericInput(session, "area_weight_scenario_a", value = input$area_weight_existing)
       
-      # Copy all weight values
+      # Copy all feature weights
+      all_features <- c(
+        values$feature_columns$structure_features,
+        values$feature_columns$utility_features,
+        values$feature_columns$location_features,
+        values$feature_columns$property_characteristics,
+        values$ward_columns
+      )
+      
+      for (feat in all_features) {
+        source_id <- paste0("weight_", feat, "_existing")
+        target_id <- paste0("weight_", feat, "_scenario_a")
+        
+        if (!is.null(input[[source_id]])) {
+          updateNumericInput(session, target_id, value = input[[source_id]])
+        }
+      }
+      
+      # Copy all structure type weights
+      all_structures <- c(
+        values$commercial_type_columns,
+        values$institutional_type_columns
+      )
+      
+      for (struct in all_structures) {
+        source_id <- paste0("weight_", struct, "_existing")
+        target_id <- paste0("weight_", struct, "_scenario_a")
+        
+        if (!is.null(input[[source_id]])) {
+          updateNumericInput(session, target_id, value = input[[source_id]])
+        }
+      }
+      
+      # Copy the stored configuration
       values$scenario_a_config <- values$existing_config
       
       showNotification("Copied Existing Scenario to Scenario A", type = "message")
     })
-    
+
+    # ==================== Copy Existing to Scenario B ====================
     observeEvent(input$copy_existing_to_b, {
+      # Copy base parameters
       updateNumericInput(session, "base_value_scenario_b", value = input$base_value_existing)
       updateNumericInput(session, "inflation_scenario_b", value = input$inflation_existing)
       updateNumericInput(session, "area_weight_scenario_b", value = input$area_weight_existing)
       
+      # Copy all feature weights
+      all_features <- c(
+        values$feature_columns$structure_features,
+        values$feature_columns$utility_features,
+        values$feature_columns$location_features,
+        values$feature_columns$property_characteristics,
+        values$ward_columns
+      )
+      
+      for (feat in all_features) {
+        source_id <- paste0("weight_", feat, "_existing")
+        target_id <- paste0("weight_", feat, "_scenario_b")
+        
+        if (!is.null(input[[source_id]])) {
+          updateNumericInput(session, target_id, value = input[[source_id]])
+        }
+      }
+      
+      # Copy all structure type weights
+      all_structures <- c(
+        values$commercial_type_columns,
+        values$institutional_type_columns
+      )
+      
+      for (struct in all_structures) {
+        source_id <- paste0("weight_", struct, "_existing")
+        target_id <- paste0("weight_", struct, "_scenario_b")
+        
+        if (!is.null(input[[source_id]])) {
+          updateNumericInput(session, target_id, value = input[[source_id]])
+        }
+      }
+      
+      # Copy the stored configuration
       values$scenario_b_config <- values$existing_config
       
       showNotification("Copied Existing Scenario to Scenario B", type = "message")
     })
-    
+
+    # ==================== Copy Scenario A to Scenario B ====================
     observeEvent(input$copy_a_to_b, {
+      # Copy base parameters
       updateNumericInput(session, "base_value_scenario_b", value = input$base_value_scenario_a)
       updateNumericInput(session, "inflation_scenario_b", value = input$inflation_scenario_a)
       updateNumericInput(session, "area_weight_scenario_b", value = input$area_weight_scenario_a)
       
+      # Copy all feature weights
+      all_features <- c(
+        values$feature_columns$structure_features,
+        values$feature_columns$utility_features,
+        values$feature_columns$location_features,
+        values$feature_columns$property_characteristics,
+        values$ward_columns
+      )
+      
+      for (feat in all_features) {
+        source_id <- paste0("weight_", feat, "_scenario_a")
+        target_id <- paste0("weight_", feat, "_scenario_b")
+        
+        if (!is.null(input[[source_id]])) {
+          updateNumericInput(session, target_id, value = input[[source_id]])
+        }
+      }
+      
+      # Copy all structure type weights
+      all_structures <- c(
+        values$commercial_type_columns,
+        values$institutional_type_columns
+      )
+      
+      for (struct in all_structures) {
+        source_id <- paste0("weight_", struct, "_scenario_a")
+        target_id <- paste0("weight_", struct, "_scenario_b")
+        
+        if (!is.null(input[[source_id]])) {
+          updateNumericInput(session, target_id, value = input[[source_id]])
+        }
+      }
+      
+      # Copy the stored configuration
       values$scenario_b_config <- values$scenario_a_config
       
       showNotification("Copied Scenario A to Scenario B", type = "message")
