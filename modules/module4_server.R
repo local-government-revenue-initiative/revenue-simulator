@@ -595,6 +595,7 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
                             choices = ward_numbers,
                             selected = NULL)      
       }
+    }
     
       # Reset filters button
       observeEvent(input$reset_filters, {
