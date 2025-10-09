@@ -403,25 +403,37 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
           weight <- config$feature_weights[[feat]]
           if (!is.null(weight) && !is.na(weight)) {
             feature_multiplier <- ifelse(data[[feat]] == 1, 
-                                         (weight/100 + 1), 
-                                         1)
+                                        (weight/100 + 1), 
+                                        1)
             product_weights <- product_weights * feature_multiplier
           }
         }
       }
       
-      # Calculate structure type weights
+      # FIXED: Calculate structure type weights using matrix approach
       all_structures <- names(config$structure_weights)
-      structure_weights <- rep(0, n_rows)
+      structure_matrix <- matrix(0, nrow = n_rows, ncol = length(all_structures))
+      weight_vector <- numeric(length(all_structures))
       
-      for (struct in all_structures) {
+      for (j in seq_along(all_structures)) {
+        struct <- all_structures[j]
+        
         if (struct %in% names(data)) {
+          # Get the column values and handle NAs properly
+          col_values <- data[[struct]]
+          # Convert to 1 where value is 1, 0 everywhere else (including NAs)
+          structure_matrix[, j] <- ifelse(!is.na(col_values) & col_values == 1, 1, 0)
+          
+          # Get the weight
           weight <- config$structure_weights[[struct]]
-          if (!is.null(weight) && !is.na(weight)) {
-            structure_weights <- ifelse(data[[struct]] == 1, weight, structure_weights)
-          }
+          if (is.null(weight) || is.na(weight)) weight <- 0
+          weight_vector[j] <- weight
         }
       }
+      
+      # Calculate structure weights using matrix multiplication
+      structure_weights <- structure_matrix %*% weight_vector
+      structure_weights <- as.vector(structure_weights)
       
       # Apply structure type weights as multipliers
       structure_multipliers <- (structure_weights/100 + 1)
@@ -466,25 +478,37 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
           weight <- config$feature_weights[[feat]]
           if (!is.null(weight) && !is.na(weight)) {
             feature_multiplier <- ifelse(data[[feat]] == 1, 
-                                         (weight/100 + 1), 
-                                         1)
+                                        (weight/100 + 1), 
+                                        1)
             product_weights <- product_weights * feature_multiplier
           }
         }
       }
       
-      # Calculate structure type weights
+      # FIXED: Calculate structure type weights using matrix approach
       all_structures <- names(config$structure_weights)
-      structure_weights <- rep(0, n_rows)
+      structure_matrix <- matrix(0, nrow = n_rows, ncol = length(all_structures))
+      weight_vector <- numeric(length(all_structures))
       
-      for (struct in all_structures) {
+      for (j in seq_along(all_structures)) {
+        struct <- all_structures[j]
+        
         if (struct %in% names(data)) {
+          # Get the column values and handle NAs properly
+          col_values <- data[[struct]]
+          # Convert to 1 where value is 1, 0 everywhere else (including NAs)
+          structure_matrix[, j] <- ifelse(!is.na(col_values) & col_values == 1, 1, 0)
+          
+          # Get the weight
           weight <- config$structure_weights[[struct]]
-          if (!is.null(weight) && !is.na(weight)) {
-            structure_weights <- ifelse(data[[struct]] == 1, weight, structure_weights)
-          }
+          if (is.null(weight) || is.na(weight)) weight <- 0
+          weight_vector[j] <- weight
         }
       }
+      
+      # Calculate structure weights using matrix multiplication
+      structure_weights <- structure_matrix %*% weight_vector
+      structure_weights <- as.vector(structure_weights)
       
       structure_multipliers <- (structure_weights/100 + 1)
       
