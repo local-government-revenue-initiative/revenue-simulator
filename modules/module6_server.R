@@ -70,15 +70,25 @@ module6_server <- function(id, revenue_data) {
     observeEvent(input$apply_filters, {
       req(revenue_data())
       
-      # Get the actual scenario key using the mapping
+      # Validate data structure
       actual_scenario <- scenario_map()[input$scenario_select]
-      
-      # Get the selected scenario data using the mapped key
       scenario_data <- revenue_data()[[actual_scenario]]
       
       if (is.null(scenario_data)) {
         showNotification(
           paste("No data available for", input$scenario_select),
+          type = "error"
+        )
+        return()
+      }
+      
+      # Check for required columns
+      required_cols <- c("id_property", "total_tax", "property_tax", "business_license")
+      missing_cols <- setdiff(required_cols, names(scenario_data))
+      
+      if (length(missing_cols) > 0) {
+        showNotification(
+          paste("Missing required columns:", paste(missing_cols, collapse = ", ")),
           type = "error"
         )
         return()
@@ -146,7 +156,7 @@ module6_server <- function(id, revenue_data) {
       
       showNotification(
         paste("Filters applied. Found", nrow(filtered_data), "properties"),
-        type = "success",
+        type = "message",  # Changed from "success" to "message"
         duration = 3
       )
     })
