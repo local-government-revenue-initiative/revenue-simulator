@@ -587,346 +587,419 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       updateSelectInput(session, "filter_license_subcategories",
                         choices = c("All", sort(subcategories)),
                         selected = "All")
-    }
-    
-    # Reset filters button
-    observeEvent(input$reset_filters, {
-      updateSelectInput(session, "filter_structure_types", selected = "All")
-      updateSelectInput(session, "filter_property_types", selected = "All")
-      updateSelectInput(session, "filter_license_categories", selected = "All")
-      updateSelectInput(session, "filter_license_subcategories", selected = "All")
-    })
-    
-    # Value boxes for total revenue
-    output$existing_total_revenue <- renderValueBox({
-      if (is.null(values$revenue_data)) {
-        valueBox(
-          value = "Not Calculated",
-          subtitle = "Existing Scenario",
-          icon = icon("calculator"),
-          color = "black"
-        )
-      } else {
-        scenario_data <- values$revenue_data[["existing"]]
-        total <- sum(scenario_data$total_tax, na.rm = TRUE)
-        
-        valueBox(
-          value = format(round(total, 0), big.mark = ",", scientific = FALSE),
-          subtitle = "Existing Scenario Revenue",
-          icon = icon("dollar-sign"),
-          color = "blue"
-        )
+      
+      # Update ward choices
+      if ("ward_number" %in% names(all_data)) {
+        ward_numbers <- sort(unique(all_data$ward_number[!is.na(all_data$ward_number)]))
+        updateSelectizeInput(session, "filter_wards",
+                            choices = ward_numbers,
+                            selected = NULL)      
       }
-    })
     
-    output$scenario_a_total_revenue <- renderValueBox({
-      if (is.null(values$revenue_data)) {
-        valueBox(
-          value = "Not Calculated",
-          subtitle = "Scenario A",
-          icon = icon("calculator"),
-          color = "black"
-        )
-      } else {
-        scenario_data <- values$revenue_data[["scenario_a"]]
-        total <- sum(scenario_data$total_tax, na.rm = TRUE)
-        
-        # Calculate change from existing
-        existing_total <- sum(values$revenue_data[["existing"]]$total_tax, na.rm = TRUE)
-        change_pct <- if(existing_total > 0) {
-          round((total - existing_total) / existing_total * 100, 1)
+      # Reset filters button
+      observeEvent(input$reset_filters, {
+        updateSelectInput(session, "filter_structure_types", selected = "All")
+        updateSelectInput(session, "filter_property_types", selected = "All")
+        updateSelectInput(session, "filter_license_categories", selected = "All")
+        updateSelectInput(session, "filter_license_subcategories", selected = "All")
+        updateCheckboxGroupInput(session, "filter_tourist_areas", selected = character(0))
+        updateCheckboxGroupInput(session, "filter_commercial_industrial", selected = character(0))
+        updateCheckboxGroupInput(session, "filter_other_areas", selected = character(0))
+        updateSelectizeInput(session, "filter_wards", selected = NULL)        
+      })
+      
+      # Value boxes for total revenue
+      output$existing_total_revenue <- renderValueBox({
+        if (is.null(values$revenue_data)) {
+          valueBox(
+            value = "Not Calculated",
+            subtitle = "Existing Scenario",
+            icon = icon("calculator"),
+            color = "black"
+          )
         } else {
-          0
-        }
-        
-        valueBox(
-          value = format(round(total, 0), big.mark = ",", scientific = FALSE),
-          subtitle = paste0("Scenario A (", ifelse(change_pct >= 0, "+", ""), change_pct, "%)"),
-          icon = icon("dollar-sign"),
-          color = if(change_pct > 0) "green" else if(change_pct < 0) "red" else "blue"
-        )
-      }
-    })
-    
-    output$scenario_b_total_revenue <- renderValueBox({
-      if (is.null(values$revenue_data)) {
-        valueBox(
-          value = "Not Calculated",
-          subtitle = "Scenario B",
-          icon = icon("calculator"),
-          color = "black"
-        )
-      } else {
-        scenario_data <- values$revenue_data[["scenario_b"]]
-        total <- sum(scenario_data$total_tax, na.rm = TRUE)
-        
-        # Calculate change from existing
-        existing_total <- sum(values$revenue_data[["existing"]]$total_tax, na.rm = TRUE)
-        change_pct <- if(existing_total > 0) {
-          round((total - existing_total) / existing_total * 100, 1)
-        } else {
-          0
-        }
-        
-        valueBox(
-          value = format(round(total, 0), big.mark = ",", scientific = FALSE),
-          subtitle = paste0("Scenario B (", ifelse(change_pct >= 0, "+", ""), change_pct, "%)"),
-          icon = icon("dollar-sign"),
-          color = if(change_pct > 0) "green" else if(change_pct < 0) "red" else "blue"
-        )
-      }
-    })
-    
-    # Chart 1A: Revenue by type (All properties)
-    output$revenue_by_type_plot <- renderPlot({
-      req(values$revenue_data)
-      
-      plot_data <- list()
-      for (scenario in names(values$revenue_data)) {
-        scenario_data <- values$revenue_data[[scenario]]
-        
-        type_summary <- data.frame(
-          scenario = scenario,
-          Property_Tax = sum(scenario_data$property_tax, na.rm = TRUE),
-          Business_License = sum(scenario_data$business_license, na.rm = TRUE)
-        )
-        
-        plot_data[[scenario]] <- type_summary
-      }
-      
-      combined_data <- do.call(rbind, plot_data)
-      
-      combined_long <- combined_data %>%
-        tidyr::pivot_longer(cols = c(Property_Tax, Business_License),
-                            names_to = "Type",
-                            values_to = "Revenue")
-      
-      # Format labels for display
-      combined_long$label <- scales::comma(round(combined_long$Revenue, 0))
-      
-      # Chart 1A colors: Standard blue and red - FIXED ORDER
-      chart_colors <- c("Property_Tax" = "#e74c3c",      # Bright red
-                        "Business_License" = "#3498db")   # Bright blue
+          scenario_data <- values$revenue_data[["existing"]]
+          total <- sum(scenario_data$total_tax, na.rm = TRUE)
           
-      ggplot(combined_long, aes(x = scenario, y = Revenue, fill = Type)) +
-        geom_bar(stat = "identity", position = "dodge") +
-        geom_text(aes(label = label), 
-                  position = position_dodge(width = 0.9),
-                  vjust = -0.5,
-                  size = 3.5) +
-        scale_fill_manual(
-          values = c("Property_Tax" = "#e74c3c", "Business_License" = "#3498db"),
-          labels = c("Property_Tax" = "Property Tax", "Business_License" = "Business License")) +
-        scale_y_continuous(labels = scales::comma,
-                           expand = expansion(mult = c(0, 0.1))) +  # Add space for labels
-        labs(title = "Total Revenue by Type - All Properties",
-             x = "Scenario",
-             y = "Total Revenue",
-             fill = "Revenue Type") +
-        theme_minimal() +
-        theme(legend.position = "bottom")
-    })
-    
-    # Chart 1B: Revenue by type (Compliers only)
-    output$revenue_by_type_compliers_plot <- renderPlot({
-      req(values$revenue_data)
-      
-      plot_data <- list()
-      for (scenario in names(values$revenue_data)) {
-        scenario_data <- values$revenue_data[[scenario]]
-        # Filter to compliers only
-        scenario_data <- scenario_data[scenario_data$made_payment == TRUE, ]
-        
-        type_summary <- data.frame(
-          scenario = scenario,
-          Property_Tax = sum(scenario_data$property_tax, na.rm = TRUE),
-          Business_License = sum(scenario_data$business_license, na.rm = TRUE)
-        )
-        
-        plot_data[[scenario]] <- type_summary
-      }
-      
-      combined_data <- do.call(rbind, plot_data)
-      
-      combined_long <- combined_data %>%
-        tidyr::pivot_longer(cols = c(Property_Tax, Business_License),
-                            names_to = "Type",
-                            values_to = "Revenue")
-      
-      # Format labels for display
-      combined_long$label <- scales::comma(round(combined_long$Revenue, 0))
-      
-      # Chart 1B colors: Darker blue and red
-      chart_colors <- c("Property_Tax" = "#e74c3c",      # Bright red
-                        "Business_License" = "#3498db")   # Bright blue
-      
-      ggplot(combined_long, aes(x = scenario, y = Revenue, fill = Type)) +
-        geom_bar(stat = "identity", position = "dodge") +
-        geom_text(aes(label = label), 
-                  position = position_dodge(width = 0.9),
-                  vjust = -0.5,
-                  size = 3.5) +
-        scale_fill_manual(
-          values = c("Property_Tax" = "#e74c3c", "Business_License" = "#3498db"),
-          labels = c("Property_Tax" = "Property Tax", "Business_License" = "Business License")) +
-        scale_y_continuous(labels = scales::comma,
-                           expand = expansion(mult = c(0, 0.1))) +  # Add space for labels
-        labs(title = "Total Revenue by Type - Filtered to Compliers",
-             x = "Scenario",
-             y = "Total Revenue",
-             fill = "Revenue Type") +
-        theme_minimal() +
-        theme(legend.position = "bottom")
-    })
-    
-    # Chart 1C: Revenue with filtering options
-    output$revenue_filtered_plot <- renderPlot({
-      req(values$revenue_data)
-      
-      plot_data <- list()
-      for (scenario in names(values$revenue_data)) {
-        scenario_data <- values$revenue_data[[scenario]]
-        
-        # Structure type filter
-        if (is.null(input$filter_structure_types) || length(input$filter_structure_types) == 0) {
-          # Empty: keep only rows where structure_type is NA
-          scenario_data <- scenario_data[is.na(scenario_data$structure_type) | 
-                                        scenario_data$structure_type == "None" | 
-                                        scenario_data$structure_type == "", ]
-        } else if (!"All" %in% input$filter_structure_types) {
-          # Specific values: filter to those values
-          scenario_data <- scenario_data[scenario_data$structure_type %in% input$filter_structure_types, ]
+          valueBox(
+            value = format(round(total, 0), big.mark = ",", scientific = FALSE),
+            subtitle = "Existing Scenario Revenue",
+            icon = icon("dollar-sign"),
+            color = "blue"
+          )
         }
-        # "All": do nothing (no filter)
+      })
+      
+      output$scenario_a_total_revenue <- renderValueBox({
+        if (is.null(values$revenue_data)) {
+          valueBox(
+            value = "Not Calculated",
+            subtitle = "Scenario A",
+            icon = icon("calculator"),
+            color = "black"
+          )
+        } else {
+          scenario_data <- values$revenue_data[["scenario_a"]]
+          total <- sum(scenario_data$total_tax, na.rm = TRUE)
+          
+          # Calculate change from existing
+          existing_total <- sum(values$revenue_data[["existing"]]$total_tax, na.rm = TRUE)
+          change_pct <- if(existing_total > 0) {
+            round((total - existing_total) / existing_total * 100, 1)
+          } else {
+            0
+          }
+          
+          valueBox(
+            value = format(round(total, 0), big.mark = ",", scientific = FALSE),
+            subtitle = paste0("Scenario A (", ifelse(change_pct >= 0, "+", ""), change_pct, "%)"),
+            icon = icon("dollar-sign"),
+            color = if(change_pct > 0) "green" else if(change_pct < 0) "red" else "blue"
+          )
+        }
+      })
+      
+      output$scenario_b_total_revenue <- renderValueBox({
+        if (is.null(values$revenue_data)) {
+          valueBox(
+            value = "Not Calculated",
+            subtitle = "Scenario B",
+            icon = icon("calculator"),
+            color = "black"
+          )
+        } else {
+          scenario_data <- values$revenue_data[["scenario_b"]]
+          total <- sum(scenario_data$total_tax, na.rm = TRUE)
+          
+          # Calculate change from existing
+          existing_total <- sum(values$revenue_data[["existing"]]$total_tax, na.rm = TRUE)
+          change_pct <- if(existing_total > 0) {
+            round((total - existing_total) / existing_total * 100, 1)
+          } else {
+            0
+          }
+          
+          valueBox(
+            value = format(round(total, 0), big.mark = ",", scientific = FALSE),
+            subtitle = paste0("Scenario B (", ifelse(change_pct >= 0, "+", ""), change_pct, "%)"),
+            icon = icon("dollar-sign"),
+            color = if(change_pct > 0) "green" else if(change_pct < 0) "red" else "blue"
+          )
+        }
+      })
+      
+      # Chart 1A: Revenue by type (All properties)
+      output$revenue_by_type_plot <- renderPlot({
+        req(values$revenue_data)
         
-        # Property type filter
-        if (is.null(input$filter_property_types) || length(input$filter_property_types) == 0) {
-          scenario_data <- scenario_data[is.na(scenario_data$property_type) | 
-                                        scenario_data$property_type == "", ]
-        } else if (!"All" %in% input$filter_property_types) {
-          scenario_data <- scenario_data[scenario_data$property_type %in% input$filter_property_types, ]
+        plot_data <- list()
+        for (scenario in names(values$revenue_data)) {
+          scenario_data <- values$revenue_data[[scenario]]
+          
+          type_summary <- data.frame(
+            scenario = scenario,
+            Property_Tax = sum(scenario_data$property_tax, na.rm = TRUE),
+            Business_License = sum(scenario_data$business_license, na.rm = TRUE)
+          )
+          
+          plot_data[[scenario]] <- type_summary
         }
         
-        # License category filter
-        if (is.null(input$filter_license_categories) || length(input$filter_license_categories) == 0) {
-          scenario_data <- scenario_data[is.na(scenario_data$business_category) | 
-                                        scenario_data$business_category == "", ]
-        } else if (!"All" %in% input$filter_license_categories) {
-          scenario_data <- scenario_data[scenario_data$business_category %in% input$filter_license_categories, ]
+        combined_data <- do.call(rbind, plot_data)
+        
+        combined_long <- combined_data %>%
+          tidyr::pivot_longer(cols = c(Property_Tax, Business_License),
+                              names_to = "Type",
+                              values_to = "Revenue")
+        
+        # Format labels for display
+        combined_long$label <- scales::comma(round(combined_long$Revenue, 0))
+        
+        # Chart 1A colors: Standard blue and red - FIXED ORDER
+        chart_colors <- c("Property_Tax" = "#e74c3c",      # Bright red
+                          "Business_License" = "#3498db")   # Bright blue
+            
+        ggplot(combined_long, aes(x = scenario, y = Revenue, fill = Type)) +
+          geom_bar(stat = "identity", position = "dodge") +
+          geom_text(aes(label = label), 
+                    position = position_dodge(width = 0.9),
+                    vjust = -0.5,
+                    size = 3.5) +
+          scale_fill_manual(
+            values = c("Property_Tax" = "#e74c3c", "Business_License" = "#3498db"),
+            labels = c("Property_Tax" = "Property Tax", "Business_License" = "Business License")) +
+          scale_y_continuous(labels = scales::comma,
+                            expand = expansion(mult = c(0, 0.1))) +  # Add space for labels
+          labs(title = "Total Revenue by Type - All Properties",
+              x = "Scenario",
+              y = "Total Revenue",
+              fill = "Revenue Type") +
+          theme_minimal() +
+          theme(legend.position = "bottom")
+      })
+      
+      # Chart 1B: Revenue by type (Compliers only)
+      output$revenue_by_type_compliers_plot <- renderPlot({
+        req(values$revenue_data)
+        
+        plot_data <- list()
+        for (scenario in names(values$revenue_data)) {
+          scenario_data <- values$revenue_data[[scenario]]
+          # Filter to compliers only
+          scenario_data <- scenario_data[scenario_data$made_payment == TRUE, ]
+          
+          type_summary <- data.frame(
+            scenario = scenario,
+            Property_Tax = sum(scenario_data$property_tax, na.rm = TRUE),
+            Business_License = sum(scenario_data$business_license, na.rm = TRUE)
+          )
+          
+          plot_data[[scenario]] <- type_summary
         }
         
-        # License subcategory filter
-        if (is.null(input$filter_license_subcategories) || length(input$filter_license_subcategories) == 0) {
-          scenario_data <- scenario_data[is.na(scenario_data$business_sub_category) | 
-                                        scenario_data$business_sub_category == "", ]
-        } else if (!"All" %in% input$filter_license_subcategories) {
-          scenario_data <- scenario_data[scenario_data$business_sub_category %in% input$filter_license_subcategories, ]
+        combined_data <- do.call(rbind, plot_data)
+        
+        combined_long <- combined_data %>%
+          tidyr::pivot_longer(cols = c(Property_Tax, Business_License),
+                              names_to = "Type",
+                              values_to = "Revenue")
+        
+        # Format labels for display
+        combined_long$label <- scales::comma(round(combined_long$Revenue, 0))
+        
+        # Chart 1B colors: Darker blue and red
+        chart_colors <- c("Property_Tax" = "#e74c3c",      # Bright red
+                          "Business_License" = "#3498db")   # Bright blue
+        
+        ggplot(combined_long, aes(x = scenario, y = Revenue, fill = Type)) +
+          geom_bar(stat = "identity", position = "dodge") +
+          geom_text(aes(label = label), 
+                    position = position_dodge(width = 0.9),
+                    vjust = -0.5,
+                    size = 3.5) +
+          scale_fill_manual(
+            values = c("Property_Tax" = "#e74c3c", "Business_License" = "#3498db"),
+            labels = c("Property_Tax" = "Property Tax", "Business_License" = "Business License")) +
+          scale_y_continuous(labels = scales::comma,
+                            expand = expansion(mult = c(0, 0.1))) +  # Add space for labels
+          labs(title = "Total Revenue by Type - Filtered to Compliers",
+              x = "Scenario",
+              y = "Total Revenue",
+              fill = "Revenue Type") +
+          theme_minimal() +
+          theme(legend.position = "bottom")
+      })
+      
+      # Chart 1C: Revenue with filtering options
+      output$revenue_filtered_plot <- renderPlot({
+        req(values$revenue_data)
+        
+        plot_data <- list()
+        for (scenario in names(values$revenue_data)) {
+          scenario_data <- values$revenue_data[[scenario]]
+          
+          # Structure type filter
+          if (is.null(input$filter_structure_types) || length(input$filter_structure_types) == 0) {
+            # Empty: keep only rows where structure_type is NA
+            scenario_data <- scenario_data[is.na(scenario_data$structure_type) | 
+                                          scenario_data$structure_type == "None" | 
+                                          scenario_data$structure_type == "", ]
+          } else if (!"All" %in% input$filter_structure_types) {
+            # Specific values: filter to those values
+            scenario_data <- scenario_data[scenario_data$structure_type %in% input$filter_structure_types, ]
+          }
+          # "All": do nothing (no filter)
+          
+          # Property type filter
+          if (is.null(input$filter_property_types) || length(input$filter_property_types) == 0) {
+            scenario_data <- scenario_data[is.na(scenario_data$property_type) | 
+                                          scenario_data$property_type == "", ]
+          } else if (!"All" %in% input$filter_property_types) {
+            scenario_data <- scenario_data[scenario_data$property_type %in% input$filter_property_types, ]
+          }
+          
+          # License category filter
+          if (is.null(input$filter_license_categories) || length(input$filter_license_categories) == 0) {
+            scenario_data <- scenario_data[is.na(scenario_data$business_category) | 
+                                          scenario_data$business_category == "", ]
+          } else if (!"All" %in% input$filter_license_categories) {
+            scenario_data <- scenario_data[scenario_data$business_category %in% input$filter_license_categories, ]
+          }
+          
+          # License subcategory filter
+          if (is.null(input$filter_license_subcategories) || length(input$filter_license_subcategories) == 0) {
+            scenario_data <- scenario_data[is.na(scenario_data$business_sub_category) | 
+                                          scenario_data$business_sub_category == "", ]
+          } else if (!"All" %in% input$filter_license_subcategories) {
+            scenario_data <- scenario_data[scenario_data$business_sub_category %in% input$filter_license_subcategories, ]
+          }
+          
+          # Geographic FIlters -----------------------------------------------------
+
+          # Tourist area filters
+          if (length(input$filter_tourist_areas) > 0) {
+            filter_mask <- rep(FALSE, nrow(scenario_data))
+            
+            for (filter_col in input$filter_tourist_areas) {
+              if (filter_col %in% names(scenario_data)) {
+                filter_mask <- filter_mask | (scenario_data[[filter_col]] == "Yes")
+              }
+            }
+            
+            scenario_data <- scenario_data[filter_mask, ]
+          }
+          
+          # Commercial/Industrial filters
+          if (length(input$filter_commercial_industrial) > 0) {
+            filter_mask <- rep(FALSE, nrow(scenario_data))
+            
+            for (filter_col in input$filter_commercial_industrial) {
+              if (filter_col %in% names(scenario_data)) {
+                filter_mask <- filter_mask | (scenario_data[[filter_col]] == "Yes")
+              }
+            }
+            
+            scenario_data <- scenario_data[filter_mask, ]
+          }
+          
+          # Other area filters
+          if (length(input$filter_other_areas) > 0) {
+            filter_mask <- rep(FALSE, nrow(scenario_data))
+            
+            for (filter_col in input$filter_other_areas) {
+              if (filter_col %in% names(scenario_data)) {
+                filter_mask <- filter_mask | (scenario_data[[filter_col]] == "Yes")
+              }
+            }
+            
+            scenario_data <- scenario_data[filter_mask, ]
+          }
+          
+          # Ward filters
+          if (length(input$filter_wards) > 0) {
+            if ("ward_number" %in% names(scenario_data)) {
+              scenario_data <- scenario_data[scenario_data$ward_number %in% as.integer(input$filter_wards), ]
+            }
+          }
+
+          type_summary <- data.frame(
+            scenario = scenario,
+            Property_Tax = sum(scenario_data$property_tax, na.rm = TRUE),
+            Business_License = sum(scenario_data$business_license, na.rm = TRUE)
+          )
+          
+          plot_data[[scenario]] <- type_summary
         }
         
-        type_summary <- data.frame(
-          scenario = scenario,
-          Property_Tax = sum(scenario_data$property_tax, na.rm = TRUE),
-          Business_License = sum(scenario_data$business_license, na.rm = TRUE)
-        )
+        combined_data <- do.call(rbind, plot_data)
         
-        plot_data[[scenario]] <- type_summary
-      }
+        combined_long <- combined_data %>%
+          tidyr::pivot_longer(cols = c(Property_Tax, Business_License),
+                              names_to = "Type",
+                              values_to = "Revenue")
+        
+        combined_long$label <- scales::comma(round(combined_long$Revenue, 0))
+        
+        # Build filter text
+        active_filters <- c()
+
+        if (!is.null(input$filter_structure_types) && length(input$filter_structure_types) > 0 && 
+            !"All" %in% input$filter_structure_types) {
+          active_filters <- c(active_filters, paste("Structure:", length(input$filter_structure_types), "selected"))
+        }
+        if (!is.null(input$filter_property_types) && length(input$filter_property_types) > 0 && 
+            !"All" %in% input$filter_property_types) {
+          active_filters <- c(active_filters, paste("Property:", length(input$filter_property_types), "selected"))
+        }
+        if (!is.null(input$filter_license_categories) && length(input$filter_license_categories) > 0 && 
+            !"All" %in% input$filter_license_categories) {
+          active_filters <- c(active_filters, paste("Category:", length(input$filter_license_categories), "selected"))
+        }
+        if (!is.null(input$filter_license_subcategories) && length(input$filter_license_subcategories) > 0 && 
+            !"All" %in% input$filter_license_subcategories) {
+          active_filters <- c(active_filters, paste("Subcategory:", length(input$filter_license_subcategories), "selected"))
+        }
+        
+        if (length(input$filter_tourist_areas) > 0) {
+          active_filters <- c(active_filters, paste("Tourist:", length(input$filter_tourist_areas), "selected"))
+        }
+        if (length(input$filter_commercial_industrial) > 0) {
+          active_filters <- c(active_filters, paste("Commercial/Industrial:", length(input$filter_commercial_industrial), "selected"))
+        }
+        if (length(input$filter_other_areas) > 0) {
+          active_filters <- c(active_filters, paste("Other Areas:", length(input$filter_other_areas), "selected"))
+        }
+        if (length(input$filter_wards) > 0) {
+          active_filters <- c(active_filters, paste("Wards:", length(input$filter_wards), "selected"))
+        }
+        
+        filter_text <- if (length(active_filters) > 0) {
+          paste(" - Filtered by", paste(active_filters, collapse = ", "))
+        } else {
+          ""
+        }
+       
+        ggplot(combined_long, aes(x = scenario, y = Revenue, fill = Type)) +
+          geom_bar(stat = "identity", position = "dodge") +
+          geom_text(aes(label = label), 
+                    position = position_dodge(width = 0.9),
+                    vjust = -0.5,
+                    size = 3.5) +
+          scale_fill_manual(
+            values = c("Property_Tax" = "#e74c3c", "Business_License" = "#3498db"),
+            labels = c("Property_Tax" = "Property Tax", "Business_License" = "Business License")) +
+          scale_y_continuous(labels = scales::comma,
+                            expand = expansion(mult = c(0, 0.1))) +
+          labs(title = paste0("Total Revenue by Type", filter_text),
+              x = "Scenario",
+              y = "Total Revenue",
+              fill = "Revenue Type") +
+          theme_minimal() +
+          theme(legend.position = "bottom")
+      })
       
-      combined_data <- do.call(rbind, plot_data)
+      # Download handler for detailed data
+      output$download_data <- downloadHandler(
+        filename = function() {
+          paste0("revenue_data_", input$detailed_scenario, "_", Sys.Date(), ".csv")
+        },
+        content = function(file) {
+          scenario_data <- values$revenue_data[[input$detailed_scenario]]
+          write.csv(scenario_data, file, row.names = FALSE)
+        }
+      )
       
-      combined_long <- combined_data %>%
-        tidyr::pivot_longer(cols = c(Property_Tax, Business_License),
-                            names_to = "Type",
-                            values_to = "Revenue")
-      
-      combined_long$label <- scales::comma(round(combined_long$Revenue, 0))
-      
-      # Build filter text
-      active_filters <- c()
-      if (!is.null(input$filter_structure_types) && length(input$filter_structure_types) > 0 && 
-          !"All" %in% input$filter_structure_types) {
-        active_filters <- c(active_filters, paste("Structure:", length(input$filter_structure_types), "selected"))
-      }
-      if (!is.null(input$filter_property_types) && length(input$filter_property_types) > 0 && 
-          !"All" %in% input$filter_property_types) {
-        active_filters <- c(active_filters, paste("Property:", length(input$filter_property_types), "selected"))
-      }
-      if (!is.null(input$filter_license_categories) && length(input$filter_license_categories) > 0 && 
-          !"All" %in% input$filter_license_categories) {
-        active_filters <- c(active_filters, paste("Category:", length(input$filter_license_categories), "selected"))
-      }
-      if (!is.null(input$filter_license_subcategories) && length(input$filter_license_subcategories) > 0 && 
-          !"All" %in% input$filter_license_subcategories) {
-        active_filters <- c(active_filters, paste("Subcategory:", length(input$filter_license_subcategories), "selected"))
-      }
-      
-      filter_text <- if (length(active_filters) > 0) {
-        paste(" - Filtered by", paste(active_filters, collapse = ", "))
-      } else {
-        ""
-      }
-      
-      ggplot(combined_long, aes(x = scenario, y = Revenue, fill = Type)) +
-        geom_bar(stat = "identity", position = "dodge") +
-        geom_text(aes(label = label), 
-                  position = position_dodge(width = 0.9),
-                  vjust = -0.5,
-                  size = 3.5) +
-        scale_fill_manual(
-          values = c("Property_Tax" = "#e74c3c", "Business_License" = "#3498db"),
-          labels = c("Property_Tax" = "Property Tax", "Business_License" = "Business License")) +
-        scale_y_continuous(labels = scales::comma,
-                          expand = expansion(mult = c(0, 0.1))) +
-        labs(title = paste0("Total Revenue by Type", filter_text),
-            x = "Scenario",
-            y = "Total Revenue",
-            fill = "Revenue Type") +
-        theme_minimal() +
-        theme(legend.position = "bottom")
-    })
-    
-    # Download handler for detailed data
-    output$download_data <- downloadHandler(
-      filename = function() {
-        paste0("revenue_data_", input$detailed_scenario, "_", Sys.Date(), ".csv")
-      },
-      content = function(file) {
+      # Detailed data table
+      output$detailed_data_table <- DT::renderDataTable({
+        req(values$revenue_data)
+        
         scenario_data <- values$revenue_data[[input$detailed_scenario]]
-        write.csv(scenario_data, file, row.names = FALSE)
-      }
-    )
-    
-    # Detailed data table
-    output$detailed_data_table <- DT::renderDataTable({
-      req(values$revenue_data)
+        
+        # Limit rows for display
+        n_rows <- min(input$detailed_rows, nrow(scenario_data))
+        display_data <- scenario_data[1:n_rows, ]
+        
+        DT::datatable(
+          display_data,
+          options = list(
+            scrollX = TRUE,
+            pageLength = 25,
+            dom = 'Bfrtip',
+            buttons = c('copy', 'csv', 'excel')
+          ),
+          extensions = 'Buttons'
+        ) %>%
+          DT::formatCurrency(columns = c('property_value', 'property_tax',
+                                        'business_value', 'business_license',
+                                        'total_tax'), 
+                            currency = "", 
+                            interval = 3, 
+                            mark = ",")
+      })
       
-      scenario_data <- values$revenue_data[[input$detailed_scenario]]
-      
-      # Limit rows for display
-      n_rows <- min(input$detailed_rows, nrow(scenario_data))
-      display_data <- scenario_data[1:n_rows, ]
-      
-      DT::datatable(
-        display_data,
-        options = list(
-          scrollX = TRUE,
-          pageLength = 25,
-          dom = 'Bfrtip',
-          buttons = c('copy', 'csv', 'excel')
-        ),
-        extensions = 'Buttons'
-      ) %>%
-        DT::formatCurrency(columns = c('property_value', 'property_tax',
-                                       'business_value', 'business_license',
-                                       'total_tax'), 
-                           currency = "", 
-                           interval = 3, 
-                           mark = ",")
+      # Return revenue data for use in other modules
+      return(reactive({
+        values$revenue_data
+      }))
     })
-    
-    # Return revenue data for use in other modules
-    return(reactive({
-      values$revenue_data
-    }))
-  })
 }
