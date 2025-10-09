@@ -970,36 +970,37 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       )
       
       # Detailed data table
-      output$detailed_data_table <- DT::renderDataTable({
-        req(values$revenue_data)
-        
-        scenario_data <- values$revenue_data[[input$detailed_scenario]]
-        
-        # Limit rows for display
-        n_rows <- min(input$detailed_rows, nrow(scenario_data))
-        display_data <- scenario_data[1:n_rows, ]
-        
-        DT::datatable(
-          display_data,
-          options = list(
-            scrollX = TRUE,
-            pageLength = 25,
-            dom = 'Bfrtip',
-            buttons = c('copy', 'csv', 'excel')
-          ),
-          extensions = 'Buttons'
-        ) %>%
-          DT::formatCurrency(columns = c('property_value', 'property_tax',
-                                        'business_value', 'business_license',
-                                        'total_tax'), 
-                            currency = "", 
-                            interval = 3, 
-                            mark = ",")
-      })
+    output$detailed_data_table <- DT::renderDataTable({
+      req(values$revenue_data)
       
-      # Return revenue data for use in other modules
-      return(reactive({
-        values$revenue_data
-      }))
+      scenario_data <- values$revenue_data[[input$detailed_scenario]]
+      
+      # Limit rows for display
+      n_rows <- min(input$detailed_rows, nrow(scenario_data))
+      display_data <- scenario_data[1:n_rows, ]
+      
+      DT::datatable(
+        display_data,
+        options = list(
+          scrollX = TRUE,
+          pageLength = 25,
+          dom = 'Bfrtip',
+          buttons = c('copy', 'csv', 'excel')
+        ),
+        extensions = 'Buttons'
+      ) %>%
+        DT::formatCurrency(columns = c('property_value', 'property_tax',
+                                       'business_value', 'business_license',
+                                       'total_tax'), 
+                           currency = "", 
+                           interval = 3, 
+                           mark = ",")
     })
-}
+    
+    # Return revenue data for use in other modules
+    return(reactive({
+      values$revenue_data
+    }))
+    
+  })  # This closes moduleServer(id, function(input, output, session) {
+}     # This closes module4_server <- function(id, ...) {
