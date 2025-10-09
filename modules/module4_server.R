@@ -143,7 +143,8 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
       cat("==========================================\n\n")
 
       # Create initial result dataframe with ALL rows
-      result <- data
+      # Force a deep copy of the data to avoid scenarios overwriting each other
+      result <- as.data.frame(data, stringsAsFactors = FALSE)
 
       # Add/update the revenue-related columns
       result$scenario <- scenario_name
