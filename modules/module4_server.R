@@ -18,6 +18,11 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
         withProgress(message = 'Calculating revenue...', value = 0, {
           data <- processed_data()
           
+          # CRITICAL FIX: Snapshot the reactive configs ONCE before the loop
+          # This prevents the reactive from being re-evaluated during iterations
+          all_prop_configs <- property_configs()
+          all_tax_configs <- tax_configs()
+          
           # Initialize results storage
           all_results <- list()
           
@@ -27,9 +32,9 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
           for (scenario in scenarios) {
             incProgress(0.25, detail = paste("Processing", scenario, "scenario..."))
             
-            # Get configurations
-            prop_config <- property_configs()[[scenario]]
-            tax_config <- tax_configs()[[scenario]]
+            # Get configurations from the snapshot
+            prop_config <- all_prop_configs[[scenario]]
+            tax_config <- all_tax_configs[[scenario]]
             
             # Check if configurations exist
             if (is.null(prop_config)) {
