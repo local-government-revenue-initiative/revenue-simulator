@@ -3,5 +3,6 @@
 .Rproj.user/
 *.Rproj
 README.md
+issues.txt
 .gitignore
 tests/

@@ -11,8 +11,8 @@ id = '0199a044-03ef-4e3c-f8b7-f291894b69c0'
 dashboard_url = 'https://connect.posit.cloud/local-government-revenue-initiative/content/0199a044-03ef-4e3c-f8b7-f291894b69c0'
 direct_url = 'https://0199a044-03ef-4e3c-f8b7-f291894b69c0.share.connect.posit.cloud'
 logs_url = 'https://connect.posit.cloud/local-government-revenue-initiative/content/0199a044-03ef-4e3c-f8b7-f291894b69c0/history'
-deployed_at = '2025-10-01T16:56:20+02:00'
-bundle_id = '0199a044-03f2-0ec4-0736-abf02e7b23e3'
+deployed_at = '2025-10-09T12:46:56Z'
+bundle_id = '0199c902-8386-307a-012e-e661cfd77206'
 files = [
   '.gitignore',
   '.posit/publish/deployments/deployment-LMM1.toml',
@@ -22,11 +22,23 @@ files = [
   'R/module3_functions.R',
   'R/module4_functions.R',
   'R/module5_functions.R',
+  'R/module6_functions.R',
   'README.md',
   'app.R',
   'configs/alt_a_2025-07-24.rds',
   'configs/alt_b_2025-07-24.rds',
   'configs/existing_2025-07-24.rds',
+  'gis_layers/aberdeen_lumley_tourist.gpkg',
+  'gis_layers/buffered_commercial_corridors.gpkg',
+  'gis_layers/cbd.gpkg',
+  'gis_layers/dock_industrial.gpkg',
+  'gis_layers/hazardous_zones.gpkg',
+  'gis_layers/informal_settlements.gpkg',
+  'gis_layers/juba_levuma_tourist.gpkg',
+  'gis_layers/kissy_industrial_area.gpkg',
+  'gis_layers/kissy_texaco_terminal_area.gpkg',
+  'gis_layers/wards.gpkg',
+  'gis_layers/wellington_industrial_estate.gpkg',
   'modules/module1_server.R',
   'modules/module1_ui.R',
   'modules/module2_server.R',
@@ -38,6 +50,8 @@ files = [
   'modules/module4_ui.R',
   'modules/module5_server.R',
   'modules/module5_ui.R',
+  'modules/module6_server.R',
+  'modules/module6_ui.R',
   'renv.lock',
   'www/custom.css'
 ]
@@ -63,7 +77,8 @@ files = [
   '/configs',
   '/modules',
   '/tests',
-  '/www'
+  '/www',
+  '/gis_layers'
 ]
 title = 'freetown-revenue-simulator'
 
@@ -79,6 +94,14 @@ name = 'CRAN'
 url = 'https://cloud.r-project.org'
 
 [renv.packages]
+[renv.packages.DBI]
+package = 'DBI'
+version = '1.2.3'
+source = 'Repository'
+repository = 'CRAN'
+requirements = ['R', 'methods']
+hash = '065ae649b05f1ff66bb0c793107508f5'
+
 [renv.packages.DT]
 package = 'DT'
 version = '0.34.0'
@@ -199,6 +222,14 @@ repository = 'CRAN'
 requirements = ['MASS', 'R', 'stats', 'utils']
 hash = 'f91f6b29f38b8c280f2b9477787d4bb2'
 
+[renv.packages.classInt]
+package = 'classInt'
+version = '0.4-11'
+source = 'Repository'
+repository = 'CRAN'
+requirements = ['KernSmooth', 'R', 'class', 'e1071', 'grDevices', 'graphics', 'stats']
+hash = 'f2af70314a63d7f025ae668f08bd933a'
+
 [renv.packages.cli]
 package = 'cli'
 version = '3.6.5'
@@ -285,6 +316,14 @@ source = 'Repository'
 repository = 'CRAN'
 requirements = ['R', 'R6', 'cli', 'generics', 'glue', 'lifecycle', 'magrittr', 'methods', 'pillar', 'rlang', 'tibble', 'tidyselect', 'utils', 'vctrs']
 hash = 'fedd9d00c2944ff00a0e2696ccf048ec'
+
+[renv.packages.e1071]
+package = 'e1071'
+version = '1.7-16'
+source = 'Repository'
+repository = 'CRAN'
+requirements = ['class', 'grDevices', 'graphics', 'methods', 'proxy', 'stats', 'utils']
+hash = '27a09ca40266a1066d62ef5402dd51d6'
 
 [renv.packages.evaluate]
 package = 'evaluate'
@@ -476,6 +515,22 @@ repository = 'CRAN'
 requirements = ['R']
 hash = 'd908914ae53b04d4c0c0fd72ecc35370'
 
+[renv.packages.leaflet]
+package = 'leaflet'
+version = '2.2.3'
+source = 'Repository'
+repository = 'CRAN'
+requirements = ['R', 'RColorBrewer', 'crosstalk', 'htmltools', 'htmlwidgets', 'jquerylib', 'leaflet.providers', 'magrittr', 'methods', 'png', 'raster', 'rlang', 'scales', 'sf', 'stats', 'viridisLite', 'xfun']
+hash = 'da8aa03b2885c2b934923e6a53fe592a'
+
+[renv.packages.'leaflet.providers']
+package = 'leaflet.providers'
+version = '2.0.0'
+source = 'Repository'
+repository = 'CRAN'
+requirements = ['R', 'htmltools']
+hash = 'c0b81ad9d5d932772f7a457ac398cf36'
+
 [renv.packages.lifecycle]
 package = 'lifecycle'
 version = '1.0.4'
@@ -556,6 +611,14 @@ repository = 'CRAN'
 requirements = ['utils']
 hash = '01f28d4278f15c76cddbea05899c5d6f'
 
+[renv.packages.png]
+package = 'png'
+version = '0.1-8'
+source = 'Repository'
+repository = 'CRAN'
+requirements = ['R']
+hash = 'bd54ba8a0a5faded999a7aab6e46b374'
+
 [renv.packages.prettyunits]
 package = 'prettyunits'
 version = '1.2.0'
@@ -580,6 +643,14 @@ repository = 'CRAN'
 requirements = ['R6', 'Rcpp', 'fastmap', 'later', 'magrittr', 'rlang', 'stats']
 hash = '70157a4a73963da5779f9c67f4d31fd1'
 
+[renv.packages.proxy]
+package = 'proxy'
+version = '0.4-27'
+source = 'Repository'
+repository = 'CRAN'
+requirements = ['R', 'stats', 'utils']
+hash = 'e0ef355c12942cf7a6b91a6cfaea8b3e'
+
 [renv.packages.purrr]
 package = 'purrr'
 version = '1.1.0'
@@ -595,6 +666,14 @@ source = 'Repository'
 repository = 'CRAN'
 requirements = ['R']
 hash = '5e3c5dc0b071b21fa128676560dbe94d'
+
+[renv.packages.raster]
+package = 'raster'
+version = '3.6-32'
+source = 'Repository'
+repository = 'CRAN'
+requirements = ['R', 'Rcpp', 'methods', 'sp', 'terra']
+hash = '1e193fc2c727a6f83cf95d9e16024423'
 
 [renv.packages.readr]
 package = 'readr'
@@ -636,6 +715,14 @@ repository = 'CRAN'
 requirements = ['R', 'grDevices', 'graphics', 'stats']
 hash = 'b3d390424f41d04174cccf84d49676c2'
 
+[renv.packages.s2]
+package = 's2'
+version = '1.1.9'
+source = 'Repository'
+repository = 'CRAN'
+requirements = ['R', 'Rcpp', 'wk']
+hash = '4e664a5d610d58f27ec196e96cdb7f6f'
+
 [renv.packages.sass]
 package = 'sass'
 version = '0.4.10'
@@ -652,6 +739,14 @@ repository = 'CRAN'
 requirements = ['R', 'R6', 'RColorBrewer', 'cli', 'farver', 'glue', 'labeling', 'lifecycle', 'rlang', 'viridisLite']
 hash = 'c5bba8f0d1df8c4b9538a40570798d9b'
 
+[renv.packages.sf]
+package = 'sf'
+version = '1.0-21'
+source = 'Repository'
+repository = 'CRAN'
+requirements = ['DBI', 'R', 'Rcpp', 'classInt', 'grDevices', 'graphics', 'grid', 'magrittr', 'methods', 's2', 'stats', 'tools', 'units', 'utils']
+hash = '14a8dae2a678fa953907893a9df561c0'
+
 [renv.packages.shiny]
 package = 'shiny'
 version = '1.11.1'
@@ -659,6 +754,22 @@ source = 'Repository'
 repository = 'CRAN'
 requirements = ['R', 'R6', 'bslib', 'cachem', 'cli', 'commonmark', 'fastmap', 'fontawesome', 'glue', 'grDevices', 'htmltools', 'httpuv', 'jsonlite', 'later', 'lifecycle', 'methods', 'mime', 'promises', 'rlang', 'sourcetools', 'tools', 'utils', 'withr', 'xtable']
 hash = '1c1a2437351984ff592639ae28cda09e'
+
+[renv.packages.shinybusy]
+package = 'shinybusy'
+version = '0.3.3'
+source = 'Repository'
+repository = 'CRAN'
+requirements = ['htmltools', 'htmlwidgets', 'jsonlite', 'shiny']
+hash = '7dc8feb4207741ff581422a04fc8f3ea'
+
+[renv.packages.shinycssloaders]
+package = 'shinycssloaders'
+version = '1.1.0'
+source = 'Repository'
+repository = 'CRAN'
+requirements = ['R', 'digest', 'glue', 'grDevices', 'htmltools', 'shiny']
+hash = '2b45a467a30d6a88a1892a738c0900cf'
 
 [renv.packages.shinydashboard]
 package = 'shinydashboard'
@@ -668,6 +779,14 @@ repository = 'CRAN'
 requirements = ['R', 'htmltools', 'promises', 'shiny', 'utils']
 hash = 'b39bc6c8dd72423ccf9e30ec7eb6a0f2'
 
+[renv.packages.shinytoastr]
+package = 'shinytoastr'
+version = '2.2.0'
+source = 'Repository'
+repository = 'CRAN'
+requirements = ['shiny']
+hash = '02b8ff3893fc0c2bbc3a6093c1e4e44d'
+
 [renv.packages.sourcetools]
 package = 'sourcetools'
 version = '0.1.7-1'
@@ -675,6 +794,14 @@ source = 'Repository'
 repository = 'CRAN'
 requirements = ['R']
 hash = '5f5a7629f956619d519205ec475fe647'
+
+[renv.packages.sp]
+package = 'sp'
+version = '2.2-0'
+source = 'Repository'
+repository = 'CRAN'
+requirements = ['R', 'grDevices', 'graphics', 'grid', 'lattice', 'methods', 'stats', 'utils']
+hash = 'd9ff3b753db98bc50650314c8782abe6'
 
 [renv.packages.spatial]
 package = 'spatial'
@@ -707,6 +834,14 @@ source = 'Repository'
 repository = 'CRAN'
 requirements = ['Matrix', 'R', 'graphics', 'methods', 'splines', 'stats', 'utils']
 hash = '184d7799bca4ba8c3be72ea396f4b9a3'
+
+[renv.packages.terra]
+package = 'terra'
+version = '1.8-70'
+source = 'Repository'
+repository = 'CRAN'
+requirements = ['R', 'Rcpp', 'methods']
+hash = '366d90437eed64db1ada9722388d8a58'
 
 [renv.packages.tibble]
 package = 'tibble'
@@ -748,6 +883,14 @@ repository = 'CRAN'
 requirements = ['R', 'cpp11']
 hash = '09e3961e87b7bafa4a9340bbb34aeda8'
 
+[renv.packages.units]
+package = 'units'
+version = '1.0-0'
+source = 'Repository'
+repository = 'CRAN'
+requirements = ['R', 'Rcpp']
+hash = '3797c73fd3bde8b1601a4e1bf53557ac'
+
 [renv.packages.utf8]
 package = 'utf8'
 version = '1.2.6'
@@ -787,6 +930,14 @@ source = 'Repository'
 repository = 'CRAN'
 requirements = ['R', 'grDevices', 'graphics']
 hash = 'cc2d62c76458d425210d1eb1478b30b4'
+
+[renv.packages.wk]
+package = 'wk'
+version = '0.9.4'
+source = 'Repository'
+repository = 'CRAN'
+requirements = ['R']
+hash = '37be35d733130f1de1ef51672cf7cdc0'
 
 [renv.packages.xfun]
 package = 'xfun'

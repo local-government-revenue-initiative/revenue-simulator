@@ -18,7 +18,8 @@ files = [
   '/configs',
   '/modules',
   '/tests',
-  '/www'
+  '/www',
+  '/gis_layers'
 ]
 title = 'freetown-revenue-simulator'
 
