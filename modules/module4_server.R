@@ -19,9 +19,20 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
           data <- processed_data()
           
           # CRITICAL FIX: Snapshot the reactive configs ONCE before the loop
-          # This prevents the reactive from being re-evaluated during iterations
           all_prop_configs <- property_configs()
           all_tax_configs <- tax_configs()
+          
+          # DIAGNOSTIC: Print the structure weights for each scenario
+          cat("\n========== CONFIG SNAPSHOT DIAGNOSTICS ==========\n")
+          for (sc in c("existing", "scenario_a", "scenario_b")) {
+            cat("\n--- ", toupper(sc), " CONFIG ---\n")
+            cfg <- all_prop_configs[[sc]]
+            if (!is.null(cfg$structure_weights)) {
+              indust_manuf_weight <- cfg$structure_weights[["commercial_type_Industrial Manufacturing"]]
+              cat("Industrial Manufacturing weight:", indust_manuf_weight, "\n")
+            }
+          }
+          cat("=================================================\n\n")
           
           # Initialize results storage
           all_results <- list()
@@ -31,6 +42,8 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
           
           for (scenario in scenarios) {
             incProgress(0.25, detail = paste("Processing", scenario, "scenario..."))
+            
+            cat("\n########## PROCESSING:", toupper(scenario), "##########\n")
             
             # Get configurations from the snapshot
             prop_config <- all_prop_configs[[scenario]]
@@ -55,7 +68,19 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
               scenario
             )
             
+            # DIAGNOSTIC: Check specific property FCC0000033
+            test_prop_rows <- calc_result[calc_result$id_property == "FCC0000033", ]
+            if (nrow(test_prop_rows) > 0) {
+              cat("\n=== DIAGNOSTIC FOR FCC0000033 in", toupper(scenario), "===\n")
+              cat("Number of rows found:", nrow(test_prop_rows), "\n")
+              cat("property_value:", unique(test_prop_rows$property_value), "\n")
+              cat("property_tax:", unique(test_prop_rows$property_tax), "\n")
+              cat("scenario column:", unique(test_prop_rows$scenario), "\n")
+              cat("=========================================\n")
+            }
+            
             all_results[[scenario]] <- calc_result
+            cat("########## FINISHED:", toupper(scenario), "##########\n\n")
           }
           
           incProgress(0.2, detail = "Combining results...")
@@ -66,9 +91,31 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
             return()
           }
           
+          # DIAGNOSTIC: Verify each scenario stored correctly
+          cat("\n========== STORAGE VERIFICATION ==========\n")
+          for (sc in names(all_results)) {
+            test_rows <- all_results[[sc]][all_results[[sc]]$id_property == "FCC0000033", ]
+            if (nrow(test_rows) > 0) {
+              cat(toupper(sc), "- property_value:", unique(test_rows$property_value), 
+                  ", scenario:", unique(test_rows$scenario), "\n")
+            }
+          }
+          cat("==========================================\n\n")
+          
           # Combine all scenarios into one dataset for comparison
           values$revenue_data <- all_results
           values$calculations_done <- TRUE
+          
+          # FINAL DIAGNOSTIC: Check what's in values$revenue_data
+          cat("\n========== FINAL VALUES$REVENUE_DATA CHECK ==========\n")
+          for (sc in names(values$revenue_data)) {
+            test_rows <- values$revenue_data[[sc]][values$revenue_data[[sc]]$id_property == "FCC0000033", ]
+            if (nrow(test_rows) > 0) {
+              cat(toupper(sc), "- property_value:", unique(test_rows$property_value), 
+                  ", scenario:", unique(test_rows$scenario), "\n")
+            }
+          }
+          cat("=====================================================\n\n")
           
           # Update filter choices
           update_filter_choices()
@@ -83,7 +130,7 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
         print(paste("Detailed error:", e))
       })
     })
-    
+
     # Helper function to calculate values and taxes for a scenario
     calculate_values_and_taxes <- function(data, prop_config, tax_config, scenario_name) {
       n_rows <- nrow(data)
