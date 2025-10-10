@@ -362,6 +362,22 @@ compare_property_across_scenarios <- function(revenue_data, property_id) {
     return(NULL)  # Property not found
   }
   
+  # Helper function to safely extract text fields
+  get_text_field <- function(prop_df, field_name) {
+    if (nrow(prop_df) == 0) return("Not in scenario")
+    value <- prop_df[[field_name]]
+    if (is.na(value) || value == "" || value == "NA") return("None")
+    return(value)
+  }
+  
+  # Helper function to safely extract logical fields
+  get_logical_field <- function(prop_df, field_name) {
+    if (nrow(prop_df) == 0) return("Not in scenario")
+    value <- prop_df[[field_name]]
+    if (is.na(value)) return("Unknown")
+    return(ifelse(value, "Yes", "No"))
+  }
+  
   # Create comparison dataframe
   comparison <- data.frame(
     Metric = c("Total Property Value", 
@@ -370,16 +386,18 @@ compare_property_across_scenarios <- function(revenue_data, property_id) {
                "Total Tax",
                "Property Types",
                "Has Business",
-               "Business Categories"),
+               "Business Categories",
+               "Business Subcategories"),
     
     Existing = c(
       if(nrow(existing_prop) > 0) existing_prop$total_property_value else NA,
       if(nrow(existing_prop) > 0) existing_prop$total_property_tax else NA,
       if(nrow(existing_prop) > 0) existing_prop$total_business_license else NA,
       if(nrow(existing_prop) > 0) existing_prop$total_tax else NA,
-      if(nrow(existing_prop) > 0) existing_prop$property_types else "N/A",
-      if(nrow(existing_prop) > 0) as.character(existing_prop$has_business) else "N/A",
-      if(nrow(existing_prop) > 0) existing_prop$business_categories else "N/A"
+      get_text_field(existing_prop, "property_types"),
+      get_logical_field(existing_prop, "has_business"),
+      get_text_field(existing_prop, "business_categories"),
+      get_text_field(existing_prop, "business_subcategories")
     ),
     
     Scenario_A = c(
@@ -387,9 +405,10 @@ compare_property_across_scenarios <- function(revenue_data, property_id) {
       if(nrow(scenario_a_prop) > 0) scenario_a_prop$total_property_tax else NA,
       if(nrow(scenario_a_prop) > 0) scenario_a_prop$total_business_license else NA,
       if(nrow(scenario_a_prop) > 0) scenario_a_prop$total_tax else NA,
-      if(nrow(scenario_a_prop) > 0) scenario_a_prop$property_types else "N/A",
-      if(nrow(scenario_a_prop) > 0) as.character(scenario_a_prop$has_business) else "N/A",
-      if(nrow(scenario_a_prop) > 0) scenario_a_prop$business_categories else "N/A"
+      get_text_field(scenario_a_prop, "property_types"),
+      get_logical_field(scenario_a_prop, "has_business"),
+      get_text_field(scenario_a_prop, "business_categories"),
+      get_text_field(scenario_a_prop, "business_subcategories")
     ),
     
     Scenario_B = c(
@@ -397,9 +416,10 @@ compare_property_across_scenarios <- function(revenue_data, property_id) {
       if(nrow(scenario_b_prop) > 0) scenario_b_prop$total_property_tax else NA,
       if(nrow(scenario_b_prop) > 0) scenario_b_prop$total_business_license else NA,
       if(nrow(scenario_b_prop) > 0) scenario_b_prop$total_tax else NA,
-      if(nrow(scenario_b_prop) > 0) scenario_b_prop$property_types else "N/A",
-      if(nrow(scenario_b_prop) > 0) as.character(scenario_b_prop$has_business) else "N/A",
-      if(nrow(scenario_b_prop) > 0) scenario_b_prop$business_categories else "N/A"
+      get_text_field(scenario_b_prop, "property_types"),
+      get_logical_field(scenario_b_prop, "has_business"),
+      get_text_field(scenario_b_prop, "business_categories"),
+      get_text_field(scenario_b_prop, "business_subcategories")
     ),
     
     stringsAsFactors = FALSE
