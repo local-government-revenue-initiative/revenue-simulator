@@ -362,23 +362,67 @@ compare_property_across_scenarios <- function(revenue_data, property_id) {
     return(NULL)  # Property not found
   }
   
+  # DEBUGGING: Check what's actually in the data
+  cat("\n=== DEBUGGING PROPERTY FIELDS ===\n")
+  if (nrow(existing_prop) > 0) {
+    cat("Existing property fields:\n")
+    cat("  property_types:", existing_prop$property_types, "\n")
+    cat("  has_business:", existing_prop$has_business, "\n")
+    cat("  business_categories:", existing_prop$business_categories, "\n")
+    cat("  business_subcategories:", existing_prop$business_subcategories, "\n")
+  }
+  cat("==================================\n\n")
+  
   # Helper function to safely extract text fields
   get_text_field <- function(prop_df, field_name) {
-    if (nrow(prop_df) == 0) return("Not in scenario")
+    if (nrow(prop_df) == 0) {
+      return("Not in scenario")
+    }
+    
+    # Check if field exists
+    if (!field_name %in% names(prop_df)) {
+      return("Field not found")
+    }
+    
     value <- prop_df[[field_name]]
-    if (is.na(value) || value == "" || value == "NA") return("None")
-    return(value)
+    
+    # Debug output
+    cat(sprintf("  get_text_field(%s): value='%s', is.na=%s, nchar=%d\n", 
+                field_name, value, is.na(value), nchar(as.character(value))))
+    
+    # Handle various empty cases
+    if (is.na(value)) return("None")
+    if (value == "") return("None")
+    if (value == "NA") return("None")
+    if (length(value) == 0) return("None")
+    
+    return(as.character(value))
   }
   
   # Helper function to safely extract logical fields
   get_logical_field <- function(prop_df, field_name) {
-    if (nrow(prop_df) == 0) return("Not in scenario")
+    if (nrow(prop_df) == 0) {
+      return("Not in scenario")
+    }
+    
+    # Check if field exists
+    if (!field_name %in% names(prop_df)) {
+      return("Field not found")
+    }
+    
     value <- prop_df[[field_name]]
+    
+    # Debug output
+    cat(sprintf("  get_logical_field(%s): value=%s, is.na=%s\n", 
+                field_name, value, is.na(value)))
+    
     if (is.na(value)) return("Unknown")
     return(ifelse(value, "Yes", "No"))
   }
   
   # Create comparison dataframe
+  cat("\n=== CREATING COMPARISON TABLE ===\n")
+  
   comparison <- data.frame(
     Metric = c("Total Property Value", 
                "Total Property Tax", 
@@ -424,6 +468,8 @@ compare_property_across_scenarios <- function(revenue_data, property_id) {
     
     stringsAsFactors = FALSE
   )
+  
+  cat("=================================\n\n")
   
   # Calculate changes vs Existing
   comparison <- comparison %>%
