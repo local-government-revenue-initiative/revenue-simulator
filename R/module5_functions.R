@@ -340,6 +340,7 @@ analyze_winners_losers <- function(comparison_data) {
 }
 
 # Function to compare a specific property across scenarios
+# Function to compare a specific property across scenarios
 compare_property_across_scenarios <- function(revenue_data, property_id) {
   
   # Get aggregated data from all scenarios
@@ -362,122 +363,145 @@ compare_property_across_scenarios <- function(revenue_data, property_id) {
     return(NULL)  # Property not found
   }
   
-  # Helper function to safely extract text fields
-  get_text_field <- function(prop_df, field_name) {
-    if (nrow(prop_df) == 0) return("Not in scenario")
-    if (!field_name %in% names(prop_df)) return("Field not found")
-    
-    value <- prop_df[[field_name]]
-    if (is.na(value) || value == "" || value == "NA") return("None")
-    
-    return(as.character(value))
+  # Helper to get numeric value or NA
+  get_num <- function(prop_df, field) {
+    if (nrow(prop_df) > 0 && field %in% names(prop_df)) {
+      return(prop_df[[field]])
+    }
+    return(NA_real_)
   }
   
-  # Helper function to safely extract logical fields
-  get_logical_field <- function(prop_df, field_name) {
+  # Helper to get text value
+  get_txt <- function(prop_df, field) {
     if (nrow(prop_df) == 0) return("Not in scenario")
-    if (!field_name %in% names(prop_df)) return("Field not found")
+    if (!field %in% names(prop_df)) return("Field missing")
     
-    value <- prop_df[[field_name]]
-    if (is.na(value)) return("Unknown")
-    return(ifelse(value, "Yes", "No"))
+    val <- prop_df[[field]]
+    if (is.na(val)) return("None")
+    if (val == "") return("None")
+    return(as.character(val))
   }
   
-  # PART 1: Create numeric rows
-  numeric_comparison <- data.frame(
-    Metric = c("Total Property Value", 
-               "Total Property Tax", 
-               "Total Business License", 
-               "Total Tax"),
+  # Helper to get logical as text
+  get_bool <- function(prop_df, field) {
+    if (nrow(prop_df) == 0) return("Not in scenario")
+    if (!field %in% names(prop_df)) return("Field missing")
     
-    Existing = as.character(c(
-      if(nrow(existing_prop) > 0) existing_prop$total_property_value else NA,
-      if(nrow(existing_prop) > 0) existing_prop$total_property_tax else NA,
-      if(nrow(existing_prop) > 0) existing_prop$total_business_license else NA,
-      if(nrow(existing_prop) > 0) existing_prop$total_tax else NA
-    )),
-    
-    Scenario_A = as.character(c(
-      if(nrow(scenario_a_prop) > 0) scenario_a_prop$total_property_value else NA,
-      if(nrow(scenario_a_prop) > 0) scenario_a_prop$total_property_tax else NA,
-      if(nrow(scenario_a_prop) > 0) scenario_a_prop$total_business_license else NA,
-      if(nrow(scenario_a_prop) > 0) scenario_a_prop$total_tax else NA
-    )),
-    
-    Scenario_B = as.character(c(
-      if(nrow(scenario_b_prop) > 0) scenario_b_prop$total_property_value else NA,
-      if(nrow(scenario_b_prop) > 0) scenario_b_prop$total_property_tax else NA,
-      if(nrow(scenario_b_prop) > 0) scenario_b_prop$total_business_license else NA,
-      if(nrow(scenario_b_prop) > 0) scenario_b_prop$total_tax else NA
-    )),
-    
+    val <- prop_df[[field]]
+    if (is.na(val)) return("Unknown")
+    return(ifelse(val, "Yes", "No"))
+  }
+  
+  # Extract numeric values
+  ex_pv <- get_num(existing_prop, "total_property_value")
+  ex_pt <- get_num(existing_prop, "total_property_tax")
+  ex_bl <- get_num(existing_prop, "total_business_license")
+  ex_tt <- get_num(existing_prop, "total_tax")
+  
+  sa_pv <- get_num(scenario_a_prop, "total_property_value")
+  sa_pt <- get_num(scenario_a_prop, "total_property_tax")
+  sa_bl <- get_num(scenario_a_prop, "total_business_license")
+  sa_tt <- get_num(scenario_a_prop, "total_tax")
+  
+  sb_pv <- get_num(scenario_b_prop, "total_property_value")
+  sb_pt <- get_num(scenario_b_prop, "total_property_tax")
+  sb_bl <- get_num(scenario_b_prop, "total_business_license")
+  sb_tt <- get_num(scenario_b_prop, "total_tax")
+  
+  # Calculate changes
+  calc_change <- function(new_val, old_val) {
+    if (is.na(new_val) || is.na(old_val)) return(NA_real_)
+    return(new_val - old_val)
+  }
+  
+  calc_pct <- function(change, old_val) {
+    if (is.na(change) || is.na(old_val) || old_val == 0) return(NA_real_)
+    return((change / old_val) * 100)
+  }
+  
+  # Build comparison dataframe row by row
+  comparison <- data.frame(
+    Metric = character(0),
+    Existing = character(0),
+    Scenario_A = character(0),
+    Scenario_B = character(0),
+    Change_A_vs_Existing = numeric(0),
+    Change_B_vs_Existing = numeric(0),
+    Pct_Change_A = numeric(0),
+    Pct_Change_B = numeric(0),
     stringsAsFactors = FALSE
   )
   
-  # PART 2: Create text rows
-  text_comparison <- data.frame(
-    Metric = c("Property Types",
-               "Has Business",
-               "Business Categories",
-               "Business Subcategories"),
+  # Add numeric rows
+  add_row <- function(metric, ex, sa, sb) {
+    ch_a <- calc_change(sa, ex)
+    ch_b <- calc_change(sb, ex)
+    pct_a <- calc_pct(ch_a, ex)
+    pct_b <- calc_pct(ch_b, ex)
     
-    Existing = c(
-      get_text_field(existing_prop, "property_types"),
-      get_logical_field(existing_prop, "has_business"),
-      get_text_field(existing_prop, "business_categories"),
-      get_text_field(existing_prop, "business_subcategories")
-    ),
-    
-    Scenario_A = c(
-      get_text_field(scenario_a_prop, "property_types"),
-      get_logical_field(scenario_a_prop, "has_business"),
-      get_text_field(scenario_a_prop, "business_categories"),
-      get_text_field(scenario_a_prop, "business_subcategories")
-    ),
-    
-    Scenario_B = c(
-      get_text_field(scenario_b_prop, "property_types"),
-      get_logical_field(scenario_b_prop, "has_business"),
-      get_text_field(scenario_b_prop, "business_categories"),
-      get_text_field(scenario_b_prop, "business_subcategories")
-    ),
-    
-    stringsAsFactors = FALSE
-  )
-  
-  # Combine both parts
-  comparison <- dplyr::bind_rows(numeric_comparison, text_comparison)
-  
-  # Calculate changes vs Existing (only for numeric rows)
-  comparison <- comparison %>%
-    dplyr::mutate(
-      Change_A_vs_Existing = dplyr::case_when(
-        Metric %in% c("Total Property Value", "Total Property Tax", 
-                      "Total Business License", "Total Tax") ~ 
-          as.numeric(Scenario_A) - as.numeric(Existing),
-        TRUE ~ NA_real_
-      ),
-      Change_B_vs_Existing = dplyr::case_when(
-        Metric %in% c("Total Property Value", "Total Property Tax", 
-                      "Total Business License", "Total Tax") ~ 
-          as.numeric(Scenario_B) - as.numeric(Existing),
-        TRUE ~ NA_real_
-      ),
-      Pct_Change_A = dplyr::case_when(
-        Metric %in% c("Total Property Value", "Total Property Tax", 
-                      "Total Business License", "Total Tax") & 
-          as.numeric(Existing) > 0 ~ 
-          (Change_A_vs_Existing / as.numeric(Existing)) * 100,
-        TRUE ~ NA_real_
-      ),
-      Pct_Change_B = dplyr::case_when(
-        Metric %in% c("Total Property Value", "Total Property Tax", 
-                      "Total Business License", "Total Tax") & 
-          as.numeric(Existing) > 0 ~ 
-          (Change_B_vs_Existing / as.numeric(Existing)) * 100,
-        TRUE ~ NA_real_
-      )
+    data.frame(
+      Metric = metric,
+      Existing = as.character(ex),
+      Scenario_A = as.character(sa),
+      Scenario_B = as.character(sb),
+      Change_A_vs_Existing = ch_a,
+      Change_B_vs_Existing = ch_b,
+      Pct_Change_A = pct_a,
+      Pct_Change_B = pct_b,
+      stringsAsFactors = FALSE
     )
+  }
+  
+  comparison <- rbind(
+    comparison,
+    add_row("Total Property Value", ex_pv, sa_pv, sb_pv),
+    add_row("Total Property Tax", ex_pt, sa_pt, sb_pt),
+    add_row("Total Business License", ex_bl, sa_bl, sb_bl),
+    add_row("Total Tax", ex_tt, sa_tt, sb_tt)
+  )
+  
+  # Add text rows (no calculations)
+  add_text_row <- function(metric, ex, sa, sb) {
+    data.frame(
+      Metric = metric,
+      Existing = ex,
+      Scenario_A = sa,
+      Scenario_B = sb,
+      Change_A_vs_Existing = NA_real_,
+      Change_B_vs_Existing = NA_real_,
+      Pct_Change_A = NA_real_,
+      Pct_Change_B = NA_real_,
+      stringsAsFactors = FALSE
+    )
+  }
+  
+  comparison <- rbind(
+    comparison,
+    add_text_row(
+      "Property Types",
+      get_txt(existing_prop, "property_types"),
+      get_txt(scenario_a_prop, "property_types"),
+      get_txt(scenario_b_prop, "property_types")
+    ),
+    add_text_row(
+      "Has Business",
+      get_bool(existing_prop, "has_business"),
+      get_bool(scenario_a_prop, "has_business"),
+      get_bool(scenario_b_prop, "has_business")
+    ),
+    add_text_row(
+      "Business Categories",
+      get_txt(existing_prop, "business_categories"),
+      get_txt(scenario_a_prop, "business_categories"),
+      get_txt(scenario_b_prop, "business_categories")
+    ),
+    add_text_row(
+      "Business Subcategories",
+      get_txt(existing_prop, "business_subcategories"),
+      get_txt(scenario_a_prop, "business_subcategories"),
+      get_txt(scenario_b_prop, "business_subcategories")
+    )
+  )
   
   return(comparison)
 }
