@@ -508,6 +508,172 @@ module5_server <- function(id, revenue_data) {
         DT::formatRound(columns = names(winners_losers)[grepl("avg_", names(winners_losers))],
                         digits = 2)
     })
+
+    # ============================================
+    # Property Lookup Feature (Scenario Comparison Tab)
+    # ============================================
+
+    # Reactive value to store property search results
+    values$property_comparison <- NULL
+    values$property_found <- FALSE
+
+    # Handle property search button
+    observeEvent(input$search_property, {
+      req(input$property_id_search)
+      req(revenue_data())
+      
+      # Clean up the property ID (remove whitespace)
+      property_id <- trimws(input$property_id_search)
+      
+      if (property_id == "") {
+        showNotification("Please enter a property ID", type = "warning")
+        values$property_found <- FALSE
+        return()
+      }
+      
+      # Search for the property across all scenarios
+      withProgress(message = 'Searching for property...', value = 0.5, {
+        comparison_result <- compare_property_across_scenarios(
+          revenue_data(), 
+          property_id
+        )
+        
+        if (is.null(comparison_result)) {
+          showNotification(
+            paste("Property ID", property_id, "not found in any scenario"),
+            type = "error",
+            duration = 5
+          )
+          values$property_found <- FALSE
+          values$property_comparison <- NULL
+        } else {
+          values$property_comparison <- comparison_result
+          values$property_found <- TRUE
+          showNotification(
+            paste("Property", property_id, "found!"),
+            type = "message",
+            duration = 3
+          )
+        }
+      })
+    })
+
+    # Output: property found flag (for conditional panel)
+    output$property_found <- reactive({
+      values$property_found
+    })
+    outputOptions(output, "property_found", suspendWhenHidden = FALSE)
+
+    # Render the comparison table
+    output$property_comparison_table <- DT::renderDataTable({
+      req(values$property_comparison)
+      
+      values$property_comparison %>%
+        DT::datatable(
+          options = list(
+            pageLength = 10,
+            dom = 't',  # Just the table, no search/pagination needed
+            scrollX = TRUE
+          ),
+          rownames = FALSE
+        ) %>%
+        DT::formatCurrency(
+          columns = c('Existing', 'Scenario_A', 'Scenario_B', 
+                      'Change_A_vs_Existing', 'Change_B_vs_Existing'),
+          currency = "",
+          interval = 3,
+          mark = ","
+        ) %>%
+        DT::formatRound(
+          columns = c('Pct_Change_A', 'Pct_Change_B'),
+          digits = 1
+        ) %>%
+        DT::formatStyle(
+          'Change_A_vs_Existing',
+          backgroundColor = DT::styleInterval(
+            cuts = c(-0.01, 0.01),
+            values = c('#ffcccc', '#ffffff', '#ccffcc')
+          )
+        ) %>%
+        DT::formatStyle(
+          'Change_B_vs_Existing',
+          backgroundColor = DT::styleInterval(
+            cuts = c(-0.01, 0.01),
+            values = c('#ffcccc', '#ffffff', '#ccffcc')
+          )
+        )
+    })
+
+    # Plot: Property value comparison
+    output$property_value_comparison <- renderPlot({
+      req(values$property_comparison)
+      
+      # Extract value data
+      value_data <- values$property_comparison %>%
+        dplyr::filter(Metric == "Total Property Value") %>%
+        tidyr::pivot_longer(
+          cols = c(Existing, Scenario_A, Scenario_B),
+          names_to = "Scenario",
+          values_to = "Value"
+        ) %>%
+        dplyr::mutate(
+          Value = as.numeric(Value),
+          Scenario = factor(Scenario, levels = c("Existing", "Scenario_A", "Scenario_B"))
+        )
+      
+      ggplot(value_data, aes(x = Scenario, y = Value, fill = Scenario)) +
+        geom_bar(stat = "identity", alpha = 0.8) +
+        geom_text(aes(label = scales::comma(Value)), 
+                  vjust = -0.5, size = 4) +
+        scale_fill_manual(values = c("Existing" = "#95a5a6",
+                                      "Scenario_A" = "#3498db",
+                                      "Scenario_B" = "#e74c3c")) +
+        scale_y_continuous(labels = scales::comma) +
+        labs(title = "Total Property Value Comparison",
+            x = NULL,
+            y = "Property Value") +
+        theme_minimal() +
+        theme(
+          plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+          legend.position = "none"
+        )
+    })
+
+    # Plot: Tax comparison
+    output$property_tax_comparison <- renderPlot({
+      req(values$property_comparison)
+      
+      # Extract tax data
+      tax_data <- values$property_comparison %>%
+        dplyr::filter(Metric %in% c("Total Property Tax", "Total Business License")) %>%
+        tidyr::pivot_longer(
+          cols = c(Existing, Scenario_A, Scenario_B),
+          names_to = "Scenario",
+          values_to = "Value"
+        ) %>%
+        dplyr::mutate(
+          Value = as.numeric(Value),
+          Scenario = factor(Scenario, levels = c("Existing", "Scenario_A", "Scenario_B"))
+        )
+      
+      ggplot(tax_data, aes(x = Scenario, y = Value, fill = Metric)) +
+        geom_bar(stat = "identity", position = "stack", alpha = 0.8) +
+        scale_fill_manual(
+          values = c("Total Property Tax" = "#3498db",
+                    "Total Business License" = "#e74c3c"),
+          labels = c("Property Tax", "Business License")
+        ) +
+        scale_y_continuous(labels = scales::comma) +
+        labs(title = "Total Tax Comparison (Property + Business)",
+            x = NULL,
+            y = "Tax Amount",
+            fill = "Tax Type") +
+        theme_minimal() +
+        theme(
+          plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+          legend.position = "bottom"
+        )
+    })
     
     # Tab 6: Special Cases
     output$multi_type_properties <- DT::renderDataTable({

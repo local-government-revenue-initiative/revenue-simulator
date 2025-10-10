@@ -338,3 +338,103 @@ analyze_winners_losers <- function(comparison_data) {
       values_fill = 0
     )
 }
+
+# Function to compare a specific property across scenarios
+compare_property_across_scenarios <- function(revenue_data, property_id) {
+  
+  # Get aggregated data from all scenarios
+  existing_agg <- aggregate_properties(revenue_data$existing)
+  scenario_a_agg <- aggregate_properties(revenue_data$scenario_a)
+  scenario_b_agg <- aggregate_properties(revenue_data$scenario_b)
+  
+  # Filter to the specific property
+  existing_prop <- existing_agg %>%
+    dplyr::filter(id_property == property_id)
+  
+  scenario_a_prop <- scenario_a_agg %>%
+    dplyr::filter(id_property == property_id)
+  
+  scenario_b_prop <- scenario_b_agg %>%
+    dplyr::filter(id_property == property_id)
+  
+  # Check if property exists in any scenario
+  if (nrow(existing_prop) == 0 && nrow(scenario_a_prop) == 0 && nrow(scenario_b_prop) == 0) {
+    return(NULL)  # Property not found
+  }
+  
+  # Create comparison dataframe
+  comparison <- data.frame(
+    Metric = c("Total Property Value", 
+               "Total Property Tax", 
+               "Total Business License", 
+               "Total Tax",
+               "Property Types",
+               "Has Business",
+               "Business Categories"),
+    
+    Existing = c(
+      if(nrow(existing_prop) > 0) existing_prop$total_property_value else NA,
+      if(nrow(existing_prop) > 0) existing_prop$total_property_tax else NA,
+      if(nrow(existing_prop) > 0) existing_prop$total_business_license else NA,
+      if(nrow(existing_prop) > 0) existing_prop$total_tax else NA,
+      if(nrow(existing_prop) > 0) existing_prop$property_types else "N/A",
+      if(nrow(existing_prop) > 0) as.character(existing_prop$has_business) else "N/A",
+      if(nrow(existing_prop) > 0) existing_prop$business_categories else "N/A"
+    ),
+    
+    Scenario_A = c(
+      if(nrow(scenario_a_prop) > 0) scenario_a_prop$total_property_value else NA,
+      if(nrow(scenario_a_prop) > 0) scenario_a_prop$total_property_tax else NA,
+      if(nrow(scenario_a_prop) > 0) scenario_a_prop$total_business_license else NA,
+      if(nrow(scenario_a_prop) > 0) scenario_a_prop$total_tax else NA,
+      if(nrow(scenario_a_prop) > 0) scenario_a_prop$property_types else "N/A",
+      if(nrow(scenario_a_prop) > 0) as.character(scenario_a_prop$has_business) else "N/A",
+      if(nrow(scenario_a_prop) > 0) scenario_a_prop$business_categories else "N/A"
+    ),
+    
+    Scenario_B = c(
+      if(nrow(scenario_b_prop) > 0) scenario_b_prop$total_property_value else NA,
+      if(nrow(scenario_b_prop) > 0) scenario_b_prop$total_property_tax else NA,
+      if(nrow(scenario_b_prop) > 0) scenario_b_prop$total_business_license else NA,
+      if(nrow(scenario_b_prop) > 0) scenario_b_prop$total_tax else NA,
+      if(nrow(scenario_b_prop) > 0) scenario_b_prop$property_types else "N/A",
+      if(nrow(scenario_b_prop) > 0) as.character(scenario_b_prop$has_business) else "N/A",
+      if(nrow(scenario_b_prop) > 0) scenario_b_prop$business_categories else "N/A"
+    ),
+    
+    stringsAsFactors = FALSE
+  )
+  
+  # Calculate changes vs Existing
+  comparison <- comparison %>%
+    dplyr::mutate(
+      Change_A_vs_Existing = dplyr::case_when(
+        Metric %in% c("Total Property Value", "Total Property Tax", 
+                      "Total Business License", "Total Tax") ~ 
+          as.numeric(Scenario_A) - as.numeric(Existing),
+        TRUE ~ NA_real_
+      ),
+      Change_B_vs_Existing = dplyr::case_when(
+        Metric %in% c("Total Property Value", "Total Property Tax", 
+                      "Total Business License", "Total Tax") ~ 
+          as.numeric(Scenario_B) - as.numeric(Existing),
+        TRUE ~ NA_real_
+      ),
+      Pct_Change_A = dplyr::case_when(
+        Metric %in% c("Total Property Value", "Total Property Tax", 
+                      "Total Business License", "Total Tax") & 
+          as.numeric(Existing) > 0 ~ 
+          (Change_A_vs_Existing / as.numeric(Existing)) * 100,
+        TRUE ~ NA_real_
+      ),
+      Pct_Change_B = dplyr::case_when(
+        Metric %in% c("Total Property Value", "Total Property Tax", 
+                      "Total Business License", "Total Tax") & 
+          as.numeric(Existing) > 0 ~ 
+          (Change_B_vs_Existing / as.numeric(Existing)) * 100,
+        TRUE ~ NA_real_
+      )
+    )
+  
+  return(comparison)
+}

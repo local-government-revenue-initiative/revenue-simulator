@@ -237,9 +237,55 @@ module5_ui <- function(id) {
                     
                     # Tab 5: Scenario Comparison
                     tabPanel("Scenario Comparison",
-                             icon = icon("exchange-alt"),
-                             br(),
-                             
+                            icon = icon("exchange-alt"),
+                            br(),
+                            
+                            # Property Lookup Section
+                            fluidRow(
+                              box(
+                                title = "Individual Property Lookup",
+                                width = 12,
+                                status = "info",
+                                solidHeader = TRUE,
+                                collapsible = TRUE,
+                                
+                                p("Search for a specific property to compare its values and taxes across all three scenarios."),
+                                
+                                fluidRow(
+                                  column(4,
+                                          textInput(ns("property_id_search"), 
+                                                  "Enter Property ID:", 
+                                                  placeholder = "e.g., FCC1234567")),
+                                  column(2,
+                                          br(),
+                                          actionButton(ns("search_property"), 
+                                                      "Search", 
+                                                      icon = icon("search"),
+                                                      class = "btn-primary"))
+                                ),
+                                
+                                br(),
+                                
+                                # Results section (only shown after search)
+                                conditionalPanel(
+                                  condition = paste0("output['", ns("property_found"), "']"),
+                                  
+                                  h4("Property Tax Comparison Across Scenarios"),
+                                  DT::dataTableOutput(ns("property_comparison_table")),
+                                  
+                                  br(),
+                                  
+                                  fluidRow(
+                                    column(6,
+                                            plotOutput(ns("property_value_comparison"), height = "300px")),
+                                    column(6,
+                                            plotOutput(ns("property_tax_comparison"), height = "300px"))
+                                  )
+                                )
+                              )
+                            ),
+                              
+                            hr(),                             
                             #  fluidRow(
                             #    column(12,
                             #           h4("Change in Tax Burden: Selected Scenario vs Existing"),
@@ -278,7 +324,7 @@ module5_ui <- function(id) {
                             #           DT::dataTableOutput(ns("property_changes_table"))
                             #    )
                             #  )
-                    ),
+                    )
                     
                     # Tab 6: Special Cases
                     # tabPanel("Special Cases",
