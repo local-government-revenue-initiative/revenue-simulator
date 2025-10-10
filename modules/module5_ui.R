@@ -118,23 +118,25 @@ module5_ui <- function(id) {
                              icon = icon("percentage"),
                              br(),
                              
-                             fluidRow(
-                               column(12,
-                                      h4("Effective Tax Rate vs Property Value"),
-                                      p("Shows relationship between property value and effective tax rate. 
-                  Points above threshold line may be overtaxed."),
-                                      plotOutput(ns("effective_rate_scatter"), height = "500px")
-                               )
-                             ),
+                  #            fluidRow(
+                  #              column(12,
+                  #                     h4("Effective Tax Rate vs Property Value"),
+                  #                     p("Shows relationship between property value and effective tax rate. 
+                  # Points above threshold line may be overtaxed."),
+                  #                     plotOutput(ns("effective_rate_scatter"), height = "500px")
+                  #              )
+                  #            ),
                              
-                             br(),
+                  #            br(),
                              
-                             fluidRow(
-                               column(6,
-                                      h4("Distribution of Effective Tax Rates by Quantile"),
-                                      plotOutput(ns("effective_rate_boxplot"), height = "400px")
-                               ),
-                               column(6,
+                  #            fluidRow(
+                  #              column(6,
+                  #                     h4("Distribution of Effective Tax Rates by Quantile"),
+                  #                     plotOutput(ns("effective_rate_boxplot"), height = "400px")
+                  #              ),
+                  #            column(6,
+                            fluidRow(                  
+                               column(12,                                
                                       h4("Average Effective Tax Rate by Property Type"),
                                       plotOutput(ns("effective_rate_by_type"), height = "400px")
                                )
@@ -142,12 +144,12 @@ module5_ui <- function(id) {
                              
                              br(),
                              
-                             fluidRow(
-                               column(12,
-                                      h4("Effective Tax Rate Statistics"),
-                                      DT::dataTableOutput(ns("effective_rate_stats_table"))
-                               )
-                             )
+                            #  fluidRow(
+                            #    column(12,
+                            #           h4("Effective Tax Rate Statistics"),
+                            #           DT::dataTableOutput(ns("effective_rate_stats_table"))
+                            #    )
+                            #  )
                     ),
                     
                     # Tab 3: Overtaxation Analysis
@@ -155,14 +157,14 @@ module5_ui <- function(id) {
                              icon = icon("exclamation-triangle"),
                              br(),
                              
-                             fluidRow(
-                               column(12,
-                                      h4("Summary of Overtaxation Risk"),
-                                      infoBoxOutput(ns("overtax_summary_low_value")),
-                                      infoBoxOutput(ns("overtax_summary_business")),
-                                      infoBoxOutput(ns("overtax_summary_total"))
-                               )
-                             ),
+                            #  fluidRow(
+                            #    column(12,
+                            #           h4("Summary of Overtaxation Risk"),
+                            #           infoBoxOutput(ns("overtax_summary_low_value")),
+                            #           infoBoxOutput(ns("overtax_summary_business")),
+                            #           infoBoxOutput(ns("overtax_summary_total"))
+                            #    )
+                            #  ),
                              
                              br(),
                              
@@ -177,13 +179,14 @@ module5_ui <- function(id) {
                              br(),
                              
                              fluidRow(
-                               column(6,
+                              #  column(6,
+                               column(12,
                                       h4("Overtaxation by Value Quantile"),
                                       plotOutput(ns("overtax_by_quantile"), height = "400px")
-                               ),
-                               column(6,
-                                      h4("Risk Categories Distribution"),
-                                      plotOutput(ns("risk_categories_plot"), height = "400px")
+                              #  ),
+                              #  column(6,
+                              #         h4("Risk Categories Distribution"),
+                              #         plotOutput(ns("risk_categories_plot"), height = "400px")
                                )
                              ),
                              
@@ -198,207 +201,207 @@ module5_ui <- function(id) {
                     ),
                     
                     # Tab 4: Business Impact
-                    tabPanel("Business Impact",
-                             icon = icon("building"),
-                             br(),
+                    # tabPanel("Business Impact",
+                    #          icon = icon("building"),
+                    #          br(),
                              
-                             fluidRow(
-                               column(12,
-                                      h4("Tax Burden Comparison: Properties With vs Without Businesses"),
-                                      plotOutput(ns("business_comparison_plot"), height = "400px")
-                               )
-                             ),
+                    #          fluidRow(
+                    #            column(12,
+                    #                   h4("Tax Burden Comparison: Properties With vs Without Businesses"),
+                    #                   plotOutput(ns("business_comparison_plot"), height = "400px")
+                    #            )
+                    #          ),
                              
-                             br(),
+                    #          br(),
                              
-                             fluidRow(
-                               column(6,
-                                      h4("Business License Share of Total Tax"),
-                                      plotOutput(ns("business_share_plot"), height = "400px")
-                               ),
-                               column(6,
-                                      h4("Effective Rates by Business Status"),
-                                      plotOutput(ns("business_rates_boxplot"), height = "400px")
-                               )
-                             ),
+                    #          fluidRow(
+                    #            column(6,
+                    #                   h4("Business License Share of Total Tax"),
+                    #                   plotOutput(ns("business_share_plot"), height = "400px")
+                    #            ),
+                    #            column(6,
+                    #                   h4("Effective Rates by Business Status"),
+                    #                   plotOutput(ns("business_rates_boxplot"), height = "400px")
+                    #            )
+                    #          ),
                              
-                             br(),
+                    #          br(),
                              
-                             fluidRow(
-                               column(12,
-                                      h4("Business Property Analysis by Quantile"),
-                                      DT::dataTableOutput(ns("business_burden_table"))
-                               )
-                             )
-                    ),
+                    #          fluidRow(
+                    #            column(12,
+                    #                   h4("Business Property Analysis by Quantile"),
+                    #                   DT::dataTableOutput(ns("business_burden_table"))
+                    #            )
+                    #          )
+                    # ),
                     
                     # Tab 5: Scenario Comparison
                     tabPanel("Scenario Comparison",
                              icon = icon("exchange-alt"),
                              br(),
                              
-                             fluidRow(
-                               column(12,
-                                      h4("Change in Tax Burden: Selected Scenario vs Existing"),
-                                      plotOutput(ns("burden_change_waterfall"), height = "450px")
-                               )
-                             ),
+                            #  fluidRow(
+                            #    column(12,
+                            #           h4("Change in Tax Burden: Selected Scenario vs Existing"),
+                            #           plotOutput(ns("burden_change_waterfall"), height = "450px")
+                            #    )
+                            #  ),
                              
-                             br(),
+                            #  br(),
                              
-                             fluidRow(
-                               column(6,
-                                      h4("Winners and Losers by Quantile"),
-                                      DT::dataTableOutput(ns("winners_losers_table"))
-                               ),
-                               column(6,
-                                      h4("Distribution of Tax Changes"),
-                                      plotOutput(ns("tax_change_distribution"), height = "400px")
-                               )
-                             ),
+                            #  fluidRow(
+                            #    column(6,
+                            #           h4("Winners and Losers by Quantile"),
+                            #           DT::dataTableOutput(ns("winners_losers_table"))
+                            #    ),
+                            #    column(6,
+                            #           h4("Distribution of Tax Changes"),
+                            #           plotOutput(ns("tax_change_distribution"), height = "400px")
+                            #    )
+                            #  ),
                              
-                             br(),
+                            #  br(),
                              
-                             fluidRow(
-                               column(12,
-                                      h4("Revenue Impact by Property Type"),
-                                      plotOutput(ns("revenue_impact_plot"), height = "400px")
-                               )
-                             ),
+                            #  fluidRow(
+                            #    column(12,
+                            #           h4("Revenue Impact by Property Type"),
+                            #           plotOutput(ns("revenue_impact_plot"), height = "400px")
+                            #    )
+                            #  ),
                              
-                             br(),
+                            #  br(),
                              
-                             fluidRow(
-                               column(12,
-                                      h4("Property-Level Changes"),
-                                      p("Detailed view of tax changes for individual properties."),
-                                      DT::dataTableOutput(ns("property_changes_table"))
-                               )
-                             )
+                            #  fluidRow(
+                            #    column(12,
+                            #           h4("Property-Level Changes"),
+                            #           p("Detailed view of tax changes for individual properties."),
+                            #           DT::dataTableOutput(ns("property_changes_table"))
+                            #    )
+                            #  )
                     ),
                     
                     # Tab 6: Special Cases
-                    tabPanel("Special Cases",
-                             icon = icon("flag"),
-                             br(),
+                    # tabPanel("Special Cases",
+                    #          icon = icon("flag"),
+                    #          br(),
                              
-                             fluidRow(
-                               column(12,
-                                      h4("Multi-Type Properties Analysis"),
-                                      p("Properties that have multiple property types (e.g., both Commercial and Domestic)."),
-                                      DT::dataTableOutput(ns("multi_type_properties"))
-                               )
-                             ),
+                    #          fluidRow(
+                    #            column(12,
+                    #                   h4("Multi-Type Properties Analysis"),
+                    #                   p("Properties that have multiple property types (e.g., both Commercial and Domestic)."),
+                    #                   DT::dataTableOutput(ns("multi_type_properties"))
+                    #            )
+                    #          ),
                              
-                             br(),
+                    #          br(),
                              
-                             fluidRow(
-                               column(6,
-                                      h4("Tax Concentration Analysis"),
-                                      p("How much of total tax revenue comes from top taxpayers?"),
-                                      plotOutput(ns("tax_concentration_plot"), height = "400px")
-                               ),
-                               column(6,
-                                      h4("Concentration Metrics"),
-                                      verbatimTextOutput(ns("concentration_metrics"))
-                               )
-                             ),
+                    #          fluidRow(
+                    #            column(6,
+                    #                   h4("Tax Concentration Analysis"),
+                    #                   p("How much of total tax revenue comes from top taxpayers?"),
+                    #                   plotOutput(ns("tax_concentration_plot"), height = "400px")
+                    #            ),
+                    #            column(6,
+                    #                   h4("Concentration Metrics"),
+                    #                   verbatimTextOutput(ns("concentration_metrics"))
+                    #            )
+                    #          ),
                              
-                             br(),
+                    #          br(),
                              
-                             fluidRow(
-                               column(12,
-                                      h4("Top 20 Taxpayers"),
-                                      DT::dataTableOutput(ns("top_taxpayers_table"))
-                               )
-                             )
-                    ),
+                    #          fluidRow(
+                    #            column(12,
+                    #                   h4("Top 20 Taxpayers"),
+                    #                   DT::dataTableOutput(ns("top_taxpayers_table"))
+                    #            )
+                    #          )
+                    # ),
                     
                     # Tab 7: Export Report
-                    tabPanel("Export & Reports",
-                             icon = icon("download"),
-                             br(),
+                    # tabPanel("Export & Reports",
+                    #          icon = icon("download"),
+                    #          br(),
                              
-                             fluidRow(
-                               column(12,
-                                      h3("Export Options"),
-                                      br(),
+                    #          fluidRow(
+                    #            column(12,
+                    #                   h3("Export Options"),
+                    #                   br(),
                                       
-                                      wellPanel(
-                                        h4("Report Configuration"),
-                                        fluidRow(
-                                          column(4,
-                                                 checkboxGroupInput(ns("report_sections"),
-                                                                    "Include Sections:",
-                                                                    choices = list(
-                                                                      "Executive Summary" = "summary",
-                                                                      "Progressivity Analysis" = "progressivity",
-                                                                      "Effective Tax Rates" = "rates",
-                                                                      "Overtaxation Risk" = "overtax",
-                                                                      "Business Impact" = "business",
-                                                                      "Scenario Comparison" = "comparison",
-                                                                      "Special Cases" = "special"
-                                                                    ),
-                                                                    selected = c("summary", "progressivity", "overtax"))
-                                          ),
-                                          column(4,
-                                                 radioButtons(ns("report_format"),
-                                                              "Report Format:",
-                                                              choices = list(
-                                                                "PDF Report" = "pdf",
-                                                                "HTML Report" = "html",
-                                                                "Word Document" = "word"
-                                                              ),
-                                                              selected = "html")
-                                          ),
-                                          column(4,
-                                                 br(),
-                                                 actionButton(ns("generate_report"),
-                                                              "Generate Report",
-                                                              icon = icon("file-alt"),
-                                                              class = "btn-primary btn-lg")
-                                          )
-                                        )
-                                      ),
+                    #                   wellPanel(
+                    #                     h4("Report Configuration"),
+                    #                     fluidRow(
+                    #                       column(4,
+                    #                              checkboxGroupInput(ns("report_sections"),
+                    #                                                 "Include Sections:",
+                    #                                                 choices = list(
+                    #                                                   "Executive Summary" = "summary",
+                    #                                                   "Progressivity Analysis" = "progressivity",
+                    #                                                   "Effective Tax Rates" = "rates",
+                    #                                                   "Overtaxation Risk" = "overtax",
+                    #                                                   "Business Impact" = "business",
+                    #                                                   "Scenario Comparison" = "comparison",
+                    #                                                   "Special Cases" = "special"
+                    #                                                 ),
+                    #                                                 selected = c("summary", "progressivity", "overtax"))
+                    #                       ),
+                    #                       column(4,
+                    #                              radioButtons(ns("report_format"),
+                    #                                           "Report Format:",
+                    #                                           choices = list(
+                    #                                             "PDF Report" = "pdf",
+                    #                                             "HTML Report" = "html",
+                    #                                             "Word Document" = "word"
+                    #                                           ),
+                    #                                           selected = "html")
+                    #                       ),
+                    #                       column(4,
+                    #                              br(),
+                    #                              actionButton(ns("generate_report"),
+                    #                                           "Generate Report",
+                    #                                           icon = icon("file-alt"),
+                    #                                           class = "btn-primary btn-lg")
+                    #                       )
+                    #                     )
+                    #                   ),
                                       
-                                      br(),
+                    #                   br(),
                                       
-                                      wellPanel(
-                                        h4("Data Export"),
-                                        p("Download the complete analysis dataset in Excel format."),
-                                        fluidRow(
-                                          column(4,
-                                                 downloadButton(ns("download_excel_summary"),
-                                                                "Download Summary Tables",
-                                                                class = "btn-info")
-                                          ),
-                                          column(4,
-                                                 downloadButton(ns("download_excel_detailed"),
-                                                                "Download Detailed Data",
-                                                                class = "btn-info")
-                                          ),
-                                          column(4,
-                                                 downloadButton(ns("download_csv_all"),
-                                                                "Download All Data (CSV)",
-                                                                class = "btn-info")
-                                          )
-                                        )
-                                      ),
+                    #                   wellPanel(
+                    #                     h4("Data Export"),
+                    #                     p("Download the complete analysis dataset in Excel format."),
+                    #                     fluidRow(
+                    #                       column(4,
+                    #                              downloadButton(ns("download_excel_summary"),
+                    #                                             "Download Summary Tables",
+                    #                                             class = "btn-info")
+                    #                       ),
+                    #                       column(4,
+                    #                              downloadButton(ns("download_excel_detailed"),
+                    #                                             "Download Detailed Data",
+                    #                                             class = "btn-info")
+                    #                       ),
+                    #                       column(4,
+                    #                              downloadButton(ns("download_csv_all"),
+                    #                                             "Download All Data (CSV)",
+                    #                                             class = "btn-info")
+                    #                       )
+                    #                     )
+                    #                   ),
                                       
-                                      br(),
+                    #                   br(),
                                       
-                                      conditionalPanel(
-                                        condition = paste0("input['", ns("generate_report"), "'] > 0"),
-                                        wellPanel(
-                                          h4("Download Generated Report"),
-                                          downloadButton(ns("download_report"),
-                                                         "Download Report",
-                                                         class = "btn-success btn-lg")
-                                        )
-                                      )
-                               )
-                             )
-                    )
+                    #                   conditionalPanel(
+                    #                     condition = paste0("input['", ns("generate_report"), "'] > 0"),
+                    #                     wellPanel(
+                    #                       h4("Download Generated Report"),
+                    #                       downloadButton(ns("download_report"),
+                    #                                      "Download Report",
+                    #                                      class = "btn-success btn-lg")
+                    #                     )
+                    #                   )
+                    #            )
+                    #          )
+                    # )
         )
       )
     )
