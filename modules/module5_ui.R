@@ -255,7 +255,7 @@ module5_ui <- function(id) {
                                   column(4,
                                           textInput(ns("property_id_search"), 
                                                   "Enter Property ID:", 
-                                                  placeholder = "e.g., FCC1234567")),
+                                                  placeholder = "e.g., FCC0000033")),
                                   column(2,
                                           br(),
                                           actionButton(ns("search_property"), 
@@ -266,11 +266,15 @@ module5_ui <- function(id) {
                                 
                                 br(),
                                 
-                                # Results section (only shown after search)
                                 conditionalPanel(
                                   condition = paste0("output['", ns("property_found"), "']"),
                                   
-                                  h4("Property Tax Comparison Across Scenarios"),
+                                  h4("Property Characteristics"),
+                                  uiOutput(ns("property_info")),
+                                  
+                                  br(),
+                                  
+                                  h4("Tax Comparison Across Scenarios"),
                                   DT::dataTableOutput(ns("property_comparison_table")),
                                   
                                   br(),
@@ -284,6 +288,7 @@ module5_ui <- function(id) {
                                 )
                               )
                             ),
+
                               
                             hr(),                             
                             #  fluidRow(

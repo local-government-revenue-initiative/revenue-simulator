@@ -522,7 +522,6 @@ module5_server <- function(id, revenue_data) {
       req(input$property_id_search)
       req(revenue_data())
       
-      # Clean up the property ID (remove whitespace)
       property_id <- trimws(input$property_id_search)
       
       if (property_id == "") {
@@ -531,14 +530,10 @@ module5_server <- function(id, revenue_data) {
         return()
       }
       
-      # Search for the property across all scenarios
       withProgress(message = 'Searching for property...', value = 0.5, {
-        comparison_result <- compare_property_across_scenarios(
-          revenue_data(), 
-          property_id
-        )
+        result <- compare_property_across_scenarios(revenue_data(), property_id)
         
-        if (is.null(comparison_result)) {
+        if (is.null(result)) {
           showNotification(
             paste("Property ID", property_id, "not found in any scenario"),
             type = "error",
@@ -546,8 +541,10 @@ module5_server <- function(id, revenue_data) {
           )
           values$property_found <- FALSE
           values$property_comparison <- NULL
+          values$property_characteristics <- NULL
         } else {
-          values$property_comparison <- comparison_result
+          values$property_comparison <- result$comparison
+          values$property_characteristics <- result$characteristics
           values$property_found <- TRUE
           showNotification(
             paste("Property", property_id, "found!"),
@@ -558,13 +555,56 @@ module5_server <- function(id, revenue_data) {
       })
     })
 
-    # Output: property found flag (for conditional panel)
+    # Output: property found flag
     output$property_found <- reactive({
       values$property_found
     })
     outputOptions(output, "property_found", suspendWhenHidden = FALSE)
 
-    # Render the comparison table
+    # Render property characteristics
+    output$property_info <- renderUI({
+      req(values$property_characteristics)
+      char <- values$property_characteristics
+      
+      tagList(
+        div(class = "row",
+          div(class = "col-md-3",
+              div(class = "info-box bg-aqua",
+                  div(class = "info-box-content",
+                      span(class = "info-box-text", "Property Types"),
+                      span(class = "info-box-number", char$property_types)
+                  )
+              )
+          ),
+          div(class = "col-md-3",
+              div(class = "info-box bg-green",
+                  div(class = "info-box-content",
+                      span(class = "info-box-text", "Has Business"),
+                      span(class = "info-box-number", char$has_business)
+                  )
+              )
+          ),
+          div(class = "col-md-3",
+              div(class = "info-box bg-yellow",
+                  div(class = "info-box-content",
+                      span(class = "info-box-text", "Business Categories"),
+                      span(class = "info-box-number", char$business_categories)
+                  )
+              )
+          ),
+          div(class = "col-md-3",
+              div(class = "info-box bg-red",
+                  div(class = "info-box-content",
+                      span(class = "info-box-text", "Business Subcategories"),
+                      span(class = "info-box-number", char$business_subcategories)
+                  )
+              )
+          )
+        )
+      )
+    })
+
+    # Render the comparison table (UNCHANGED)
     output$property_comparison_table <- DT::renderDataTable({
       req(values$property_comparison)
       
@@ -572,7 +612,7 @@ module5_server <- function(id, revenue_data) {
         DT::datatable(
           options = list(
             pageLength = 10,
-            dom = 't',  # Just the table, no search/pagination needed
+            dom = 't',
             scrollX = TRUE
           ),
           rownames = FALSE
