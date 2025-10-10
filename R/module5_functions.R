@@ -362,82 +362,66 @@ compare_property_across_scenarios <- function(revenue_data, property_id) {
     return(NULL)  # Property not found
   }
   
-  # DEBUGGING: Check what's actually in the data
-  cat("\n=== DEBUGGING PROPERTY FIELDS ===\n")
-  if (nrow(existing_prop) > 0) {
-    cat("Existing property fields:\n")
-    cat("  property_types:", existing_prop$property_types, "\n")
-    cat("  has_business:", existing_prop$has_business, "\n")
-    cat("  business_categories:", existing_prop$business_categories, "\n")
-    cat("  business_subcategories:", existing_prop$business_subcategories, "\n")
-  }
-  cat("==================================\n\n")
-  
   # Helper function to safely extract text fields
   get_text_field <- function(prop_df, field_name) {
-    if (nrow(prop_df) == 0) {
-      return("Not in scenario")
-    }
-    
-    # Check if field exists
-    if (!field_name %in% names(prop_df)) {
-      return("Field not found")
-    }
+    if (nrow(prop_df) == 0) return("Not in scenario")
+    if (!field_name %in% names(prop_df)) return("Field not found")
     
     value <- prop_df[[field_name]]
-    
-    # Debug output
-    cat(sprintf("  get_text_field(%s): value='%s', is.na=%s, nchar=%d\n", 
-                field_name, value, is.na(value), nchar(as.character(value))))
-    
-    # Handle various empty cases
-    if (is.na(value)) return("None")
-    if (value == "") return("None")
-    if (value == "NA") return("None")
-    if (length(value) == 0) return("None")
+    if (is.na(value) || value == "" || value == "NA") return("None")
     
     return(as.character(value))
   }
   
   # Helper function to safely extract logical fields
   get_logical_field <- function(prop_df, field_name) {
-    if (nrow(prop_df) == 0) {
-      return("Not in scenario")
-    }
-    
-    # Check if field exists
-    if (!field_name %in% names(prop_df)) {
-      return("Field not found")
-    }
+    if (nrow(prop_df) == 0) return("Not in scenario")
+    if (!field_name %in% names(prop_df)) return("Field not found")
     
     value <- prop_df[[field_name]]
-    
-    # Debug output
-    cat(sprintf("  get_logical_field(%s): value=%s, is.na=%s\n", 
-                field_name, value, is.na(value)))
-    
     if (is.na(value)) return("Unknown")
     return(ifelse(value, "Yes", "No"))
   }
   
-  # Create comparison dataframe
-  cat("\n=== CREATING COMPARISON TABLE ===\n")
-  
-  comparison <- data.frame(
+  # PART 1: Create numeric rows
+  numeric_comparison <- data.frame(
     Metric = c("Total Property Value", 
                "Total Property Tax", 
                "Total Business License", 
-               "Total Tax",
-               "Property Types",
+               "Total Tax"),
+    
+    Existing = as.character(c(
+      if(nrow(existing_prop) > 0) existing_prop$total_property_value else NA,
+      if(nrow(existing_prop) > 0) existing_prop$total_property_tax else NA,
+      if(nrow(existing_prop) > 0) existing_prop$total_business_license else NA,
+      if(nrow(existing_prop) > 0) existing_prop$total_tax else NA
+    )),
+    
+    Scenario_A = as.character(c(
+      if(nrow(scenario_a_prop) > 0) scenario_a_prop$total_property_value else NA,
+      if(nrow(scenario_a_prop) > 0) scenario_a_prop$total_property_tax else NA,
+      if(nrow(scenario_a_prop) > 0) scenario_a_prop$total_business_license else NA,
+      if(nrow(scenario_a_prop) > 0) scenario_a_prop$total_tax else NA
+    )),
+    
+    Scenario_B = as.character(c(
+      if(nrow(scenario_b_prop) > 0) scenario_b_prop$total_property_value else NA,
+      if(nrow(scenario_b_prop) > 0) scenario_b_prop$total_property_tax else NA,
+      if(nrow(scenario_b_prop) > 0) scenario_b_prop$total_business_license else NA,
+      if(nrow(scenario_b_prop) > 0) scenario_b_prop$total_tax else NA
+    )),
+    
+    stringsAsFactors = FALSE
+  )
+  
+  # PART 2: Create text rows
+  text_comparison <- data.frame(
+    Metric = c("Property Types",
                "Has Business",
                "Business Categories",
                "Business Subcategories"),
     
     Existing = c(
-      if(nrow(existing_prop) > 0) existing_prop$total_property_value else NA,
-      if(nrow(existing_prop) > 0) existing_prop$total_property_tax else NA,
-      if(nrow(existing_prop) > 0) existing_prop$total_business_license else NA,
-      if(nrow(existing_prop) > 0) existing_prop$total_tax else NA,
       get_text_field(existing_prop, "property_types"),
       get_logical_field(existing_prop, "has_business"),
       get_text_field(existing_prop, "business_categories"),
@@ -445,10 +429,6 @@ compare_property_across_scenarios <- function(revenue_data, property_id) {
     ),
     
     Scenario_A = c(
-      if(nrow(scenario_a_prop) > 0) scenario_a_prop$total_property_value else NA,
-      if(nrow(scenario_a_prop) > 0) scenario_a_prop$total_property_tax else NA,
-      if(nrow(scenario_a_prop) > 0) scenario_a_prop$total_business_license else NA,
-      if(nrow(scenario_a_prop) > 0) scenario_a_prop$total_tax else NA,
       get_text_field(scenario_a_prop, "property_types"),
       get_logical_field(scenario_a_prop, "has_business"),
       get_text_field(scenario_a_prop, "business_categories"),
@@ -456,10 +436,6 @@ compare_property_across_scenarios <- function(revenue_data, property_id) {
     ),
     
     Scenario_B = c(
-      if(nrow(scenario_b_prop) > 0) scenario_b_prop$total_property_value else NA,
-      if(nrow(scenario_b_prop) > 0) scenario_b_prop$total_property_tax else NA,
-      if(nrow(scenario_b_prop) > 0) scenario_b_prop$total_business_license else NA,
-      if(nrow(scenario_b_prop) > 0) scenario_b_prop$total_tax else NA,
       get_text_field(scenario_b_prop, "property_types"),
       get_logical_field(scenario_b_prop, "has_business"),
       get_text_field(scenario_b_prop, "business_categories"),
@@ -469,9 +445,10 @@ compare_property_across_scenarios <- function(revenue_data, property_id) {
     stringsAsFactors = FALSE
   )
   
-  cat("=================================\n\n")
+  # Combine both parts
+  comparison <- dplyr::bind_rows(numeric_comparison, text_comparison)
   
-  # Calculate changes vs Existing
+  # Calculate changes vs Existing (only for numeric rows)
   comparison <- comparison %>%
     dplyr::mutate(
       Change_A_vs_Existing = dplyr::case_when(
