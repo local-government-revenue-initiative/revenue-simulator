@@ -340,7 +340,6 @@ analyze_winners_losers <- function(comparison_data) {
 }
 
 # Function to compare a specific property across scenarios
-# Function to compare a specific property across scenarios
 compare_property_across_scenarios <- function(revenue_data, property_id) {
   
   # Get aggregated data from all scenarios
@@ -396,17 +395,6 @@ compare_property_across_scenarios <- function(revenue_data, property_id) {
   sb_bl <- get_num(scenario_b_prop, "total_business_license")
   sb_tt <- get_num(scenario_b_prop, "total_tax")
   
-  # Calculate changes
-  calc_change <- function(new_val, old_val) {
-    if (is.na(new_val) || is.na(old_val)) return(NA_real_)
-    return(new_val - old_val)
-  }
-  
-  calc_pct <- function(change, old_val) {
-    if (is.na(change) || is.na(old_val) || old_val == 0) return(NA_real_)
-    return((change / old_val) * 100)
-  }
-  
   # Build comparison table (NUMERIC ONLY)
   comparison <- data.frame(
     Metric = c("Total Property Value", "Total Property Tax", 
@@ -417,11 +405,30 @@ compare_property_across_scenarios <- function(revenue_data, property_id) {
     stringsAsFactors = FALSE
   )
   
-  # Calculate changes
-  comparison$Change_A_vs_Existing <- calc_change(comparison$Scenario_A, comparison$Existing)
-  comparison$Change_B_vs_Existing <- calc_change(comparison$Scenario_B, comparison$Existing)
-  comparison$Pct_Change_A <- calc_pct(comparison$Change_A_vs_Existing, comparison$Existing)
-  comparison$Pct_Change_B <- calc_pct(comparison$Change_B_vs_Existing, comparison$Existing)
+  # Calculate changes using vectorized operations
+  comparison$Change_A_vs_Existing <- ifelse(
+    is.na(comparison$Scenario_A) | is.na(comparison$Existing),
+    NA_real_,
+    comparison$Scenario_A - comparison$Existing
+  )
+  
+  comparison$Change_B_vs_Existing <- ifelse(
+    is.na(comparison$Scenario_B) | is.na(comparison$Existing),
+    NA_real_,
+    comparison$Scenario_B - comparison$Existing
+  )
+  
+  comparison$Pct_Change_A <- ifelse(
+    is.na(comparison$Change_A_vs_Existing) | is.na(comparison$Existing) | comparison$Existing == 0,
+    NA_real_,
+    (comparison$Change_A_vs_Existing / comparison$Existing) * 100
+  )
+  
+  comparison$Pct_Change_B <- ifelse(
+    is.na(comparison$Change_B_vs_Existing) | is.na(comparison$Existing) | comparison$Existing == 0,
+    NA_real_,
+    (comparison$Change_B_vs_Existing / comparison$Existing) * 100
+  )
   
   # Get property characteristics (same across scenarios)
   get_safe <- function(df, field) {
@@ -433,9 +440,19 @@ compare_property_across_scenarios <- function(revenue_data, property_id) {
     return("None")
   }
   
+  get_bool <- function(df, field) {
+    if (nrow(df) > 0 && field %in% names(df)) {
+      val <- df[[field]]
+      if (is.logical(val) && !is.na(val)) {
+        return(ifelse(val, "Yes", "No"))
+      }
+    }
+    return("Unknown")
+  }
+  
   characteristics <- list(
     property_types = get_safe(prop_data, "property_types"),
-    has_business = ifelse(get_safe(prop_data, "has_business") == "TRUE", "Yes", "No"),
+    has_business = get_bool(prop_data, "has_business"),
     business_categories = get_safe(prop_data, "business_categories"),
     business_subcategories = get_safe(prop_data, "business_subcategories")
   )
