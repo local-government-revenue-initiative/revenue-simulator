@@ -88,6 +88,7 @@ module6_ui <- function(id) {
               "Dock Industrial" = "dock_industrial",
               "Kissy Industrial Area" = "kissy_industrial_area",
               "Kissy Texaco Terminal" = "kissy_texaco_terminal_area",
+              "Grassfield Industrial Area" = "grassfield_industrial_area",
               "Wellington Industrial Estate" = "wellington_industrial_estate"
             )
           ),

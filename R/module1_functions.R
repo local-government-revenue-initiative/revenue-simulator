@@ -198,6 +198,7 @@ categorical_cols <- c("property_type", "commercial_type", "institutional_type",
                       "aberdeen_lumley_tourist", "juba_levuma_tourist",
                       "commercial_corridor", "cbd", "dock_industrial",
                       "kissy_industrial_area", "kissy_texaco_terminal_area",
+                      "grassfield_industrial_area",
                       "wellington_industrial_estate", "hazardous_zones",
                       "informal_settlements", 
                       # Ward columns

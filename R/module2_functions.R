@@ -140,6 +140,8 @@ get_default_weights <- function() {
       kissy_industrial_area_No = 0,
       kissy_texaco_terminal_area_Yes = 0,
       kissy_texaco_terminal_area_No = 0,
+      grassfield_industrial_area_Yes = 0,  
+      grassfield_industrial_area_No = 0,         
       wellington_industrial_estate_Yes = 0,
       wellington_industrial_estate_No = 0,
       hazardous_zones_Yes = 0,
@@ -235,6 +237,7 @@ group_feature_columns <- function(column_names) {
   location_zones <- c("aberdeen_lumley_tourist", "juba_levuma_tourist",
                      "buffered_commercial_corridors", "cbd", "dock_industrial",
                      "kissy_industrial_area", "kissy_texaco_terminal_area",
+                     "grassfield_industrial_area",
                      "wellington_industrial_estate", "hazardous_zones",
                      "informal_settlements")
   
@@ -289,6 +292,7 @@ get_all_feature_columns <- function(column_names) {
   location_zones <- c("aberdeen_lumley_tourist", "juba_levuma_tourist",
                      "buffered_commercial_corridors", "cbd", "dock_industrial",
                      "kissy_industrial_area", "kissy_texaco_terminal_area",
+                     "grassfield_industrial_area",
                      "wellington_industrial_estate", "hazardous_zones",
                      "informal_settlements")
   

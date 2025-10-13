@@ -11,8 +11,8 @@ id = '0199a044-03ef-4e3c-f8b7-f291894b69c0'
 dashboard_url = 'https://connect.posit.cloud/local-government-revenue-initiative/content/0199a044-03ef-4e3c-f8b7-f291894b69c0'
 direct_url = 'https://0199a044-03ef-4e3c-f8b7-f291894b69c0.share.connect.posit.cloud'
 logs_url = 'https://connect.posit.cloud/local-government-revenue-initiative/content/0199a044-03ef-4e3c-f8b7-f291894b69c0/history'
-deployed_at = '2025-10-10T00:51:20Z'
-bundle_id = '0199cb99-be95-1aa3-18c6-226ef82d0e7d'
+deployed_at = '2025-10-10T12:15:27Z'
+bundle_id = '0199ce0c-132e-0931-6d58-e314b1c0cdbf'
 files = [
   '.gitignore',
   '.posit/publish/deployments/deployment-LMM1.toml',
