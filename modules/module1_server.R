@@ -100,6 +100,7 @@ module1_server <- function(id) {
                             "aberdeen_lumley_tourist", "juba_levuma_tourist",
                             "buffered_commercial_corridors", "cbd", "dock_industrial",
                             "kissy_industrial_area", "kissy_texaco_terminal_area",
+                            "grassfield_industrial_area",
                             "wellington_industrial_estate", "hazardous_zones",
                             "informal_settlements",
                             # Ward columns
