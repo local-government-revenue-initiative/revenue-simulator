@@ -250,7 +250,7 @@ merge_datasets <- function(property_data, payment_data, business_data,
     properties_with_businesses <- unique(business_data[[business_id_col]])
     
     # Step 3: Split the data
-    # Properties that don't have any businesses at all - keep as is
+    # Properties that don't have any businesses at all - keep them as is
     props_without_businesses <- merged_with_priority %>%
       filter(!(!!sym(property_id_col) %in% properties_with_businesses)) %>%
       select(-property_row_id, -type_priority)
