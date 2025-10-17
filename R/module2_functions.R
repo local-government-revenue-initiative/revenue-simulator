@@ -232,7 +232,7 @@ group_feature_columns <- function(column_names) {
                          "environmental_hazard", "old_environmental_hazard",
                          "main_road_high_visibility", 
                          "informal_settlement", "old_informal_settlement",
-                         "commercial_corridor", "old_commercial_corridor")
+                         "old_commercial_corridor")
   
   location_zones <- c("aberdeen_lumley_tourist", "juba_levuma_tourist",
                      "buffered_commercial_corridors", "cbd", "dock_industrial",
@@ -287,7 +287,7 @@ get_all_feature_columns <- function(column_names) {
                          "environmental_hazard", "old_environmental_hazard",
                          "main_road_high_visibility", 
                          "informal_settlement", "old_informal_settlement",
-                         "commercial_corridor", "old_commercial_corridor")
+                         "old_commercial_corridor")
   
   location_zones <- c("aberdeen_lumley_tourist", "juba_levuma_tourist",
                      "buffered_commercial_corridors", "cbd", "dock_industrial",

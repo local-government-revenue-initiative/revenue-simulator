@@ -2,7 +2,7 @@
 '$schema' = 'https://cdn.posit.co/publisher/schemas/posit-publishing-record-schema-v3.json'
 server_type = 'connect_cloud'
 server_url = 'https://connect.posit.cloud'
-client_version = '1.22.0'
+client_version = '1.23.12'
 created_at = ''
 dismissed_at = ''
 type = 'r-shiny'
@@ -11,8 +11,8 @@ id = '0199a044-03ef-4e3c-f8b7-f291894b69c0'
 dashboard_url = 'https://connect.posit.cloud/local-government-revenue-initiative/content/0199a044-03ef-4e3c-f8b7-f291894b69c0'
 direct_url = 'https://0199a044-03ef-4e3c-f8b7-f291894b69c0.share.connect.posit.cloud'
 logs_url = 'https://connect.posit.cloud/local-government-revenue-initiative/content/0199a044-03ef-4e3c-f8b7-f291894b69c0/history'
-deployed_at = '2025-10-10T12:15:27Z'
-bundle_id = '0199ce0c-132e-0931-6d58-e314b1c0cdbf'
+deployed_at = '2025-10-15T17:43:44Z'
+bundle_id = '0199e8f8-7dbf-c2d7-72c5-f452544ac46a'
 files = [
   '.gitignore',
   '.posit/publish/deployments/deployment-LMM1.toml',
@@ -32,6 +32,7 @@ files = [
   'gis_layers/buffered_commercial_corridors.gpkg',
   'gis_layers/cbd.gpkg',
   'gis_layers/dock_industrial.gpkg',
+  'gis_layers/grassfield_industrial_area.gpkg',
   'gis_layers/hazardous_zones.gpkg',
   'gis_layers/informal_settlements.gpkg',
   'gis_layers/juba_levuma_tourist.gpkg',
