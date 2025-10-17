@@ -150,7 +150,6 @@ observe({
         values$feature_columns$property_characteristics,
         values$ward_columns
       )
-      )
       
       for (feat in all_features) {
         # Sanitize the feature name for use in input IDs
@@ -198,6 +197,7 @@ observe({
         values$feature_columns$structure_features,
         values$feature_columns$utility_features,
         values$feature_columns$location_features,
+        values$feature_columns$location_zones,        
         values$feature_columns$property_characteristics,
         values$ward_columns
       )
