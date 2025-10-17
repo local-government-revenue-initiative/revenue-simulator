@@ -95,6 +95,7 @@ observe({
         values$feature_columns$structure_features,
         values$feature_columns$utility_features,
         values$feature_columns$location_features,
+        values$feature_columns$location_zones,
         values$feature_columns$property_characteristics,
         values$ward_columns
       )
@@ -145,8 +146,10 @@ observe({
         values$feature_columns$structure_features,
         values$feature_columns$utility_features,
         values$feature_columns$location_features,
+        values$feature_columns$location_zones,
         values$feature_columns$property_characteristics,
         values$ward_columns
+      )
       )
       
       for (feat in all_features) {
@@ -856,6 +859,7 @@ for (feat in all_features) {
         all_features <- c(values$feature_columns$structure_features,
                           values$feature_columns$utility_features,
                           values$feature_columns$location_features,
+                          values$feature_columns$location_zones,
                           values$feature_columns$property_characteristics,
                           values$ward_columns)
         
@@ -871,7 +875,8 @@ for (feat in all_features) {
             # Set _na variables to weight 0
             config$feature_weights[[feat]] <- 0
           } else {
-            input_id <- paste0("weight_", feat, "_", scenario)
+            feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
+            input_id <- paste0("weight_", feat_safe, "_", scenario)
             if (!is.null(input[[input_id]])) {
               config$feature_weights[[feat]] <- input[[input_id]]
             }
