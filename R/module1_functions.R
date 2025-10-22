@@ -349,9 +349,10 @@ process_property_data <- function(df, column_mapping) {
     "grassfield_industrial_area",
     "wellington_industrial_estate",
     "hazardous_zones",
-    "informal_settlements"
+    "informal_settlements",
     # Ward columns
-    # "ward_number", "ward_rank"
+    "ward_number"
+    # "ward_rank"
   )
 
   # Filter to only categorical columns that exist

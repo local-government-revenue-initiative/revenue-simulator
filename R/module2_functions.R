@@ -295,7 +295,7 @@ group_feature_columns <- function(column_names) {
       visible_columns
     )],
     ward_features = visible_columns[grepl(
-      "^ward_number_[0-9]",
+      "^ward_number_[0-9]+",
       visible_columns
     )]
   )
