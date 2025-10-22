@@ -893,15 +893,22 @@ module2_server <- function(id, processed_data) {
             tagList(
               h5("Commercial Types"),
               lapply(values$commercial_type_columns, function(struct) {
-                # Get default value
-                default_val <- config$structure_weights[[struct]] %||%
+                # CRITICAL FIX: Normalize the structure name for config lookup
+                # Data column may have spaces: "commercial_type_Golf Clubhouse"
+                # Config key has underscores: "commercial_type_Golf_Clubhouse"
+                struct_normalized <- gsub(" ", "_", struct)
+
+                # Get default value using NORMALIZED key
+                default_val <- config$structure_weights[[
+                  struct_normalized
+                ]] %||%
                   values$defaults$structure_weights[[struct]] %||%
                   0
 
                 # Clean up the display name
                 display_name <- gsub("commercial_type_", "", struct)
 
-                # CRITICAL FIX: Sanitize the struct name for use in input IDs
+                # Sanitize the struct name for use in input IDs
                 struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
 
                 fluidRow(
@@ -927,15 +934,20 @@ module2_server <- function(id, processed_data) {
             tagList(
               h5("Institutional Types"),
               lapply(values$institutional_type_columns, function(struct) {
-                # Get default value
-                default_val <- config$structure_weights[[struct]] %||%
+                # CRITICAL FIX: Normalize the structure name for config lookup
+                struct_normalized <- gsub(" ", "_", struct)
+
+                # Get default value using NORMALIZED key
+                default_val <- config$structure_weights[[
+                  struct_normalized
+                ]] %||%
                   values$defaults$structure_weights[[struct]] %||%
                   0
 
                 # Clean up the display name
                 display_name <- gsub("institutional_type_", "", struct)
 
-                # CRITICAL FIX: Sanitize the struct name for use in input IDs
+                # Sanitize the struct name for use in input IDs
                 struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
 
                 fluidRow(
