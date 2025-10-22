@@ -294,7 +294,10 @@ group_feature_columns <- function(column_names) {
       paste0("^(", paste(property_characteristics, collapse = "|"), ")_"),
       visible_columns
     )],
-    ward_features = character(0)
+    ward_features = visible_columns[grepl(
+      "^ward_number_[0-9]",
+      visible_columns
+    )]
   )
 
   return(grouped)

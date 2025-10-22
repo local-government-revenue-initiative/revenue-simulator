@@ -75,7 +75,8 @@ module2_server <- function(id, processed_data) {
       ]
 
       values$ward_columns <- feature_cols[
-        grepl("^ward_", feature_cols) & !grepl("(_na|_NA)$", feature_cols)
+        grepl("^ward_number_[0-9]", feature_cols) &
+          !grepl("(_na|_NA)$", feature_cols)
       ]
     })
 
