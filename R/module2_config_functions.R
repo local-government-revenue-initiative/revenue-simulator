@@ -137,6 +137,12 @@ apply_module2_config <- function(
   institutional_type_columns,
   ward_columns
 ) {
+  cat("\n========================================\n")
+  cat("APPLYING MODULE 2 CONFIGURATION\n")
+  cat("========================================\n")
+  cat("Scenario:", scenario_suffix, "\n")
+  cat("Timestamp:", as.character(config$timestamp), "\n\n")
+
   # Update base parameters
   updateNumericInput(
     session,
@@ -154,15 +160,24 @@ apply_module2_config <- function(
     value = config$area_weight
   )
 
+  cat("✓ Base parameters updated\n")
+  cat("  Base value:", config$base_value, "\n")
+  cat("  Inflation:", config$inflation, "\n")
+  cat("  Area weight:", config$area_weight, "\n\n")
+
   # Update all feature weights (including location_zones)
   all_features <- c(
     feature_columns$structure_features,
     feature_columns$utility_features,
     feature_columns$location_features,
-    feature_columns$location_zones, # Include location zones
+    feature_columns$location_zones, # FIXED: Include location zones
     feature_columns$property_characteristics,
     ward_columns
   )
+
+  cat("Feature weights to apply:", length(config$feature_weights), "\n")
+  feature_applied <- 0
+  feature_skipped <- 0
 
   for (feat in all_features) {
     if (!is.null(config$feature_weights[[feat]])) {
@@ -173,38 +188,102 @@ apply_module2_config <- function(
         input_id,
         value = config$feature_weights[[feat]]
       )
+      feature_applied <- feature_applied + 1
+    } else {
+      feature_skipped <- feature_skipped + 1
     }
   }
 
+  cat("✓ Feature weights updated:", feature_applied, "\n")
+  if (feature_skipped > 0) {
+    cat("  (Skipped", feature_skipped, "features not in config)\n")
+  }
+
   # ============================================================================
-  # FIXED: Update structure type weights with flexible name matching
+  # DEBUGGED: Update structure type weights with detailed logging
   # ============================================================================
+  cat("\n--- STRUCTURE TYPE WEIGHTS ---\n")
+
   all_structures <- c(commercial_type_columns, institutional_type_columns)
 
-  # Track how many weights we successfully apply
+  cat("Commercial columns available:", length(commercial_type_columns), "\n")
+  cat(
+    "Institutional columns available:",
+    length(institutional_type_columns),
+    "\n"
+  )
+  cat("Total structure columns to update:", length(all_structures), "\n")
+  cat(
+    "Structure weights in config:",
+    length(config$structure_type_weights),
+    "\n\n"
+  )
+
+  # Debug: Show first few structure columns
+  if (length(all_structures) > 0) {
+    cat("First 5 structure columns from data:\n")
+    for (i in 1:min(5, length(all_structures))) {
+      cat(sprintf("  %d. '%s'\n", i, all_structures[i]))
+    }
+    cat("\n")
+  } else {
+    cat("⚠️  WARNING: No structure columns found!\n")
+    cat(
+      "   Check that commercial_type_columns and institutional_type_columns are populated\n\n"
+    )
+  }
+
+  # Debug: Show first few config keys
+  config_keys <- names(config$structure_type_weights)
+  if (length(config_keys) > 0) {
+    cat("First 5 structure weights from config:\n")
+    for (i in 1:min(5, length(config_keys))) {
+      cat(sprintf(
+        "  %d. '%s' = %s\n",
+        i,
+        config_keys[i],
+        config$structure_type_weights[[config_keys[i]]]
+      ))
+    }
+    cat("\n")
+  }
+
   applied_count <- 0
-  missing_count <- 0
-  missing_structures <- character()
+  skipped_count <- 0
+  skipped_list <- character()
+
+  # Special debug for Gym
+  gym_in_columns <- "commercial_type_Gym" %in% all_structures
+  gym_in_config <- !is.null(config$structure_type_weights[[
+    "commercial_type_Gym"
+  ]])
+
+  cat("🔍 GYM DEBUG:\n")
+  cat("  Gym in data columns?:", ifelse(gym_in_columns, "✓ YES", "✗ NO"), "\n")
+  cat("  Gym in config?:", ifelse(gym_in_config, "✓ YES", "✗ NO"), "\n")
+  if (gym_in_config) {
+    cat(
+      "  Gym value in config:",
+      config$structure_type_weights[["commercial_type_Gym"]],
+      "\n"
+    )
+  }
+  cat("\n")
 
   for (struct in all_structures) {
-    # Strategy 1: Try exact match with column name (e.g., "commercial_type_Bank")
+    # Strategy 1: Try exact match
     weight_value <- config$structure_type_weights[[struct]]
 
-    # Strategy 2: If not found, try with spaces instead of underscores
-    # (e.g., try "commercial_type Car Dealership" for "commercial_type_Car_Dealership")
+    # Strategy 2: Try with spaces instead of underscores
     if (is.null(weight_value)) {
       struct_with_spaces <- gsub("_", " ", struct)
       weight_value <- config$structure_type_weights[[struct_with_spaces]]
     }
 
-    # Strategy 3: If still not found, manually search config keys by converting
-    # spaces to underscores (handles older JSON files with inconsistent naming)
+    # Strategy 3: Manual search with sanitization
     if (is.null(weight_value)) {
-      for (config_key in names(config$structure_type_weights)) {
-        # Sanitize the config key by replacing spaces with underscores
+      for (config_key in config_keys) {
         config_key_sanitized <- gsub(" ", "_", config_key)
-
-        # Check if this matches our column name
         if (config_key_sanitized == struct) {
           weight_value <- config$structure_type_weights[[config_key]]
           break
@@ -212,13 +291,20 @@ apply_module2_config <- function(
       }
     }
 
-    # If we successfully found a weight value, update the corresponding UI input
+    # Apply if found
     if (!is.null(weight_value)) {
-      # Sanitize struct name for use in input ID (replace special chars with _)
       struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
       input_id <- paste0("weight_", struct_safe, "_", scenario_suffix)
 
-      # Update the numeric input in the UI
+      # Debug specific cases
+      if (struct == "commercial_type_Gym") {
+        cat("🎯 UPDATING GYM:\n")
+        cat("  Struct:", struct, "\n")
+        cat("  Struct safe:", struct_safe, "\n")
+        cat("  Input ID:", input_id, "\n")
+        cat("  Value:", weight_value, "\n")
+      }
+
       updateNumericInput(
         session,
         input_id,
@@ -227,38 +313,32 @@ apply_module2_config <- function(
 
       applied_count <- applied_count + 1
     } else {
-      # Track structures that couldn't be matched (for debugging)
-      missing_count <- missing_count + 1
-      missing_structures <- c(missing_structures, struct)
+      skipped_count <- skipped_count + 1
+      if (skipped_count <= 5) {
+        skipped_list <- c(skipped_list, struct)
+      }
     }
   }
 
-  # Log summary of what was applied
-  message(paste("Configuration applied for scenario:", scenario_suffix))
-  message(paste("  - Base value:", config$base_value))
-  message(paste(
-    "  - Feature weights available:",
-    length(config$feature_weights)
-  ))
-  message(paste(
-    "  - Structure type weights applied:",
+  cat(
+    "\n✓ Structure type weights applied:",
     applied_count,
     "/",
-    length(all_structures)
-  ))
+    length(all_structures),
+    "\n"
+  )
 
-  if (missing_count > 0 && missing_count <= 5) {
-    message(paste(
-      "  - Missing structures:",
-      paste(missing_structures, collapse = ", ")
-    ))
-  } else if (missing_count > 5) {
-    message(paste(
-      "  - Missing structures:",
-      missing_count,
-      "(first 5:",
-      paste(head(missing_structures, 5), collapse = ", "),
-      "...)"
-    ))
+  if (skipped_count > 0) {
+    cat("✗ Skipped", skipped_count, "structure types (not in config)\n")
+    if (length(skipped_list) > 0) {
+      cat("  First few skipped:\n")
+      for (s in skipped_list) {
+        cat(sprintf("    - '%s'\n", s))
+      }
+    }
   }
+
+  cat("\n========================================\n")
+  cat("CONFIGURATION APPLIED\n")
+  cat("========================================\n\n")
 }
