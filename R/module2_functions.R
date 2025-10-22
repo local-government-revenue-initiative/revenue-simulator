@@ -3,10 +3,10 @@
 # Function to get default weights for property features
 get_default_weights <- function() {
   list(
-    base_value = 231.859128,  # Default from Freetown
-    inflation = 0,  # 0% = no adjustment
-    area_weight = 0.5,  # Default from Freetown
-    
+    base_value = 231.859128, # Default from Freetown
+    inflation = 0, # 0% = no adjustment
+    area_weight = 0.5, # Default from Freetown
+
     # All feature weights in a single flat list for easy lookup
     feature_weights = list(
       # Wall material features
@@ -64,7 +64,7 @@ get_default_weights <- function() {
       street_lanes_One = 0,
       street_lanes_Two = 2,
       old_tourist_area_No = 0,
-      old_tourist_area_Yes  = 24,
+      old_tourist_area_Yes = 24,
       old_environmental_hazard_No = 0,
       old_environmental_hazard_Yes = -15,
       main_road_high_visibility_No = 0,
@@ -140,14 +140,14 @@ get_default_weights <- function() {
       kissy_industrial_area_No = 0,
       kissy_texaco_terminal_area_Yes = 0,
       kissy_texaco_terminal_area_No = 0,
-      grassfield_industrial_area_Yes = 0,  
-      grassfield_industrial_area_No = 0,         
+      grassfield_industrial_area_Yes = 0,
+      grassfield_industrial_area_No = 0,
       wellington_industrial_estate_Yes = 0,
       wellington_industrial_estate_No = 0,
       hazardous_zones_Yes = 0,
       hazardous_zones_No = 0,
       informal_settlements_Yes = 0,
-      informal_settlements_No = 0      
+      informal_settlements_No = 0
     ),
     # Structure type weights in a separate list
     structure_weights = list(
@@ -216,43 +216,87 @@ get_default_weights <- function() {
 # Function to group feature columns by category (excluding _na variables from UI)
 group_feature_columns <- function(column_names) {
   # Filter out variables ending in _na for UI display
-    visible_columns <- column_names[!grepl("(_na|_NA)$", column_names)]
-  
+  visible_columns <- column_names[!grepl("(_na|_NA)$", column_names)]
+
   # Remove the dummy variable suffixes to get base feature names
   base_features <- unique(gsub("_[^_]+$", "", visible_columns))
-  
-  structure_features <- c("wall_material", "wall_condition", "roof_material", 
-                          "roof_condition", "window_material", "has_veranda")
-  
-  utility_features <- c("has_water", "drainage", "air_conditioning",
-                        "has_security", "has_pool", "has_outbuilding")
-  
-  location_features <- c("street_access", "street_quality", "street_lanes", 
-                         "tourist_area", "old_tourist_area", 
-                         "environmental_hazard", "old_environmental_hazard",
-                         "main_road_high_visibility", 
-                         "informal_settlement", "old_informal_settlement",
-                         "old_commercial_corridor")
-  
-  location_zones <- c("aberdeen_lumley_tourist", "juba_levuma_tourist",
-                     "buffered_commercial_corridors", "cbd", "dock_industrial",
-                     "kissy_industrial_area", "kissy_texaco_terminal_area",
-                     "grassfield_industrial_area",
-                     "wellington_industrial_estate", "hazardous_zones",
-                     "informal_settlements")
-  
-  property_characteristics <- c("potential_to_build", "domestic_use_groundfloor")
-  
+
+  structure_features <- c(
+    "wall_material",
+    "wall_condition",
+    "roof_material",
+    "roof_condition",
+    "window_material",
+    "has_veranda"
+  )
+
+  utility_features <- c(
+    "has_water",
+    "drainage",
+    "air_conditioning",
+    "has_security",
+    "has_pool",
+    "has_outbuilding"
+  )
+
+  location_features <- c(
+    "street_access",
+    "street_quality",
+    "street_lanes",
+    "tourist_area",
+    "old_tourist_area",
+    "environmental_hazard",
+    "old_environmental_hazard",
+    "main_road_high_visibility",
+    "informal_settlement",
+    "old_informal_settlement",
+    "old_commercial_corridor"
+  )
+
+  location_zones <- c(
+    "aberdeen_lumley_tourist",
+    "juba_levuma_tourist",
+    "buffered_commercial_corridors",
+    "cbd",
+    "dock_industrial",
+    "kissy_industrial_area",
+    "kissy_texaco_terminal_area",
+    "grassfield_industrial_area",
+    "wellington_industrial_estate",
+    "hazardous_zones",
+    "informal_settlements"
+  )
+
+  property_characteristics <- c(
+    "potential_to_build",
+    "domestic_use_groundfloor"
+  )
+
   # Get actual column names for each category (excluding _na columns)
   grouped <- list(
-    structure_features = visible_columns[grepl(paste0("^(", paste(structure_features, collapse = "|"), ")_"), visible_columns)],
-    utility_features = visible_columns[grepl(paste0("^(", paste(utility_features, collapse = "|"), ")_"), visible_columns)],
-    location_features = visible_columns[grepl(paste0("^(", paste(location_features, collapse = "|"), ")_"), visible_columns)],
-    location_zones = visible_columns[grepl(paste0("^(", paste(location_zones, collapse = "|"), ")_"), visible_columns)],
-    property_characteristics = visible_columns[grepl(paste0("^(", paste(property_characteristics, collapse = "|"), ")_"), visible_columns)],
-    ward_features = visible_columns[grepl("^ward_(number|rank)_", visible_columns)]
+    structure_features = visible_columns[grepl(
+      paste0("^(", paste(structure_features, collapse = "|"), ")_"),
+      visible_columns
+    )],
+    utility_features = visible_columns[grepl(
+      paste0("^(", paste(utility_features, collapse = "|"), ")_"),
+      visible_columns
+    )],
+    location_features = visible_columns[grepl(
+      paste0("^(", paste(location_features, collapse = "|"), ")_"),
+      visible_columns
+    )],
+    location_zones = visible_columns[grepl(
+      paste0("^(", paste(location_zones, collapse = "|"), ")_"),
+      visible_columns
+    )],
+    property_characteristics = visible_columns[grepl(
+      paste0("^(", paste(property_characteristics, collapse = "|"), ")_"),
+      visible_columns
+    )],
+    ward_features = character(0)
   )
-  
+
   return(grouped)
 }
 
@@ -260,68 +304,127 @@ group_feature_columns <- function(column_names) {
 get_structure_type_columns <- function(column_names) {
   # Filter out variables ending in _na for UI display
   visible_columns <- column_names[!grepl("(_na|_NA)$", column_names)]
-  
+
   structure_types <- c("commercial_type", "institutional_type")
-  structure_cols <- visible_columns[grepl(paste0("^(", paste(structure_types, collapse = "|"), ")_"), visible_columns)]
+  structure_cols <- visible_columns[grepl(
+    paste0("^(", paste(structure_types, collapse = "|"), ")_"),
+    visible_columns
+  )]
   return(structure_cols)
 }
 
 # Function to get all feature columns including hidden _na variables (for calculations)
 get_all_feature_columns <- function(column_names) {
   # Remove non-feature columns
-  feature_cols <- column_names[!column_names %in% c("id_property", "coordinate_lat", 
-                                                    "coordinate_lng", "property_area",
-                                                    "made_payment", "business_name",
-                                                    "business_area", "business_category",
-                                                    "business_sub_category")]
-  
+  feature_cols <- column_names[
+    !column_names %in%
+      c(
+        "id_property",
+        "coordinate_lat",
+        "coordinate_lng",
+        "property_area",
+        "made_payment",
+        "business_name",
+        "business_area",
+        "business_category",
+        "business_sub_category"
+      )
+  ]
+
   # Group features by category (including _na variables)
-  structure_features <- c("wall_material", "wall_condition", "roof_material", 
-                          "roof_condition", "window_material", "has_veranda")
-  
-  utility_features <- c("has_water", "drainage", "air_conditioning",
-                        "has_security", "has_pool", "has_outbuilding")
-  
-  location_features <- c("street_access", "street_quality", "street_lanes", 
-                         "tourist_area", "old_tourist_area", 
-                         "environmental_hazard", "old_environmental_hazard",
-                         "main_road_high_visibility", 
-                         "informal_settlement", "old_informal_settlement",
-                         "old_commercial_corridor")
-  
-  location_zones <- c("aberdeen_lumley_tourist", "juba_levuma_tourist",
-                     "buffered_commercial_corridors", "cbd", "dock_industrial",
-                     "kissy_industrial_area", "kissy_texaco_terminal_area",
-                     "grassfield_industrial_area",
-                     "wellington_industrial_estate", "hazardous_zones",
-                     "informal_settlements")
-  
-  property_characteristics <- c("potential_to_build", "domestic_use_groundfloor")
-  
+  structure_features <- c(
+    "wall_material",
+    "wall_condition",
+    "roof_material",
+    "roof_condition",
+    "window_material",
+    "has_veranda"
+  )
+
+  utility_features <- c(
+    "has_water",
+    "drainage",
+    "air_conditioning",
+    "has_security",
+    "has_pool",
+    "has_outbuilding"
+  )
+
+  location_features <- c(
+    "street_access",
+    "street_quality",
+    "street_lanes",
+    "tourist_area",
+    "old_tourist_area",
+    "environmental_hazard",
+    "old_environmental_hazard",
+    "main_road_high_visibility",
+    "informal_settlement",
+    "old_informal_settlement",
+    "old_commercial_corridor"
+  )
+
+  location_zones <- c(
+    "aberdeen_lumley_tourist",
+    "juba_levuma_tourist",
+    "buffered_commercial_corridors",
+    "cbd",
+    "dock_industrial",
+    "kissy_industrial_area",
+    "kissy_texaco_terminal_area",
+    "grassfield_industrial_area",
+    "wellington_industrial_estate",
+    "hazardous_zones",
+    "informal_settlements"
+  )
+
+  property_characteristics <- c(
+    "potential_to_build",
+    "domestic_use_groundfloor"
+  )
+
   # Get all columns (including _na) for calculations
   all_features <- c(
-    feature_cols[grepl(paste0("^(", paste(structure_features, collapse = "|"), ")_"), feature_cols)],
-    feature_cols[grepl(paste0("^(", paste(utility_features, collapse = "|"), ")_"), feature_cols)],
-    feature_cols[grepl(paste0("^(", paste(location_features, collapse = "|"), ")_"), feature_cols)],
-    feature_cols[grepl(paste0("^(", paste(location_zones, collapse = "|"), ")_"), feature_cols)],
-    feature_cols[grepl(paste0("^(", paste(property_characteristics, collapse = "|"), ")_"), feature_cols)],
+    feature_cols[grepl(
+      paste0("^(", paste(structure_features, collapse = "|"), ")_"),
+      feature_cols
+    )],
+    feature_cols[grepl(
+      paste0("^(", paste(utility_features, collapse = "|"), ")_"),
+      feature_cols
+    )],
+    feature_cols[grepl(
+      paste0("^(", paste(location_features, collapse = "|"), ")_"),
+      feature_cols
+    )],
+    feature_cols[grepl(
+      paste0("^(", paste(location_zones, collapse = "|"), ")_"),
+      feature_cols
+    )],
+    feature_cols[grepl(
+      paste0("^(", paste(property_characteristics, collapse = "|"), ")_"),
+      feature_cols
+    )],
     feature_cols[grepl("^ward_", feature_cols)]
   )
-  
+
   return(all_features)
 }
 
 # Function to get all structure type columns including _na (for calculations)
 get_all_structure_columns <- function(column_names) {
   structure_types <- c("commercial_type", "institutional_type")
-  structure_cols <- column_names[grepl(paste0("^(", paste(structure_types, collapse = "|"), ")_"), column_names)]
+  structure_cols <- column_names[grepl(
+    paste0("^(", paste(structure_types, collapse = "|"), ")_"),
+    column_names
+  )]
   return(structure_cols)
 }
 
 # Function to validate weight ranges
 validate_weights <- function(weights, weight_type = "feature") {
   errors <- character()
-  
+
   if (weight_type == "feature") {
     # Feature weights typically range from -250 to 250
     for (name in names(weights)) {
@@ -341,7 +444,7 @@ validate_weights <- function(weights, weight_type = "feature") {
       }
     }
   }
-  
+
   return(errors)
 }
 
@@ -349,7 +452,7 @@ validate_weights <- function(weights, weight_type = "feature") {
 save_scenario_config <- function(scenario_name, config) {
   # Convert to JSON for storage
   config_json <- jsonlite::toJSON(config, auto_unbox = TRUE, pretty = TRUE)
-  
+
   # For now, just return the JSON
   # In production, you might save to a file or database
   return(config_json)
@@ -363,77 +466,109 @@ load_scenario_config <- function(scenario_json) {
 }
 
 # Function to calculate property value based on formula
-calculate_property_value <- function(base_value, inflation, area, area_weight, feature_weights, feature_values) {
+calculate_property_value <- function(
+  base_value,
+  inflation,
+  area,
+  area_weight,
+  feature_weights,
+  feature_values
+) {
   # Formula: property_value = base_value * inflation * area^area_weight * product((feature_weight/100 + 1)^feature)
-  
-  value <- base_value * inflation * (area ^ area_weight)
-  
+
+  value <- base_value * inflation * (area^area_weight)
+
   # Apply feature weights
   for (i in seq_along(feature_weights)) {
     if (!is.na(feature_values[i]) && feature_values[i] == 1) {
       value <- value * ((feature_weights[i] / 100) + 1)
     }
   }
-  
+
   return(value)
 }
 
 # Add this debugging version of calculate_property_value to your functions
-calculate_property_value_debug <- function(base_value, inflation, area, area_weight, 
-                                         feature_weights, feature_values, property_id = NULL) {
-  
+calculate_property_value_debug <- function(
+  base_value,
+  inflation,
+  area,
+  area_weight,
+  feature_weights,
+  feature_values,
+  property_id = NULL
+) {
   if (!is.null(property_id)) {
     cat("=== DEBUG for property:", property_id, "===\n")
   }
-  
+
   # Calculate inflation-adjusted base value
-  inflation_adjusted_base <- base_value * (1 + inflation/100)
+  inflation_adjusted_base <- base_value * (1 + inflation / 100)
   cat("Base value:", base_value, "\n")
   cat("Inflation:", inflation, "\n")
   cat("Inflation-adjusted base:", inflation_adjusted_base, "\n")
-  
+
   # Calculate area component
   area_component <- area^area_weight
   cat("Area:", area, "\n")
   cat("Area weight:", area_weight, "\n")
   cat("Area component (area^weight):", area_component, "\n")
-  
+
   # Feature weights calculation - this is the key part
   cat("\n--- Feature Analysis ---\n")
-  
+
   # Identify which features have non-zero weights
   non_zero_weights <- feature_weights[feature_weights != 0]
   cat("Features with non-zero weights:\n")
   print(non_zero_weights)
-  
+
   # Calculate individual feature contributions
   feature_contributions <- feature_weights * feature_values
   non_zero_contributions <- feature_contributions[feature_contributions != 0]
   cat("\nNon-zero feature contributions (weight * value):\n")
   print(non_zero_contributions)
-  
+
   # Product of all feature weights
   product_weights <- prod(feature_weights^feature_values)
   cat("\nProduct of all feature weights:", product_weights, "\n")
-  
+
   # Manual verification
   cat("\nManual calculation check:\n")
   manual_product <- 1
-  for(i in 1:length(feature_weights)) {
-    if(feature_values[i] != 0) {
+  for (i in 1:length(feature_weights)) {
+    if (feature_values[i] != 0) {
       contribution <- feature_weights[i]^feature_values[i]
       manual_product <- manual_product * contribution
-      cat("Feature", i, ": weight =", feature_weights[i], 
-          ", value =", feature_values[i], 
-          ", contribution =", contribution, 
-          ", running product =", manual_product, "\n")
+      cat(
+        "Feature",
+        i,
+        ": weight =",
+        feature_weights[i],
+        ", value =",
+        feature_values[i],
+        ", contribution =",
+        contribution,
+        ", running product =",
+        manual_product,
+        "\n"
+      )
     }
   }
-  
+
   # Final calculation
   property_value <- inflation_adjusted_base * area_component * product_weights
-  cat("\nFinal calculation:", inflation_adjusted_base, "*", area_component, "*", product_weights, "=", property_value, "\n")
+  cat(
+    "\nFinal calculation:",
+    inflation_adjusted_base,
+    "*",
+    area_component,
+    "*",
+    product_weights,
+    "=",
+    property_value,
+    "\n"
+  )
   cat("===========================\n\n")
-  
+
   return(property_value)
 }
