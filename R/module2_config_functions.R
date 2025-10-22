@@ -51,12 +51,16 @@ collect_module2_config <- function(
   all_structures <- c(commercial_type_columns, institutional_type_columns)
 
   for (struct in all_structures) {
-    struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
+    # Ensure struct name uses underscores, not spaces
+    struct_clean <- gsub(" ", "_", struct)
+
+    struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct_clean)
     input_id <- paste0("weight_", struct_safe, "_", scenario_suffix)
     weight_value <- input[[input_id]]
 
     if (!is.null(weight_value)) {
-      config$structure_type_weights[[struct]] <- weight_value
+      # Save with cleaned name (underscores)
+      config$structure_type_weights[[struct_clean]] <- weight_value
     }
   }
 
@@ -117,6 +121,7 @@ load_module2_config <- function(filepath) {
 }
 
 # Function to apply loaded configuration to UI inputs
+# Function to apply loaded configuration to UI inputs
 apply_module2_config <- function(
   session,
   config,
@@ -168,13 +173,35 @@ apply_module2_config <- function(
   all_structures <- c(commercial_type_columns, institutional_type_columns)
 
   for (struct in all_structures) {
-    if (!is.null(config$structure_type_weights[[struct]])) {
+    # Try to find the weight using the exact column name first
+    weight_value <- config$structure_type_weights[[struct]]
+
+    # If not found, try with spaces instead of underscores
+    if (is.null(weight_value)) {
+      struct_with_spaces <- gsub("_", " ", struct)
+      weight_value <- config$structure_type_weights[[struct_with_spaces]]
+    }
+
+    # If still not found, try sanitizing the struct name and checking again
+    if (is.null(weight_value)) {
+      # Convert spaces to underscores in all config keys and try again
+      for (config_key in names(config$structure_type_weights)) {
+        config_key_sanitized <- gsub(" ", "_", config_key)
+        if (config_key_sanitized == struct) {
+          weight_value <- config$structure_type_weights[[config_key]]
+          break
+        }
+      }
+    }
+
+    # If we found a weight value, update the input
+    if (!is.null(weight_value)) {
       struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
       input_id <- paste0("weight_", struct_safe, "_", scenario_suffix)
       updateNumericInput(
         session,
         input_id,
-        value = config$structure_type_weights[[struct]]
+        value = weight_value
       )
     }
   }
