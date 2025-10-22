@@ -227,19 +227,29 @@ module2_server <- function(id, processed_data) {
           # Load configuration from uploaded file
           config <- load_module2_config(input$upload_config_existing$datapath)
 
-          # Apply configuration to UI inputs
-          apply_module2_config(
-            session = session,
-            config = config,
-            scenario_suffix = "existing",
-            feature_columns = values$feature_columns,
-            commercial_type_columns = values$commercial_type_columns,
-            institutional_type_columns = values$institutional_type_columns,
-            ward_columns = values$ward_columns
+          # CRITICAL FIX: Update the config FIRST
+          # This allows the UI to regenerate with the new defaults
+          values$existing_config <- config
+
+          # Now update only the base parameters (not dynamically rendered)
+          updateNumericInput(
+            session,
+            "base_value_existing",
+            value = config$base_value
+          )
+          updateNumericInput(
+            session,
+            "inflation_existing",
+            value = config$inflation
+          )
+          updateNumericInput(
+            session,
+            "area_weight_existing",
+            value = config$area_weight
           )
 
-          # Update the stored configuration
-          values$existing_config <- config
+          # Feature weights and structure weights will be updated automatically
+          # when the UI regenerates with the new config defaults
 
           showNotification(
             paste0(
@@ -270,19 +280,25 @@ module2_server <- function(id, processed_data) {
           # Load configuration from uploaded file
           config <- load_module2_config(input$upload_config_scenario_a$datapath)
 
-          # Apply configuration to UI inputs
-          apply_module2_config(
-            session = session,
-            config = config,
-            scenario_suffix = "scenario_a",
-            feature_columns = values$feature_columns,
-            commercial_type_columns = values$commercial_type_columns,
-            institutional_type_columns = values$institutional_type_columns,
-            ward_columns = values$ward_columns
-          )
-
-          # Update the stored configuration
+          # CRITICAL FIX: Update the config FIRST
           values$scenario_a_config <- config
+
+          # Update only base parameters
+          updateNumericInput(
+            session,
+            "base_value_scenario_a",
+            value = config$base_value
+          )
+          updateNumericInput(
+            session,
+            "inflation_scenario_a",
+            value = config$inflation
+          )
+          updateNumericInput(
+            session,
+            "area_weight_scenario_a",
+            value = config$area_weight
+          )
 
           showNotification(
             paste0(
@@ -307,25 +323,29 @@ module2_server <- function(id, processed_data) {
     # Upload handler for Scenario B
     observeEvent(input$upload_config_scenario_b, {
       req(input$upload_config_scenario_b)
-
       tryCatch(
         {
-          # Load configuration from uploaded file
           config <- load_module2_config(input$upload_config_scenario_b$datapath)
 
-          # Apply configuration to UI inputs
-          apply_module2_config(
-            session = session,
-            config = config,
-            scenario_suffix = "scenario_b",
-            feature_columns = values$feature_columns,
-            commercial_type_columns = values$commercial_type_columns,
-            institutional_type_columns = values$institutional_type_columns,
-            ward_columns = values$ward_columns
-          )
-
-          # Update the stored configuration
+          # FIX: Update config FIRST - triggers UI regeneration with new defaults
           values$scenario_b_config <- config
+
+          # Only update base parameters (not dynamically rendered)
+          updateNumericInput(
+            session,
+            "base_value_scenario_b",
+            value = config$base_value
+          )
+          updateNumericInput(
+            session,
+            "inflation_scenario_b",
+            value = config$inflation
+          )
+          updateNumericInput(
+            session,
+            "area_weight_scenario_b",
+            value = config$area_weight
+          )
 
           showNotification(
             paste0(
