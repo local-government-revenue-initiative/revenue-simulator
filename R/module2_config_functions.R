@@ -120,6 +120,8 @@ load_module2_config <- function(filepath) {
       config <- jsonlite::fromJSON(config_json, simplifyVector = FALSE)
 
       # Validate it's a Module 2 config
+      # This check ensures that the loaded configuration file is intended for Module 2,
+      # preventing accidental loading of incompatible or incorrect configuration files.
       if (is.null(config$module) || config$module != "module2") {
         stop("This is not a valid Module 2 configuration file")
       }
@@ -192,27 +194,29 @@ apply_module2_config <- function(
   all_structures <- c(commercial_type_columns, institutional_type_columns)
 
   for (struct in all_structures) {
-    # Strategy 1: Try exact match first (for columns already using underscores)
-    weight_value <- config$structure_type_weights[[struct]]
+    # The data column might have spaces: "commercial_type_Golf Clubhouse"
+    # The config key has underscores: "commercial_type_Golf_Clubhouse"
+    # We need to convert the data column name to match the config format
 
-    # Strategy 2: Convert spaces to underscores in the data column name
-    # This is the KEY FIX: 'commercial_type_Car Dealership' → 'commercial_type_Car_Dealership'
+    # PRIMARY STRATEGY: Convert spaces to underscores to match config keys
+    struct_normalized <- gsub(" ", "_", struct)
+    weight_value <- config$structure_type_weights[[struct_normalized]]
+
+    # FALLBACK 1: Try exact match (if column already uses underscores)
     if (is.null(weight_value)) {
-      struct_normalized <- gsub(" ", "_", struct)
-      weight_value <- config$structure_type_weights[[struct_normalized]]
+      weight_value <- config$structure_type_weights[[struct]]
     }
 
-    # Strategy 3: Try reverse (for backward compatibility with old configs that have spaces)
+    # FALLBACK 2: Try with spaces (for old configs)
     if (is.null(weight_value)) {
-      struct_with_spaces <- gsub("_", " ", struct)
+      struct_with_spaces <- gsub("_", " ", struct_normalized)
       weight_value <- config$structure_type_weights[[struct_with_spaces]]
     }
 
-    # Apply if found
+    # Apply the weight if found
     if (!is.null(weight_value)) {
-      # Sanitize struct name for use in input ID
       struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
-      struct_safe <- gsub("_+", "_", struct_safe) # Replace multiple underscores
+      struct_safe <- gsub("_+", "_", struct_safe)
 
       input_id <- paste0("weight_", struct_safe, "_", scenario_suffix)
 

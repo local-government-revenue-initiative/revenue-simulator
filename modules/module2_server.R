@@ -227,29 +227,19 @@ module2_server <- function(id, processed_data) {
           # Load configuration from uploaded file
           config <- load_module2_config(input$upload_config_existing$datapath)
 
-          # CRITICAL FIX: Update the config FIRST
-          # This allows the UI to regenerate with the new defaults
+          # Update the config
           values$existing_config <- config
 
-          # Now update only the base parameters (not dynamically rendered)
-          updateNumericInput(
-            session,
-            "base_value_existing",
-            value = config$base_value
+          # Apply ALL configuration values to inputs
+          apply_module2_config(
+            session = session,
+            config = config,
+            scenario_suffix = "existing",
+            feature_columns = values$feature_columns,
+            commercial_type_columns = values$commercial_type_columns,
+            institutional_type_columns = values$institutional_type_columns,
+            ward_columns = values$ward_columns
           )
-          updateNumericInput(
-            session,
-            "inflation_existing",
-            value = config$inflation
-          )
-          updateNumericInput(
-            session,
-            "area_weight_existing",
-            value = config$area_weight
-          )
-
-          # Feature weights and structure weights will be updated automatically
-          # when the UI regenerates with the new config defaults
 
           showNotification(
             paste0(
@@ -280,24 +270,18 @@ module2_server <- function(id, processed_data) {
           # Load configuration from uploaded file
           config <- load_module2_config(input$upload_config_scenario_a$datapath)
 
-          # CRITICAL FIX: Update the config FIRST
+          # Update the config
           values$scenario_a_config <- config
 
-          # Update only base parameters
-          updateNumericInput(
-            session,
-            "base_value_scenario_a",
-            value = config$base_value
-          )
-          updateNumericInput(
-            session,
-            "inflation_scenario_a",
-            value = config$inflation
-          )
-          updateNumericInput(
-            session,
-            "area_weight_scenario_a",
-            value = config$area_weight
+          # Apply ALL configuration values to inputs
+          apply_module2_config(
+            session = session,
+            config = config,
+            scenario_suffix = "scenario_a",
+            feature_columns = values$feature_columns,
+            commercial_type_columns = values$commercial_type_columns,
+            institutional_type_columns = values$institutional_type_columns,
+            ward_columns = values$ward_columns
           )
 
           showNotification(
@@ -323,28 +307,24 @@ module2_server <- function(id, processed_data) {
     # Upload handler for Scenario B
     observeEvent(input$upload_config_scenario_b, {
       req(input$upload_config_scenario_b)
+
       tryCatch(
         {
+          # Load configuration from uploaded file
           config <- load_module2_config(input$upload_config_scenario_b$datapath)
 
-          # FIX: Update config FIRST - triggers UI regeneration with new defaults
+          # Update the config
           values$scenario_b_config <- config
 
-          # Only update base parameters (not dynamically rendered)
-          updateNumericInput(
-            session,
-            "base_value_scenario_b",
-            value = config$base_value
-          )
-          updateNumericInput(
-            session,
-            "inflation_scenario_b",
-            value = config$inflation
-          )
-          updateNumericInput(
-            session,
-            "area_weight_scenario_b",
-            value = config$area_weight
+          # Apply ALL configuration values to inputs
+          apply_module2_config(
+            session = session,
+            config = config,
+            scenario_suffix = "scenario_b",
+            feature_columns = values$feature_columns,
+            commercial_type_columns = values$commercial_type_columns,
+            institutional_type_columns = values$institutional_type_columns,
+            ward_columns = values$ward_columns
           )
 
           showNotification(
@@ -366,7 +346,6 @@ module2_server <- function(id, processed_data) {
         }
       )
     })
-
     # Calculate inflation-adjusted base values
     output$adjusted_base_existing <- renderText({
       base <- input$base_value_existing
@@ -893,13 +872,11 @@ module2_server <- function(id, processed_data) {
             tagList(
               h5("Commercial Types"),
               lapply(values$commercial_type_columns, function(struct) {
-                # CRITICAL FIX: Normalize the structure name for config lookup
-                # Data column may have spaces: "commercial_type_Golf Clubhouse"
-                # Config key has underscores: "commercial_type_Golf_Clubhouse"
+                # Normalize the structure name for config lookup
                 struct_normalized <- gsub(" ", "_", struct)
 
-                # Get default value using NORMALIZED key
-                default_val <- config$structure_weights[[
+                # FIXED: Look in structure_type_weights instead of structure_weights
+                default_val <- config$structure_type_weights[[
                   struct_normalized
                 ]] %||%
                   values$defaults$structure_weights[[struct]] %||%
@@ -934,11 +911,11 @@ module2_server <- function(id, processed_data) {
             tagList(
               h5("Institutional Types"),
               lapply(values$institutional_type_columns, function(struct) {
-                # CRITICAL FIX: Normalize the structure name for config lookup
+                # Normalize the structure name for config lookup
                 struct_normalized <- gsub(" ", "_", struct)
 
-                # Get default value using NORMALIZED key
-                default_val <- config$structure_weights[[
+                # FIXED: Look in structure_type_weights instead of structure_weights
+                default_val <- config$structure_type_weights[[
                   struct_normalized
                 ]] %||%
                   values$defaults$structure_weights[[struct]] %||%
