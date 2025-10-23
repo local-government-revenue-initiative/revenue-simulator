@@ -1635,6 +1635,15 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
         )
       }
 
+      # ============================================================
+      # KEY FIX: Log-transform BEFORE density calculation
+      # ============================================================
+      # This ensures density is calculated on the log scale
+      # and will be properly normalized
+
+      combined_density_data <- combined_density_data %>%
+        dplyr::mutate(log_total_tax = log10(total_tax))
+
       # Create scenario labels with proper ordering
       combined_density_data$scenario <- factor(
         combined_density_data$scenario,
@@ -1729,25 +1738,24 @@ module4_server <- function(id, processed_data, property_configs, tax_configs) {
         "No filters applied"
       }
 
-      # Define colors - distinct and professional
+      # Define colors
       scenario_colors <- c(
-        "Existing" = "#2C3E50", # Dark blue-gray
-        "Scenario A" = "#27AE60", # Green
-        "Scenario B" = "#E67E22" # Orange
+        "Existing" = "#2C3E50",
+        "Scenario A" = "#27AE60",
+        "Scenario B" = "#E67E22"
       )
 
       # ============================================================
-      # CLEAN LINE-BASED DENSITY PLOT
+      # CORRECTED PLOT: Use log_total_tax for density calculation
       # ============================================================
-      # NO FILL - just lines for maximum clarity!
+      # Now density is calculated on the log scale, so values will be normalized
 
-      ggplot(combined_density_data, aes(x = total_tax, color = scenario)) +
-        geom_density(size = 1.5) + # Lines only, no fill! Thick lines for visibility
+      ggplot(combined_density_data, aes(x = log_total_tax, color = scenario)) +
+        geom_density(size = 1.5) +
         scale_color_manual(values = scenario_colors) +
         scale_x_continuous(
-          labels = scales::comma,
-          trans = "log10",
-          breaks = c(100, 1000, 10000, 100000, 1000000)
+          labels = function(x) scales::comma(10^x), # Convert log back to original for labels
+          breaks = log10(c(100, 1000, 10000, 100000, 1000000))
         ) +
         labs(
           title = "Distribution of Total Tax Owed by Scenario",
