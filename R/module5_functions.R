@@ -523,6 +523,9 @@ compare_property_across_scenarios <- function(revenue_data, property_id) {
   ))
 }
 
+# FIXED VERSION of find_quantile_representatives function
+# Replace the existing function in R/module5_functions.R with this corrected version
+
 #' Find representative properties by quantile with filtering
 #'
 #' This function finds the median property (by value) from each quantile
@@ -543,13 +546,53 @@ find_quantile_representatives <- function(
   filter_license_categories = "All",
   filter_license_subcategories = "All"
 ) {
-  # Aggregate all three scenarios
-  existing_agg <- aggregate_properties(revenue_data$existing)
-  scenario_a_agg <- aggregate_properties(revenue_data$scenario_a)
-  scenario_b_agg <- aggregate_properties(revenue_data$scenario_b)
+  # FILTER RAW DATA BEFORE AGGREGATION
+  # This is the key fix - we need to filter before aggregating
 
-  # Apply filters to existing scenario
-  filtered_data <- existing_agg
+  filtered_existing <- revenue_data$existing
+
+  # Helper function to get structure type from data
+  get_structure_type <- function(data_row) {
+    # Check commercial types
+    commercial_cols <- names(data_row)[grepl(
+      "^commercial_type_",
+      names(data_row)
+    )]
+    for (col in commercial_cols) {
+      if (!is.na(data_row[[col]]) && data_row[[col]] == 1) {
+        type_name <- gsub("commercial_type_", "", col)
+        if (type_name != "NA") {
+          return(type_name)
+        }
+      }
+    }
+
+    # Check institutional types
+    institutional_cols <- names(data_row)[grepl(
+      "^institutional_type_",
+      names(data_row)
+    )]
+    for (col in institutional_cols) {
+      if (!is.na(data_row[[col]]) && data_row[[col]] == 1) {
+        type_name <- gsub("institutional_type_", "", col)
+        if (type_name != "NA") {
+          return(type_name)
+        }
+      }
+    }
+
+    return("None")
+  }
+
+  # Add structure_type column if not present
+  if (!"structure_type" %in% names(filtered_existing)) {
+    filtered_existing$structure_type <- sapply(
+      1:nrow(filtered_existing),
+      function(i) {
+        get_structure_type(filtered_existing[i, ])
+      }
+    )
+  }
 
   # Structure type filter
   if (
@@ -557,7 +600,7 @@ find_quantile_representatives <- function(
       length(filter_structure_types) > 0 &&
       !"All" %in% filter_structure_types
   ) {
-    filtered_data <- filtered_data %>%
+    filtered_existing <- filtered_existing %>%
       dplyr::filter(structure_type %in% filter_structure_types)
   }
 
@@ -567,8 +610,10 @@ find_quantile_representatives <- function(
       length(filter_property_types) > 0 &&
       !"All" %in% filter_property_types
   ) {
-    filtered_data <- filtered_data %>%
-      dplyr::filter(property_type %in% filter_property_types)
+    if ("property_type" %in% names(filtered_existing)) {
+      filtered_existing <- filtered_existing %>%
+        dplyr::filter(property_type %in% filter_property_types)
+    }
   }
 
   # License category filter
@@ -577,12 +622,13 @@ find_quantile_representatives <- function(
       length(filter_license_categories) > 0 &&
       !"All" %in% filter_license_categories
   ) {
-    filtered_data <- filtered_data %>%
-      dplyr::filter(
-        business_category %in%
-          filter_license_categories |
-          is.na(business_category)
-      )
+    if ("business_category" %in% names(filtered_existing)) {
+      filtered_existing <- filtered_existing %>%
+        dplyr::filter(
+          is.na(business_category) |
+            business_category %in% filter_license_categories
+        )
+    }
   }
 
   # License subcategory filter
@@ -591,26 +637,38 @@ find_quantile_representatives <- function(
       length(filter_license_subcategories) > 0 &&
       !"All" %in% filter_license_subcategories
   ) {
-    filtered_data <- filtered_data %>%
-      dplyr::filter(
-        business_sub_category %in%
-          filter_license_subcategories |
-          is.na(business_sub_category)
-      )
+    if ("business_sub_category" %in% names(filtered_existing)) {
+      filtered_existing <- filtered_existing %>%
+        dplyr::filter(
+          is.na(business_sub_category) |
+            business_sub_category %in% filter_license_subcategories
+        )
+    }
   }
 
   # Check if we have data after filtering
-  if (nrow(filtered_data) == 0) {
+  if (nrow(filtered_existing) == 0) {
     return(data.frame(
       message = "No properties match the selected filters"
     ))
   }
 
-  # Add quantiles to filtered data
-  valid_data <- filtered_data %>%
-    dplyr::filter(!is.na(total_property_value) & total_property_value > 0)
+  # NOW AGGREGATE THE FILTERED DATA
+  existing_agg <- aggregate_properties(filtered_existing)
 
-  if (nrow(valid_data) == 0) {
+  # Also need to filter and aggregate the scenario data using the same property IDs
+  property_ids_to_keep <- existing_agg$id_property
+
+  scenario_a_filtered <- revenue_data$scenario_a %>%
+    dplyr::filter(id_property %in% property_ids_to_keep)
+  scenario_a_agg <- aggregate_properties(scenario_a_filtered)
+
+  scenario_b_filtered <- revenue_data$scenario_b %>%
+    dplyr::filter(id_property %in% property_ids_to_keep)
+  scenario_b_agg <- aggregate_properties(scenario_b_filtered)
+
+  # Check if we have data after aggregation
+  if (nrow(existing_agg) == 0) {
     return(data.frame(
       message = "No valid properties with positive values after filtering"
     ))
@@ -621,21 +679,21 @@ find_quantile_representatives <- function(
 
   # Calculate quantile breaks
   breaks <- quantile(
-    valid_data$total_property_value,
+    existing_agg$total_property_value,
     probs = seq(0, 1, 1 / n_quantiles),
     na.rm = TRUE
   )
 
   # Assign quantiles
-  valid_data$value_quantile <- cut(
-    valid_data$total_property_value,
+  existing_agg$value_quantile <- cut(
+    existing_agg$total_property_value,
     breaks = breaks,
     labels = quantile_labels,
     include.lowest = TRUE
   )
 
   # Find median property in each quantile
-  representative_props <- valid_data %>%
+  representative_props <- existing_agg %>%
     dplyr::group_by(value_quantile) %>%
     dplyr::arrange(abs(
       total_property_value - median(total_property_value, na.rm = TRUE)
@@ -645,10 +703,8 @@ find_quantile_representatives <- function(
     dplyr::select(
       id_property,
       value_quantile,
-      property_type,
-      structure_type,
-      business_category,
-      business_sub_category,
+      property_types,
+      business_categories,
       existing_value = total_property_value,
       existing_property_tax = total_property_tax,
       existing_business_license = total_business_license,
@@ -727,9 +783,8 @@ format_quantile_representatives_table <- function(representative_props) {
     dplyr::select(
       Quantile = value_quantile,
       `Property ID` = id_property,
-      `Property Type` = property_type,
-      `Structure Type` = structure_type,
-      `Business Category` = business_category,
+      `Property Types` = property_types,
+      `Business Categories` = business_categories,
       `Existing Value` = existing_value,
       `Existing Tax` = existing_total_tax,
       `Existing Rate (%)` = existing_effective_rate,
@@ -741,10 +796,10 @@ format_quantile_representatives_table <- function(representative_props) {
       `Scenario B Change (%)` = scenario_b_tax_change_pct
     ) %>%
     dplyr::mutate(
-      `Business Category` = ifelse(
-        is.na(`Business Category`),
+      `Business Categories` = ifelse(
+        is.na(`Business Categories`) | `Business Categories` == "",
         "None",
-        `Business Category`
+        `Business Categories`
       )
     )
 }
@@ -779,25 +834,31 @@ plot_quantile_tax_impacts <- function(representative_props) {
     levels = c("Existing", "Scenario A", "Scenario B")
   )
 
-  ggplot(plot_data, aes(x = value_quantile, y = Tax, fill = Scenario)) +
-    geom_bar(stat = "identity", position = "dodge") +
-    scale_fill_manual(
+  ggplot2::ggplot(
+    plot_data,
+    ggplot2::aes(x = value_quantile, y = Tax, fill = Scenario)
+  ) +
+    ggplot2::geom_bar(stat = "identity", position = "dodge") +
+    ggplot2::scale_fill_manual(
       values = c(
         "Existing" = "#95a5a6",
         "Scenario A" = "#3498db",
         "Scenario B" = "#e74c3c"
       )
     ) +
-    scale_y_continuous(labels = scales::comma) +
-    labs(
+    ggplot2::scale_y_continuous(labels = scales::comma) +
+    ggplot2::labs(
       title = "Representative Property Tax by Quantile",
       subtitle = "Comparing median property from each value quantile",
       x = "Property Value Quantile",
       y = "Total Tax",
       fill = "Scenario"
     ) +
-    theme_minimal() +
-    theme(legend.position = "bottom", plot.title = element_text(face = "bold"))
+    ggplot2::theme_minimal() +
+    ggplot2::theme(
+      legend.position = "bottom",
+      plot.title = ggplot2::element_text(face = "bold")
+    )
 }
 
 
@@ -823,20 +884,26 @@ plot_quantile_tax_changes <- function(representative_props) {
       values_to = "Tax_Change"
     )
 
-  ggplot(plot_data, aes(x = value_quantile, y = Tax_Change, fill = Scenario)) +
-    geom_bar(stat = "identity", position = "dodge") +
-    geom_hline(yintercept = 0, linetype = "dashed", color = "gray30") +
-    scale_fill_manual(
+  ggplot2::ggplot(
+    plot_data,
+    ggplot2::aes(x = value_quantile, y = Tax_Change, fill = Scenario)
+  ) +
+    ggplot2::geom_bar(stat = "identity", position = "dodge") +
+    ggplot2::geom_hline(yintercept = 0, linetype = "dashed", color = "gray30") +
+    ggplot2::scale_fill_manual(
       values = c("Scenario A" = "#3498db", "Scenario B" = "#e74c3c")
     ) +
-    scale_y_continuous(labels = scales::comma) +
-    labs(
+    ggplot2::scale_y_continuous(labels = scales::comma) +
+    ggplot2::labs(
       title = "Tax Change from Existing Scenario",
       subtitle = "Impact on representative properties by quantile",
       x = "Property Value Quantile",
       y = "Tax Change (Positive = Increase, Negative = Decrease)",
       fill = "Scenario"
     ) +
-    theme_minimal() +
-    theme(legend.position = "bottom", plot.title = element_text(face = "bold"))
+    ggplot2::theme_minimal() +
+    ggplot2::theme(
+      legend.position = "bottom",
+      plot.title = ggplot2::element_text(face = "bold")
+    )
 }

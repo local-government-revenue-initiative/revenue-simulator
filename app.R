@@ -18,7 +18,7 @@ library(shinybusy)
 library(shinytoastr)
 
 # Set options
-options(shiny.maxRequestSize = 30*1024^2)  # 30MB max file size
+options(shiny.maxRequestSize = 30 * 1024^2) # 30MB max file size
 
 # Null-coalescing operator
 `%||%` <- function(x, y) {
@@ -30,7 +30,7 @@ source("R/module1_functions.R")
 source("R/module2_functions.R")
 source("R/module3_functions.R")
 source("R/module4_functions.R")
-source("R/module5_functions.R")  # Added for Module 5
+source("R/module5_functions.R") # Added for Module 5
 source("R/module6_functions.R")
 
 # Source UI and server modules
@@ -42,37 +42,56 @@ source("modules/module3_ui.R")
 source("modules/module3_server.R")
 source("modules/module4_ui.R")
 source("modules/module4_server.R")
-source("modules/module5_ui.R")     # Added for Module 5
-source("modules/module5_server.R")  # Added for Module 5
+source("modules/module5_ui.R") # Added for Module 5
+source("modules/module5_server.R") # Added for Module 5
 source("modules/module6_ui.R")
 source("modules/module6_server.R")
 
 # Define UI
 ui <- dashboardPage(
   dashboardHeader(title = "Property Tax Revenue Simulator"),
-  
+
   dashboardSidebar(
     sidebarMenu(
-      menuItem("Module 1: Data Input", tabName = "module1", 
-               icon = icon("database")),
-      menuItem("Module 2: Value Parameters", tabName = "module2", 
-               icon = icon("calculator")),
-      menuItem("Module 3: Tax Parameters", tabName = "module3", 
-               icon = icon("percent")),
-      menuItem("Module 4: Revenue", tabName = "module4", 
-               icon = icon("dollar-sign")),
-      menuItem("Module 5: Tax Burden Analysis", tabName = "module5",  # Updated
-               icon = icon("balance-scale")),                          # Updated icon
-      menuItem("Module 6: GIS", tabName = "module6", 
-               icon = icon("map"))
+      menuItem(
+        "Module 1: Data Input",
+        tabName = "module1",
+        icon = icon("database")
+      ),
+      menuItem(
+        "Module 2: Value Parameters",
+        tabName = "module2",
+        icon = icon("calculator")
+      ),
+      menuItem(
+        "Module 3: Tax Parameters",
+        tabName = "module3",
+        icon = icon("percent")
+      ),
+      menuItem(
+        "Module 4: Revenue",
+        tabName = "module4",
+        icon = icon("dollar-sign")
+      ),
+      menuItem(
+        "Module 5: Tax Burden Analysis",
+        tabName = "module5", # Updated
+        icon = icon("balance-scale")
+      ), # Updated icon
+      menuItem(
+        "Module 6: GIS (Under development)",
+        tabName = "module6",
+        icon = icon("map")
+      )
     )
   ),
-  
+
   dashboardBody(
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = "custom.css"),
       # Add custom CSS for Module 5
-      tags$style(HTML("
+      tags$style(HTML(
+        "
         /* Module 5 specific styles */
         .info-box {
           min-height: 90px;
@@ -155,11 +174,12 @@ ui <- dashboardPage(
       .category-header {
         transition: background-color 0.2s ease;
       }        
-      ")
-    ),
+      "
+      )),
 
-    # Add missing JavaScript function for toggling all categories
-tags$script(HTML("
+      # Add missing JavaScript function for toggling all categories
+      tags$script(HTML(
+        "
   function toggleAllCategories(scenarioSuffix, expand) {
     var categories = document.querySelectorAll('[id^=\"category_content_\"][id$=\"_' + scenarioSuffix + '\"]');
     var headers = document.querySelectorAll('[id^=\"category_header_\"][id$=\"_' + scenarioSuffix + '\"]');
@@ -177,15 +197,16 @@ tags$script(HTML("
       }
     });
   }
-"))
-  ),
-    
+"
+      ))
+    ),
+
     tabItems(
       module1_ui("module1"),
       module2_ui("module2"),
       module3_ui("module3"),
       module4_ui("module4"),
-      module5_ui("module5"),  # Now using actual module instead of placeholder
+      module5_ui("module5"), # Now using actual module instead of placeholder
       module6_ui("module6")
     )
   )
@@ -195,19 +216,24 @@ tags$script(HTML("
 server <- function(input, output, session) {
   # Module 1 server - returns processed data
   processed_data <- module1_server("module1")
-  
-  # Module 2 server - returns parameter configurations  
+
+  # Module 2 server - returns parameter configurations
   param_configs <- module2_server("module2", processed_data)
-  
+
   # Module 3 server - returns tax configurations
   tax_configs <- module3_server("module3", processed_data, param_configs)
-  
+
   # Module 4 server - returns revenue data
-  revenue_data <- module4_server("module4", processed_data, param_configs, tax_configs)
-  
+  revenue_data <- module4_server(
+    "module4",
+    processed_data,
+    param_configs,
+    tax_configs
+  )
+
   # Module 5 server - tax burden analysis
   analysis_results <- module5_server("module5", revenue_data)
-  
+
   # Module 6 server - GIS layer filtering
   gis_results <- module6_server("module6", revenue_data)
 }

@@ -999,16 +999,39 @@ module5_server <- function(id, revenue_data) {
       req(revenue_data())
 
       # Combine all data to get unique values for filters
+      # Use RAW data, not aggregated data, to get filter values
       all_data <- do.call(rbind, revenue_data())
 
-      # Aggregate to unique properties
-      all_data_agg <- aggregate_properties(all_data)
+      # Helper function to extract structure types
+      get_structure_types_from_data <- function(data) {
+        structure_types <- c()
 
-      # Structure types
-      structure_types <- unique(all_data_agg$structure_type[
-        all_data_agg$structure_type != "None" &
-          !is.na(all_data_agg$structure_type)
-      ])
+        # Check commercial types
+        commercial_cols <- names(data)[grepl("^commercial_type_", names(data))]
+        for (col in commercial_cols) {
+          type_name <- gsub("commercial_type_", "", col)
+          if (type_name != "NA" && any(data[[col]] == 1, na.rm = TRUE)) {
+            structure_types <- c(structure_types, type_name)
+          }
+        }
+
+        # Check institutional types
+        institutional_cols <- names(data)[grepl(
+          "^institutional_type_",
+          names(data)
+        )]
+        for (col in institutional_cols) {
+          type_name <- gsub("institutional_type_", "", col)
+          if (type_name != "NA" && any(data[[col]] == 1, na.rm = TRUE)) {
+            structure_types <- c(structure_types, type_name)
+          }
+        }
+
+        return(unique(structure_types))
+      }
+
+      # Structure types - extract from dummy columns
+      structure_types <- get_structure_types_from_data(all_data)
       updateSelectInput(
         session,
         "quantile_filter_structure_types",
@@ -1016,40 +1039,46 @@ module5_server <- function(id, revenue_data) {
         selected = "All"
       )
 
-      # Property types
-      property_types <- sort(unique(all_data_agg$property_type[
-        !is.na(all_data_agg$property_type)
-      ]))
-      updateSelectInput(
-        session,
-        "quantile_filter_property_types",
-        choices = c("All", property_types),
-        selected = "All"
-      )
+      # Property types - from raw data
+      if ("property_type" %in% names(all_data)) {
+        property_types <- sort(unique(all_data$property_type[
+          !is.na(all_data$property_type)
+        ]))
+        updateSelectInput(
+          session,
+          "quantile_filter_property_types",
+          choices = c("All", property_types),
+          selected = "All"
+        )
+      }
 
-      # License categories
-      categories <- unique(all_data_agg$business_category[
-        !is.na(all_data_agg$business_category) &
-          all_data_agg$business_category != ""
-      ])
-      updateSelectInput(
-        session,
-        "quantile_filter_license_categories",
-        choices = c("All", sort(categories)),
-        selected = "All"
-      )
+      # License categories - from raw data
+      if ("business_category" %in% names(all_data)) {
+        categories <- unique(all_data$business_category[
+          !is.na(all_data$business_category) &
+            all_data$business_category != ""
+        ])
+        updateSelectInput(
+          session,
+          "quantile_filter_license_categories",
+          choices = c("All", sort(categories)),
+          selected = "All"
+        )
+      }
 
-      # License subcategories
-      subcategories <- unique(all_data_agg$business_sub_category[
-        !is.na(all_data_agg$business_sub_category) &
-          all_data_agg$business_sub_category != ""
-      ])
-      updateSelectInput(
-        session,
-        "quantile_filter_license_subcategories",
-        choices = c("All", sort(subcategories)),
-        selected = "All"
-      )
+      # License subcategories - from raw data
+      if ("business_sub_category" %in% names(all_data)) {
+        subcategories <- unique(all_data$business_sub_category[
+          !is.na(all_data$business_sub_category) &
+            all_data$business_sub_category != ""
+        ])
+        updateSelectInput(
+          session,
+          "quantile_filter_license_subcategories",
+          choices = c("All", sort(subcategories)),
+          selected = "All"
+        )
+      }
     })
 
     # Reset filters button
@@ -1380,25 +1409,16 @@ module5_server <- function(id, revenue_data) {
             column(
               6,
               h5(icon("info-circle"), "Property Characteristics"),
-              p(strong("Property Type:"), prop$property_type),
+              p(strong("Property Types:"), prop$property_types),
               p(
-                strong("Structure Type:"),
-                ifelse(is.na(prop$structure_type), "None", prop$structure_type)
-              ),
-              p(
-                strong("Business Category:"),
+                strong("Business Categories:"),
                 ifelse(
-                  is.na(prop$business_category),
+                  is.na(prop$business_categories) ||
+                    prop$business_categories == "",
                   "None",
-                  prop$business_category
+                  prop$business_categories
                 )
-              ),
-              if (
-                !is.na(prop$business_sub_category) &&
-                  prop$business_sub_category != ""
-              ) {
-                p(strong("Business Subcategory:"), prop$business_sub_category)
-              }
+              )
             ),
             column(
               6,

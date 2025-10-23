@@ -3,32 +3,32 @@
 
 module6_ui <- function(id) {
   ns <- NS(id)
-  
+
   tabItem(
     tabName = "module6",
-    
+
     # Add toastr notifications
-    useToastr(),  # <- Fixed: Added comma here
-    
+    useToastr(), # <- Fixed: Added comma here
+
     # Add busy bar
     add_busy_bar(color = "#3c8dbc", height = "3px"),
-    
+
     # Header
-    h2("Module 6: GIS Layer Revenue Analysis"),
+    h2("Module 6: GIS Layer Revenue Analysis (DRAFT: UNDER DEVELOPEMENT)"),
     p("Filter and analyze revenue by geographic layers and ward boundaries"),
-    
+
     fluidRow(
       # Left Panel: Controls
       column(
         width = 3,
-        
+
         # Scenario Selection
         box(
           title = "Scenario Selection",
           width = NULL,
           status = "primary",
           solidHeader = TRUE,
-          
+
           selectInput(
             ns("scenario_select"),
             label = "Select Scenario:",
@@ -36,7 +36,7 @@ module6_ui <- function(id) {
             selected = "Existing"
           )
         ),
-        
+
         # Status and Debug Information - NEW ADDITION
         box(
           title = "System Status",
@@ -45,9 +45,9 @@ module6_ui <- function(id) {
           solidHeader = FALSE,
           collapsible = TRUE,
           collapsed = FALSE,
-          
+
           uiOutput(ns("status_message")),
-          
+
           # Debug panel (collapsible)
           tags$details(
             tags$summary(
@@ -57,7 +57,7 @@ module6_ui <- function(id) {
             verbatimTextOutput(ns("debug_info"))
           )
         ),
-        
+
         # GIS Layer Filters
         box(
           title = "Geographic Filters",
@@ -65,9 +65,9 @@ module6_ui <- function(id) {
           status = "info",
           solidHeader = TRUE,
           collapsible = TRUE,
-          
+
           h5("Select GIS Layers:"),
-          
+
           # Tourist Areas
           checkboxGroupInput(
             ns("tourist_filters"),
@@ -77,7 +77,7 @@ module6_ui <- function(id) {
               "Juba/Levuma Tourist Area" = "juba_levuma_tourist"
             )
           ),
-          
+
           # Commercial/Industrial
           checkboxGroupInput(
             ns("commercial_filters"),
@@ -92,7 +92,7 @@ module6_ui <- function(id) {
               "Wellington Industrial Estate" = "wellington_industrial_estate"
             )
           ),
-          
+
           # Other Areas
           checkboxGroupInput(
             ns("other_filters"),
@@ -102,7 +102,7 @@ module6_ui <- function(id) {
               "Informal Settlements" = "informal_settlements"
             )
           ),
-          
+
           # Ward Selection
           h5("Ward Selection:"),
           selectizeInput(
@@ -115,7 +115,7 @@ module6_ui <- function(id) {
               plugins = list('remove_button')
             )
           ),
-          
+
           # Filter Actions
           br(),
           actionButton(
@@ -133,43 +133,43 @@ module6_ui <- function(id) {
             width = "100%"
           )
         ),
-        
+
         # Revenue Summary Box
         box(
           title = "Filtered Revenue Summary",
           width = NULL,
           status = "success",
           solidHeader = TRUE,
-          
+
           valueBoxOutput(ns("total_revenue_box"), width = NULL),
           valueBoxOutput(ns("property_tax_box"), width = NULL),
           valueBoxOutput(ns("business_license_box"), width = NULL),
-          
+
           hr(),
-          
+
           h5("Properties in Selection:"),
           verbatimTextOutput(ns("property_count")),
-          
+
           h5("Businesses in Selection:"),
           verbatimTextOutput(ns("business_count"))
         )
       ),
-      
+
       # Right Panel: Map and Details
       column(
         width = 9,
-        
+
         # Interactive Map
         box(
           title = "Interactive Revenue Map",
           width = NULL,
           status = "primary",
           solidHeader = TRUE,
-          
+
           # Map tabs
           tabsetPanel(
             id = ns("map_tabs"),
-            
+
             # Main Map Tab
             tabPanel(
               "Revenue Map",
@@ -182,7 +182,7 @@ module6_ui <- function(id) {
                 size = 1.5
               ),
               br(),
-              
+
               # Map Controls
               fluidRow(
                 column(
@@ -210,13 +210,13 @@ module6_ui <- function(id) {
                       "Ward Level" = "ward",
                       "Heat Map" = "heat"
                     ),
-                    selected = "property",  # Changed default to property
+                    selected = "property", # Changed default to property
                     inline = TRUE
                   )
                 )
               )
             ),
-            
+
             # Comparison Tab
             tabPanel(
               "Layer Comparison",
@@ -226,7 +226,7 @@ module6_ui <- function(id) {
               br(),
               DT::dataTableOutput(ns("layer_comparison_table"))
             ),
-            
+
             # Ward Analysis Tab
             tabPanel(
               "Ward Analysis",
@@ -240,7 +240,7 @@ module6_ui <- function(id) {
         )
       )
     ),
-    
+
     # Bottom Row: Additional Analysis
     fluidRow(
       # Distribution by Layer
@@ -250,10 +250,10 @@ module6_ui <- function(id) {
         status = "info",
         solidHeader = TRUE,
         collapsible = TRUE,
-        
+
         plotOutput(ns("layer_distribution_plot"), height = "300px")
       ),
-      
+
       # Top Contributing Areas
       box(
         title = "Top Contributing Areas",
@@ -261,11 +261,11 @@ module6_ui <- function(id) {
         status = "warning",
         solidHeader = TRUE,
         collapsible = TRUE,
-        
+
         DT::dataTableOutput(ns("top_areas_table"))
       )
     ),
-    
+
     # Export Options
     fluidRow(
       box(
@@ -273,9 +273,9 @@ module6_ui <- function(id) {
         width = 12,
         status = "success",
         solidHeader = FALSE,
-        
+
         h5("Download Filtered Data:"),
-        
+
         fluidRow(
           column(
             width = 3,
