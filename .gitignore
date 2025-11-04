@@ -7,3 +7,4 @@ issues.txt
 .gitignore
 tests/
 archive_versions/
+data/validation/

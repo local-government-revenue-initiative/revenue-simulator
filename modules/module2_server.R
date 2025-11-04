@@ -1012,7 +1012,7 @@ module2_server <- function(id, processed_data) {
         product_weights <- rep(1, n_rows)
 
         # Find the row index for the target property
-        target_property_id <- "FCC0136047"
+        target_property_id <- "FCC0018296"
         debug_row_index <- which(preview_data$id_property == target_property_id)
         debug_property <- length(debug_row_index) > 0
 
