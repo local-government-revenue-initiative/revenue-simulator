@@ -219,24 +219,18 @@ server <- function(input, output, session) {
 
   # Module 2 Server - returns both configs and calculated values
   module2_return <- module2_server("module2", processed_data)
-  property_configs <- module2_return$configs
+  param_configs <- module2_return$configs
   calculated_property_values <- module2_return$calculated_values
 
-  # Module 3 Server - now receives calculated values from Module 2
-  tax_configs <- module3_server(
-    "module3",
-    processed_data,
-    property_configs,
-    calculated_property_values
-  )
+  # Module 3 server - returns tax configurations
+  tax_configs <- module3_server("module3", processed_data, param_configs)
 
-  # Module 4 Server - also receives calculated values
+  # Module 4 server - returns revenue data
   revenue_data <- module4_server(
     "module4",
     processed_data,
-    property_configs,
-    tax_configs,
-    calculated_property_values
+    param_configs,
+    tax_configs
   )
 
   # Module 5 server - tax burden analysis

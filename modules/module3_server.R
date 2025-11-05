@@ -2,12 +2,7 @@
 
 source("R/module3_config_functions.R")
 
-module3_server <- function(
-  id,
-  processed_data,
-  property_configs,
-  calculated_property_values
-) {
+module3_server <- function(id, processed_data, property_configs) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
