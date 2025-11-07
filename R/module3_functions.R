@@ -405,6 +405,13 @@ get_default_tax_config <- function() {
           calculation_method = "minimum_rate",
           minimum = 350,
           rate = 0.05
+        ),
+
+        # Fallback "Other" entry (for when category is not specified)
+        "Other" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.035
         )
       ),
 
@@ -978,10 +985,15 @@ create_business_license_scenario_column <- function(
 }
 
 # Replace the existing create_business_subcategory_ui function
-create_business_subcategory_ui <- function(ns, subcategory, scenario_suffix) {
+create_business_subcategory_ui <- function(
+  ns,
+  subcategory,
+  scenario_suffix,
+  category = NULL
+) {
   subcategory_safe <- gsub("[^A-Za-z0-9_]", "_", subcategory)
 
-  # Get subcategory-specific defaults
+  # Get subcategory-specific defaults - pass category if available
   defaults <- get_subcategory_defaults(subcategory, category)
 
   wellPanel(

@@ -391,20 +391,22 @@ module3_server <- function(
                 .groups = "drop"
               )
 
-            # Create collapsible sections for each category
+            # Create collapsible sections for each category (LAZY LOADING VERSION)
             category_sections <- map(1:nrow(category_groups), function(i) {
               category <- category_groups$business_category[i]
               subcats <- category_groups$subcategories[[i]]
+              category_safe <- gsub("[^A-Za-z0-9_]", "_", category)
 
-              # Create UI for subcategories in this category
-              subcat_configs <- map(subcats, function(subcategory) {
-                create_business_subcategory_ui(
-                  ns,
-                  subcategory,
-                  scenario_suffix,
-                  category
-                )
-              })
+              # Create unique ID for this category's content
+              content_output_id <- paste0(
+                "category_content_ui_",
+                category_safe,
+                "_",
+                scenario_suffix
+              )
+
+              # Instead of generating all UI upfront, create a placeholder for lazy loading
+              subcat_configs <- uiOutput(ns(content_output_id))
 
               # Create collapsible section
               div(
@@ -433,22 +435,22 @@ module3_server <- function(
                   ),
                   icon("chevron-down", style = "float: right; margin-top: 2px;")
                 ),
-                # Category content (collapsible)
+                # Category content (collapsible) - LAZY LOADED
                 div(
                   id = paste0(
                     "category_content_",
-                    gsub("[^A-Za-z0-9_]", "_", category),
+                    category_safe,
                     "_",
                     scenario_suffix
                   ),
                   style = "padding: 10px; display: none;", # Initially collapsed
-                  do.call(tagList, subcat_configs)
+                  subcat_configs # This is now just a uiOutput placeholder
                 )
               )
             })
 
             tagList(
-              # Add JavaScript for collapsible functionality
+              # Add JavaScript for collapsible functionality with Shiny event triggering
               tags$script(HTML(
                 "
           function toggleCategory(categoryId) {
@@ -459,6 +461,9 @@ module3_server <- function(
             if (content.style.display === 'none') {
               content.style.display = 'block';
               icon.className = icon.className.replace('fa-chevron-down', 'fa-chevron-up');
+              
+              // Trigger Shiny event to load content if not already loaded
+              Shiny.setInputValue('category_expanded_' + categoryId, Math.random());
             } else {
               content.style.display = 'none';
               icon.className = icon.className.replace('fa-chevron-up', 'fa-chevron-down');
@@ -527,6 +532,88 @@ module3_server <- function(
     output$business_subcategories_scenario_b <- generate_business_subcategories_ui(
       "scenario_b"
     )
+
+    # LAZY LOADING: Create reactive values to track which categories have been loaded
+    loaded_categories <- reactiveValues()
+
+    # LAZY LOADING: Observe when data changes and set up lazy loaders for each category
+    observe({
+      req(processed_data())
+      data <- processed_data()
+
+      # Get category groups
+      category_groups <- data |>
+        filter(!is.na(business_sub_category), !is.na(business_category)) |>
+        select(business_category, business_sub_category) |>
+        distinct() |>
+        group_by(business_category) |>
+        summarise(
+          subcategories = list(unique(business_sub_category)),
+          .groups = "drop"
+        )
+
+      # Set up lazy loaders for each category in each scenario
+      for (i in 1:nrow(category_groups)) {
+        category <- category_groups$business_category[i]
+        subcats <- category_groups$subcategories[[i]]
+        category_safe <- gsub("[^A-Za-z0-9_]", "_", category)
+
+        # Create lazy loaders for each scenario
+        for (scenario_suffix in c("existing", "scenario_a", "scenario_b")) {
+          # Create unique IDs
+          content_output_id <- paste0(
+            "category_content_ui_",
+            category_safe,
+            "_",
+            scenario_suffix
+          )
+          expand_input_id <- paste0(
+            "category_expanded_",
+            category_safe,
+            "_",
+            scenario_suffix
+          )
+          loaded_key <- paste0(category_safe, "_", scenario_suffix)
+
+          # Create the output renderer (wrapped in local to capture variables correctly)
+          local({
+            my_category <- category
+            my_subcats <- subcats
+            my_scenario <- scenario_suffix
+            my_output_id <- content_output_id
+            my_loaded_key <- loaded_key
+
+            output[[my_output_id]] <- renderUI({
+              # Check if this category has been expanded
+              req(input[[paste0(
+                "category_expanded_",
+                category_safe,
+                "_",
+                my_scenario
+              )]])
+
+              # Only generate once
+              if (!isTRUE(loaded_categories[[my_loaded_key]])) {
+                # Mark as loaded
+                loaded_categories[[my_loaded_key]] <- TRUE
+
+                # Generate the subcategory UIs
+                subcat_uis <- map(my_subcats, function(subcategory) {
+                  create_business_subcategory_ui(
+                    ns,
+                    subcategory,
+                    my_scenario,
+                    my_category
+                  )
+                })
+
+                return(do.call(tagList, subcat_uis))
+              }
+            })
+          })
+        }
+      }
+    })
 
     # CORRECTED: Copy functions with proper business license naming
     # Copy from existing to scenario A
