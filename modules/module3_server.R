@@ -451,7 +451,7 @@ module3_server <- function(
 
             tagList(
               # Add JavaScript for collapsible functionality with Shiny event triggering
-              tags$script(HTML(
+              tags$script(HTML(sprintf(
                 "
           function toggleCategory(categoryId) {
             var content = document.getElementById('category_content_' + categoryId);
@@ -463,14 +463,36 @@ module3_server <- function(
               icon.className = icon.className.replace('fa-chevron-down', 'fa-chevron-up');
               
               // Trigger Shiny event to load content if not already loaded
-              Shiny.setInputValue('category_expanded_' + categoryId, Math.random());
+              var inputId = '%scategory_expanded_' + categoryId;
+              Shiny.setInputValue(inputId, Date.now(), {priority: 'event'});
             } else {
               content.style.display = 'none';
               icon.className = icon.className.replace('fa-chevron-up', 'fa-chevron-down');
             }
           }
-        "
-              )),
+          
+          function toggleAllCategories(scenarioSuffix, expand) {
+            var headers = document.querySelectorAll('[id^=\"category_header_\"][id$=\"_' + scenarioSuffix + '\"]');
+            headers.forEach(function(header) {
+              var categoryId = header.id.replace('category_header_', '');
+              var content = document.getElementById('category_content_' + categoryId);
+              var icon = header.querySelector('i');
+              
+              if (expand && content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.className = icon.className.replace('fa-chevron-down', 'fa-chevron-up');
+                var inputId = '%scategory_expanded_' + categoryId;
+                Shiny.setInputValue(inputId, Date.now(), {priority: 'event'});
+              } else if (!expand && content.style.display !== 'none') {
+                content.style.display = 'none';
+                icon.className = icon.className.replace('fa-chevron-up', 'fa-chevron-down');
+              }
+            });
+          }
+        ",
+                ns(""), # First for toggleCategory
+                ns("") # Second for toggleAllCategories
+              ))),
 
               p(
                 paste(
@@ -582,15 +604,12 @@ module3_server <- function(
             my_scenario <- scenario_suffix
             my_output_id <- content_output_id
             my_loaded_key <- loaded_key
+            my_category_safe <- category_safe # Capture this too!
+            my_expand_input_id <- expand_input_id # And this!
 
             output[[my_output_id]] <- renderUI({
-              # Check if this category has been expanded
-              req(input[[paste0(
-                "category_expanded_",
-                category_safe,
-                "_",
-                my_scenario
-              )]])
+              # Check if this category has been expanded - use captured variable
+              req(input[[my_expand_input_id]])
 
               # Only generate once
               if (!isTRUE(loaded_categories[[my_loaded_key]])) {
