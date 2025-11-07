@@ -374,11 +374,37 @@ get_default_tax_config <- function() {
           flat_amount = 3900
         ),
 
-        # Handle "Other" subcategories - use category defaults
-        "Other" = list(
+        # Category-specific "Other" subcategories (using composite keys)
+        # These will be matched first when category is provided
+        "Communication services::Other" = list(
           calculation_method = "minimum_rate",
           minimum = 350,
           rate = 0.035
+        ),
+        "Consumer discretionary::Other" = list(
+          calculation_method = "minimum_rate",
+          minimum = 500,
+          rate = 0.03
+        ),
+        "Consumer staples::Other" = list(
+          calculation_method = "minimum_rate",
+          minimum = 450,
+          rate = 0.02
+        ),
+        "Energy::Other" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.065
+        ),
+        "Financials::Other" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.055
+        ),
+        "Materials Manufacturing/Industrials/Services::Other" = list(
+          calculation_method = "minimum_rate",
+          minimum = 350,
+          rate = 0.05
         )
       ),
 
@@ -398,16 +424,31 @@ calculate_business_license <- function(
   business_value,
   business_area,
   business_subcategory,
-  tax_config
+  tax_config,
+  business_category = NULL
 ) {
   # Get the business license configuration from tax_config
   business_config <- tax_config$business_license
 
-  # Look up the exact subcategory configuration
-  if (business_subcategory %in% names(business_config$subcategories)) {
+  # Try composite key first if category is provided
+  subcat_config <- NULL
+  if (!is.null(business_category)) {
+    composite_key <- paste0(business_category, "::", business_subcategory)
+    if (composite_key %in% names(business_config$subcategories)) {
+      subcat_config <- business_config$subcategories[[composite_key]]
+    }
+  }
+
+  # Fall back to subcategory-only lookup
+  if (
+    is.null(subcat_config) &&
+      business_subcategory %in% names(business_config$subcategories)
+  ) {
     subcat_config <- business_config$subcategories[[business_subcategory]]
-  } else {
-    # Use default fallback if subcategory not found
+  }
+
+  # Use default fallback if subcategory not found
+  if (is.null(subcat_config)) {
     subcat_config <- business_config$default_subcategory
   }
 
@@ -461,11 +502,34 @@ calculate_business_license <- function(
   ))
 }
 
-get_subcategory_defaults <- function(subcategory) {
+get_subcategory_defaults <- function(subcategory, category = NULL) {
   # Get the default configuration
   defaults <- get_default_tax_config()
 
-  # Look up the exact subcategory configuration
+  # Try composite key first if category is provided
+  if (!is.null(category)) {
+    composite_key <- paste0(category, "::", subcategory)
+    if (composite_key %in% names(defaults$business_license$subcategories)) {
+      subcat_config <- defaults$business_license$subcategories[[composite_key]]
+
+      return(list(
+        minimum = ifelse(
+          is.null(subcat_config$minimum),
+          0,
+          subcat_config$minimum
+        ),
+        rate = ifelse(is.null(subcat_config$rate), 0, subcat_config$rate * 100),
+        flat_amount = ifelse(
+          is.null(subcat_config$flat_amount),
+          0,
+          subcat_config$flat_amount
+        ),
+        calculation_method = subcat_config$calculation_method
+      ))
+    }
+  }
+
+  # Fall back to subcategory-only lookup for backward compatibility
   if (subcategory %in% names(defaults$business_license$subcategories)) {
     subcat_config <- defaults$business_license$subcategories[[subcategory]]
 
@@ -918,7 +982,7 @@ create_business_subcategory_ui <- function(ns, subcategory, scenario_suffix) {
   subcategory_safe <- gsub("[^A-Za-z0-9_]", "_", subcategory)
 
   # Get subcategory-specific defaults
-  defaults <- get_subcategory_defaults(subcategory)
+  defaults <- get_subcategory_defaults(subcategory, category)
 
   wellPanel(
     style = "margin-bottom: 10px;",

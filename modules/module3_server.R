@@ -398,7 +398,12 @@ module3_server <- function(
 
               # Create UI for subcategories in this category
               subcat_configs <- map(subcats, function(subcategory) {
-                create_business_subcategory_ui(ns, subcategory, scenario_suffix)
+                create_business_subcategory_ui(
+                  ns,
+                  subcategory,
+                  scenario_suffix,
+                  category
+                )
               })
 
               # Create collapsible section
