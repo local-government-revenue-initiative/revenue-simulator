@@ -604,31 +604,33 @@ module3_server <- function(
             my_scenario <- scenario_suffix
             my_output_id <- content_output_id
             my_loaded_key <- loaded_key
-            my_category_safe <- category_safe # Capture this too!
-            my_expand_input_id <- expand_input_id # And this!
+            my_expand_input_id <- expand_input_id
 
-            output[[my_output_id]] <- renderUI({
-              # Check if this category has been expanded - use captured variable
-              req(input[[my_expand_input_id]])
+            # Create an observeEvent for the expansion trigger
+            observeEvent(
+              input[[my_expand_input_id]],
+              {
+                # Only generate once
+                if (!isTRUE(loaded_categories[[my_loaded_key]])) {
+                  # Mark as loaded
+                  loaded_categories[[my_loaded_key]] <- TRUE
 
-              # Only generate once
-              if (!isTRUE(loaded_categories[[my_loaded_key]])) {
-                # Mark as loaded
-                loaded_categories[[my_loaded_key]] <- TRUE
-
-                # Generate the subcategory UIs
-                subcat_uis <- map(my_subcats, function(subcategory) {
-                  create_business_subcategory_ui(
-                    ns,
-                    subcategory,
-                    my_scenario,
-                    my_category
-                  )
-                })
-
-                return(do.call(tagList, subcat_uis))
-              }
-            })
+                  # Generate the subcategory UIs
+                  output[[my_output_id]] <- renderUI({
+                    subcat_uis <- map(my_subcats, function(subcategory) {
+                      create_business_subcategory_ui(
+                        ns,
+                        subcategory,
+                        my_scenario,
+                        my_category
+                      )
+                    })
+                    do.call(tagList, subcat_uis)
+                  })
+                }
+              },
+              ignoreInit = TRUE
+            )
           })
         }
       }
