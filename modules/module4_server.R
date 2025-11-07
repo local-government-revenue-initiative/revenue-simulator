@@ -1,6 +1,12 @@
 # modules/module4_server.R
 
-module4_server <- function(id, processed_data, property_configs, tax_configs) {
+module4_server <- function(
+  id,
+  processed_data,
+  property_configs,
+  tax_configs,
+  calculated_property_values
+) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
