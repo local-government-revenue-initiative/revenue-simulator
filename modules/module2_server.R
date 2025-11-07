@@ -18,7 +18,9 @@ module2_server <- function(id, processed_data) {
       ward_columns = list(),
       preview_data = NULL,
       defaults = NULL,
-      full_calculated_values = NULL # Store calculated values for ALL properties
+      calculated_values_existing = NULL,
+      calculated_values_scenario_a = NULL,
+      calculated_values_scenario_b = NULL
     )
 
     # Initialize with defaults
@@ -988,9 +990,8 @@ module2_server <- function(id, processed_data) {
 
         incProgress(0.1, detail = "Storing full calculated values...")
 
-        # Store full calculated values for ALL properties
-        # This is the critical data that Module 3 needs
-        values$full_calculated_values <- data.frame(
+        # Create dataframe with calculated values
+        calculated_df <- data.frame(
           id_property = data$id_property,
           property_type = data$property_type,
           property_value = property_value_all,
@@ -998,9 +999,20 @@ module2_server <- function(id, processed_data) {
           stringsAsFactors = FALSE
         )
 
+        # Store in the appropriate scenario slot
+        if (scenario == "existing") {
+          values$calculated_values_existing <- calculated_df
+        } else if (scenario == "scenario_a") {
+          values$calculated_values_scenario_a <- calculated_df
+        } else if (scenario == "scenario_b") {
+          values$calculated_values_scenario_b <- calculated_df
+        }
+
         cat(
           "Stored calculated values for",
-          nrow(values$full_calculated_values),
+          scenario,
+          ":",
+          nrow(calculated_df),
           "properties\n"
         )
 
@@ -1197,8 +1209,12 @@ module2_server <- function(id, processed_data) {
 
     # Create reactive to expose calculated values for Module 3
     get_calculated_values <- reactive({
-      req(values$full_calculated_values)
-      values$full_calculated_values
+      # Return all three scenarios as a named list
+      list(
+        existing = values$calculated_values_existing,
+        scenario_a = values$calculated_values_scenario_a,
+        scenario_b = values$calculated_values_scenario_b
+      )
     })
 
     # Return BOTH configurations and calculated values
