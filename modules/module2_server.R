@@ -245,7 +245,7 @@ module2_server <- function(id, processed_data) {
           )
 
           showNotification(
-            "Configuration uploaded and applied successfully!",
+            "Existing scenario configuration uploaded successfully!",
             type = "message"
           )
         },
@@ -265,9 +265,7 @@ module2_server <- function(id, processed_data) {
       tryCatch(
         {
           # Load configuration from uploaded file
-          config <- load_module2_config(
-            input$upload_config_scenario_a$datapath
-          )
+          config <- load_module2_config(input$upload_config_scenario_a$datapath)
 
           # Update the config
           values$scenario_a_config <- config
@@ -284,7 +282,7 @@ module2_server <- function(id, processed_data) {
           )
 
           showNotification(
-            "Configuration uploaded and applied successfully!",
+            "Scenario A configuration uploaded successfully!",
             type = "message"
           )
         },
@@ -304,9 +302,7 @@ module2_server <- function(id, processed_data) {
       tryCatch(
         {
           # Load configuration from uploaded file
-          config <- load_module2_config(
-            input$upload_config_scenario_b$datapath
-          )
+          config <- load_module2_config(input$upload_config_scenario_b$datapath)
 
           # Update the config
           values$scenario_b_config <- config
@@ -323,7 +319,7 @@ module2_server <- function(id, processed_data) {
           )
 
           showNotification(
-            "Configuration uploaded and applied successfully!",
+            "Scenario B configuration uploaded successfully!",
             type = "message"
           )
         },
@@ -337,389 +333,261 @@ module2_server <- function(id, processed_data) {
     })
 
     # ==============================================================================
-    # COPY FUNCTIONS
+    # FEATURE WEIGHT UI GENERATION
     # ==============================================================================
 
-    # Copy Existing to Scenario A
-    observeEvent(input$copy_existing_to_a, {
-      config <- collect_module2_config(
-        input = input,
-        scenario_suffix = "existing",
-        feature_columns = values$feature_columns,
-        commercial_type_columns = values$commercial_type_columns,
-        institutional_type_columns = values$institutional_type_columns,
-        ward_columns = values$ward_columns
-      )
+    # Helper function to generate feature weight UI
+    generate_feature_ui <- function(scenario_suffix) {
+      req(values$feature_columns)
 
-      apply_module2_config(
-        session = session,
-        config = config,
-        scenario_suffix = "scenario_a",
-        feature_columns = values$feature_columns,
-        commercial_type_columns = values$commercial_type_columns,
-        institutional_type_columns = values$institutional_type_columns,
-        ward_columns = values$ward_columns
-      )
-
-      showNotification("Copied Existing to Scenario A", type = "message")
-    })
-
-    # Copy Existing to Scenario B
-    observeEvent(input$copy_existing_to_b, {
-      config <- collect_module2_config(
-        input = input,
-        scenario_suffix = "existing",
-        feature_columns = values$feature_columns,
-        commercial_type_columns = values$commercial_type_columns,
-        institutional_type_columns = values$institutional_type_columns,
-        ward_columns = values$ward_columns
-      )
-
-      apply_module2_config(
-        session = session,
-        config = config,
-        scenario_suffix = "scenario_b",
-        feature_columns = values$feature_columns,
-        commercial_type_columns = values$commercial_type_columns,
-        institutional_type_columns = values$institutional_type_columns,
-        ward_columns = values$ward_columns
-      )
-
-      showNotification("Copied Existing to Scenario B", type = "message")
-    })
-
-    # Copy Scenario A to Scenario B
-    observeEvent(input$copy_a_to_b, {
-      config <- collect_module2_config(
-        input = input,
-        scenario_suffix = "scenario_a",
-        feature_columns = values$feature_columns,
-        commercial_type_columns = values$commercial_type_columns,
-        institutional_type_columns = values$institutional_type_columns,
-        ward_columns = values$ward_columns
-      )
-
-      apply_module2_config(
-        session = session,
-        config = config,
-        scenario_suffix = "scenario_b",
-        feature_columns = values$feature_columns,
-        commercial_type_columns = values$commercial_type_columns,
-        institutional_type_columns = values$institutional_type_columns,
-        ward_columns = values$ward_columns
-      )
-
-      showNotification("Copied Scenario A to Scenario B", type = "message")
-    })
-
-    # ==============================================================================
-    # RESET FUNCTION
-    # ==============================================================================
-
-    observeEvent(input$reset_all_scenarios, {
+      # Get default weights
       defaults <- get_default_weights()
 
-      # Apply defaults to all three scenarios
-      for (scenario in c("existing", "scenario_a", "scenario_b")) {
-        apply_module2_config(
-          session = session,
-          config = defaults,
-          scenario_suffix = scenario,
-          feature_columns = values$feature_columns,
-          commercial_type_columns = values$commercial_type_columns,
-          institutional_type_columns = values$institutional_type_columns,
-          ward_columns = values$ward_columns
-        )
-      }
-
-      showNotification(
-        "All scenarios reset to default weights",
-        type = "message"
-      )
-    })
-
-    # ==============================================================================
-    # UI GENERATION
-    # ==============================================================================
-
-    # Function to generate feature weight UI for a scenario
-    generate_feature_ui <- function(scenario_suffix) {
       tagList(
-        # Base parameters card
-        div(
-          class = "card",
-          div(
-            class = "card-header",
-            h4("Base Parameters")
-          ),
-          div(
-            class = "card-body",
-            fluidRow(
-              column(
-                4,
-                numericInput(
-                  ns(paste0("base_value_", scenario_suffix)),
-                  "Base Value (Le)",
-                  value = 1000,
-                  min = 0
-                )
-              ),
-              column(
-                4,
-                numericInput(
-                  ns(paste0("inflation_", scenario_suffix)),
-                  "Inflation (%)",
-                  value = 0,
-                  min = 0,
-                  max = 100,
-                  step = 0.1
-                )
-              ),
-              column(
-                4,
-                numericInput(
-                  ns(paste0("area_weight_", scenario_suffix)),
-                  "Area Weight (exponent)",
-                  value = 1,
-                  min = 0,
-                  max = 2,
-                  step = 0.1
+        # Structure Features
+        if (length(values$feature_columns$structure_features) > 0) {
+          tagList(
+            h5("Structure Features"),
+            lapply(values$feature_columns$structure_features, function(feat) {
+              feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
+              default_val <- defaults$feature_weights[[feat]] %||% 0
+
+              fluidRow(
+                column(8, p(feat, style = "margin-top: 5px;")),
+                column(
+                  4,
+                  numericInput(
+                    ns(paste0("weight_", feat_safe, "_", scenario_suffix)),
+                    label = NULL,
+                    value = default_val,
+                    step = 1,
+                    width = "100%"
+                  )
                 )
               )
-            ),
-            # Display inflation-adjusted base value
-            div(
-              class = "alert alert-info mt-3",
-              strong("Inflation-Adjusted Base Value: "),
-              textOutput(
-                ns(paste0("adjusted_base_", scenario_suffix)),
-                inline = TRUE
+            }),
+            hr()
+          )
+        },
+
+        # Utility Features
+        if (length(values$feature_columns$utility_features) > 0) {
+          tagList(
+            h5("Utility Features"),
+            lapply(values$feature_columns$utility_features, function(feat) {
+              feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
+              default_val <- defaults$feature_weights[[feat]] %||% 0
+
+              fluidRow(
+                column(8, p(feat, style = "margin-top: 5px;")),
+                column(
+                  4,
+                  numericInput(
+                    ns(paste0("weight_", feat_safe, "_", scenario_suffix)),
+                    label = NULL,
+                    value = default_val,
+                    step = 1,
+                    width = "100%"
+                  )
+                )
               )
-            )
+            }),
+            hr()
           )
-        ),
-        # Structure Features card
-        div(
-          class = "card mt-3",
-          div(
-            class = "card-header",
-            h4("Structure Features")
-          ),
-          div(
-            class = "card-body",
-            lapply(
-              values$feature_columns$structure_features,
-              function(feat) {
-                feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-                numericInput(
-                  ns(paste0("weight_", feat_safe, "_", scenario_suffix)),
-                  gsub("_", " ", feat),
-                  value = 1,
-                  min = 0,
-                  max = 2,
-                  step = 0.05
+        },
+
+        # Location Features
+        if (length(values$feature_columns$location_features) > 0) {
+          tagList(
+            h5("Location Features"),
+            lapply(values$feature_columns$location_features, function(feat) {
+              feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
+              default_val <- defaults$feature_weights[[feat]] %||% 0
+
+              fluidRow(
+                column(8, p(feat, style = "margin-top: 5px;")),
+                column(
+                  4,
+                  numericInput(
+                    ns(paste0("weight_", feat_safe, "_", scenario_suffix)),
+                    label = NULL,
+                    value = default_val,
+                    step = 1,
+                    width = "100%"
+                  )
                 )
-              }
-            )
+              )
+            }),
+            hr()
           )
-        ),
-        # Utility Features card
-        div(
-          class = "card mt-3",
-          div(
-            class = "card-header",
-            h4("Utility Features")
-          ),
-          div(
-            class = "card-body",
-            lapply(
-              values$feature_columns$utility_features,
-              function(feat) {
-                feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-                numericInput(
-                  ns(paste0("weight_", feat_safe, "_", scenario_suffix)),
-                  gsub("_", " ", feat),
-                  value = 1,
-                  min = 0,
-                  max = 2,
-                  step = 0.05
+        },
+
+        # Location Zones
+        if (length(values$feature_columns$location_zones) > 0) {
+          tagList(
+            h5("Location Zones"),
+            lapply(values$feature_columns$location_zones, function(feat) {
+              feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
+              default_val <- defaults$feature_weights[[feat]] %||% 0
+
+              fluidRow(
+                column(8, p(feat, style = "margin-top: 5px;")),
+                column(
+                  4,
+                  numericInput(
+                    ns(paste0("weight_", feat_safe, "_", scenario_suffix)),
+                    label = NULL,
+                    value = default_val,
+                    step = 1,
+                    width = "100%"
+                  )
                 )
-              }
-            )
+              )
+            }),
+            hr()
           )
-        ),
-        # Location Features card
-        div(
-          class = "card mt-3",
-          div(
-            class = "card-header",
-            h4("Location Features")
-          ),
-          div(
-            class = "card-body",
-            lapply(
-              values$feature_columns$location_features,
-              function(feat) {
-                feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-                numericInput(
-                  ns(paste0("weight_", feat_safe, "_", scenario_suffix)),
-                  gsub("_", " ", feat),
-                  value = 1,
-                  min = 0,
-                  max = 2,
-                  step = 0.05
-                )
-              }
-            )
-          )
-        ),
-        # Location Zones card
-        div(
-          class = "card mt-3",
-          div(
-            class = "card-header",
-            h4("Location Zones")
-          ),
-          div(
-            class = "card-body",
-            lapply(
-              values$feature_columns$location_zones,
-              function(feat) {
-                feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-                numericInput(
-                  ns(paste0("weight_", feat_safe, "_", scenario_suffix)),
-                  gsub("_", " ", feat),
-                  value = 1,
-                  min = 0,
-                  max = 2,
-                  step = 0.05
-                )
-              }
-            )
-          )
-        ),
-        # Property Characteristics card
-        div(
-          class = "card mt-3",
-          div(
-            class = "card-header",
-            h4("Property Characteristics")
-          ),
-          div(
-            class = "card-body",
+        },
+
+        # Property Characteristics
+        if (length(values$feature_columns$property_characteristics) > 0) {
+          tagList(
+            h5("Property Characteristics"),
             lapply(
               values$feature_columns$property_characteristics,
               function(feat) {
                 feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-                numericInput(
-                  ns(paste0("weight_", feat_safe, "_", scenario_suffix)),
-                  gsub("_", " ", feat),
-                  value = 1,
-                  min = 0,
-                  max = 2,
-                  step = 0.05
+                default_val <- defaults$feature_weights[[feat]] %||% 0
+
+                fluidRow(
+                  column(8, p(feat, style = "margin-top: 5px;")),
+                  column(
+                    4,
+                    numericInput(
+                      ns(paste0("weight_", feat_safe, "_", scenario_suffix)),
+                      label = NULL,
+                      value = default_val,
+                      step = 1,
+                      width = "100%"
+                    )
+                  )
                 )
               }
-            )
-          )
-        ),
-        # Ward Adjustments card
-        if (length(values$ward_columns) > 0) {
-          div(
-            class = "card mt-3",
-            div(
-              class = "card-header",
-              h4("Ward Adjustments")
             ),
-            div(
-              class = "card-body",
-              lapply(
-                values$ward_columns,
-                function(feat) {
-                  feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-                  numericInput(
-                    ns(paste0("weight_", feat_safe, "_", scenario_suffix)),
-                    gsub("ward_number_", "Ward ", feat),
-                    value = 1,
-                    min = 0,
-                    max = 2,
-                    step = 0.05
-                  )
-                }
-              )
-            )
-          )
-        }
-      )
-    }
-
-    # Function to generate structure type weight UI
-    generate_structure_ui <- function(scenario_suffix) {
-      tagList(
-        # Commercial Types card
-        if (length(values$commercial_type_columns) > 0) {
-          div(
-            class = "card",
-            div(
-              class = "card-header",
-              h4("Commercial Property Types")
-            ),
-            div(
-              class = "card-body",
-              lapply(
-                values$commercial_type_columns,
-                function(struct) {
-                  struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
-                  numericInput(
-                    ns(paste0("weight_", struct_safe, "_", scenario_suffix)),
-                    gsub("commercial_type_", "", struct),
-                    value = 1,
-                    min = 0,
-                    max = 3,
-                    step = 0.1
-                  )
-                }
-              )
-            )
+            hr()
           )
         },
-        # Institutional Types card
-        if (length(values$institutional_type_columns) > 0) {
-          div(
-            class = "card mt-3",
-            div(
-              class = "card-header",
-              h4("Institutional Property Types")
-            ),
-            div(
-              class = "card-body",
-              lapply(
-                values$institutional_type_columns,
-                function(struct) {
-                  struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
+
+        # Ward Numbers
+        if (length(values$ward_columns) > 0) {
+          tagList(
+            h5("Ward Numbers"),
+            lapply(values$ward_columns, function(feat) {
+              feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
+              default_val <- defaults$feature_weights[[feat]] %||% 0
+
+              fluidRow(
+                column(8, p(feat, style = "margin-top: 5px;")),
+                column(
+                  4,
                   numericInput(
-                    ns(paste0("weight_", struct_safe, "_", scenario_suffix)),
-                    gsub("institutional_type_", "", struct),
-                    value = 1,
-                    min = 0,
-                    max = 3,
-                    step = 0.1
+                    ns(paste0("weight_", feat_safe, "_", scenario_suffix)),
+                    label = NULL,
+                    value = default_val,
+                    step = 1,
+                    width = "100%"
                   )
-                }
+                )
               )
-            )
+            })
           )
         }
       )
     }
 
-    # Render UI for each scenario
-    output$existing_feature_weights <- renderUI({
+    # Render feature weight UIs for each scenario
+    output$features_ui_existing <- renderUI({
       req(values$feature_columns)
       generate_feature_ui("existing")
     })
 
-    output$existing_structure_weights <- renderUI({
+    output$features_ui_scenario_a <- renderUI({
+      req(values$feature_columns)
+      generate_feature_ui("scenario_a")
+    })
+
+    output$features_ui_scenario_b <- renderUI({
+      req(values$feature_columns)
+      generate_feature_ui("scenario_b")
+    })
+
+    # ==============================================================================
+    # STRUCTURE WEIGHT UI GENERATION
+    # ==============================================================================
+
+    # Helper function to generate structure weight UI
+    generate_structure_ui <- function(scenario_suffix) {
+      req(
+        values$commercial_type_columns,
+        values$institutional_type_columns
+      )
+
+      # Get default weights
+      defaults <- get_default_weights()
+
+      tagList(
+        h4("Commercial Types"),
+        lapply(values$commercial_type_columns, function(col) {
+          col_safe <- gsub("[^A-Za-z0-9_]", "_", col)
+          col_display <- gsub("^commercial_type_", "", col)
+          default_val <- defaults$structure_weights[[col]] %||% 0
+
+          div(
+            class = "form-group",
+            style = "margin-bottom: 10px;",
+            tags$label(
+              `for` = paste0("weight_", col_safe, "_", scenario_suffix),
+              col_display
+            ),
+            numericInput(
+              inputId = ns(paste0("weight_", col_safe, "_", scenario_suffix)),
+              label = NULL,
+              value = default_val,
+              min = -100,
+              max = 5000,
+              step = 1,
+              width = "100%"
+            )
+          )
+        }),
+        h4("Institutional Types"),
+        lapply(values$institutional_type_columns, function(col) {
+          col_safe <- gsub("[^A-Za-z0-9_]", "_", col)
+          col_display <- gsub("^institutional_type_", "", col)
+          default_val <- defaults$structure_weights[[col]] %||% 0
+
+          div(
+            class = "form-group",
+            style = "margin-bottom: 10px;",
+            tags$label(
+              `for` = paste0("weight_", col_safe, "_", scenario_suffix),
+              col_display
+            ),
+            numericInput(
+              inputId = ns(paste0("weight_", col_safe, "_", scenario_suffix)),
+              label = NULL,
+              value = default_val,
+              min = -100,
+              max = 5000,
+              step = 1,
+              width = "100%"
+            )
+          )
+        })
+      )
+    }
+
+    # Render structure weight UIs for each scenario
+    output$structure_ui_existing <- renderUI({
       req(
         values$commercial_type_columns,
         values$institutional_type_columns
@@ -727,12 +595,7 @@ module2_server <- function(id, processed_data) {
       generate_structure_ui("existing")
     })
 
-    output$scenario_a_feature_weights <- renderUI({
-      req(values$feature_columns)
-      generate_feature_ui("scenario_a")
-    })
-
-    output$scenario_a_structure_weights <- renderUI({
+    output$structure_ui_scenario_a <- renderUI({
       req(
         values$commercial_type_columns,
         values$institutional_type_columns
@@ -740,12 +603,7 @@ module2_server <- function(id, processed_data) {
       generate_structure_ui("scenario_a")
     })
 
-    output$scenario_b_feature_weights <- renderUI({
-      req(values$feature_columns)
-      generate_feature_ui("scenario_b")
-    })
-
-    output$scenario_b_structure_weights <- renderUI({
+    output$structure_ui_scenario_b <- renderUI({
       req(
         values$commercial_type_columns,
         values$institutional_type_columns
@@ -776,286 +634,413 @@ module2_server <- function(id, processed_data) {
     })
 
     # ==============================================================================
-    # CALCULATE PREVIEW - UPDATED TO CALCULATE ALL ROWS
+    # CALCULATE PREVIEW - UPDATED TO CALCULATE ALL SCENARIOS AT ONCE
     # ==============================================================================
 
     observeEvent(input$calculate_preview, {
-      req(processed_data(), input$preview_scenario)
+      req(processed_data())
 
-      withProgress(message = "Calculating property values...", value = 0, {
-        # Get scenario selection
-        scenario <- switch(
-          input$preview_scenario,
-          "Existing" = "existing",
-          "Scenario A" = "scenario_a",
-          "Scenario B" = "scenario_b"
-        )
+      withProgress(
+        message = "Calculating property values for all scenarios...",
+        value = 0,
+        {
+          # Get full dataset (ALL rows)
+          data <- processed_data()
+          n_total_rows <- nrow(data)
 
-        # Get full dataset (ALL rows, not just preview)
-        data <- processed_data()
-        n_total_rows <- nrow(data)
+          cat("\n======================================================\n")
+          cat("=== STARTING CALCULATION FOR ALL THREE SCENARIOS ===\n")
+          cat("======================================================\n")
+          cat("Total rows to process:", n_total_rows, "\n\n")
 
-        cat("\n=== Starting property value calculation ===\n")
-        cat("Total rows to process:", n_total_rows, "\n")
-        cat("Scenario:", scenario, "\n")
+          # Loop through all three scenarios
+          scenarios_to_calculate <- c("existing", "scenario_a", "scenario_b")
+          scenario_display_names <- c("Existing", "Scenario A", "Scenario B")
 
-        incProgress(0.1, detail = "Loading configuration...")
+          for (i in seq_along(scenarios_to_calculate)) {
+            scenario <- scenarios_to_calculate[i]
+            display_name <- scenario_display_names[i]
 
-        # Get base parameters
-        base_value <- input[[paste0("base_value_", scenario)]]
-        inflation <- input[[paste0("inflation_", scenario)]]
-        area_weight <- input[[paste0("area_weight_", scenario)]]
+            incProgress(
+              0.25,
+              detail = paste("Calculating", display_name, "scenario...")
+            )
 
-        cat("Base value:", base_value, "\n")
-        cat("Inflation:", inflation, "%\n")
-        cat("Area weight:", area_weight, "\n")
+            cat("\n=== Starting calculation for", display_name, "===\n")
+            cat("Scenario:", scenario, "\n")
 
-        # Calculate inflation-adjusted base
-        inflation_adjusted_base <- base_value * (1 + inflation / 100)
+            # Get base parameters for this scenario
+            base_value <- input[[paste0("base_value_", scenario)]]
+            inflation <- input[[paste0("inflation_", scenario)]]
+            area_weight <- input[[paste0("area_weight_", scenario)]]
 
-        incProgress(0.1, detail = "Collecting feature weights...")
+            cat("Base value:", base_value, "\n")
+            cat("Inflation:", inflation, "%\n")
+            cat("Area weight:", area_weight, "\n")
 
-        # Collect all feature weights (including _na set to 0)
-        feature_weights <- list()
+            # Calculate inflation-adjusted base
+            inflation_adjusted_base <- base_value * (1 + inflation / 100)
 
-        # Get all features (including _na)
-        all_features <- c(
-          values$feature_columns$structure_features,
-          values$feature_columns$utility_features,
-          values$feature_columns$location_features,
-          values$feature_columns$location_zones,
-          values$feature_columns$property_characteristics,
-          values$ward_columns
-        )
+            # Collect all feature weights (including _na set to 0)
+            feature_weights <- list()
 
-        # Add _na variables to the complete list
-        if (!is.null(values$all_feature_columns)) {
-          na_features <- values$all_feature_columns[grepl(
-            "(_na|_NA)$",
-            values$all_feature_columns
-          )]
-          all_features <- c(all_features, na_features)
-          all_features <- unique(all_features)
-        }
+            all_features <- c(
+              values$feature_columns$structure_features,
+              values$feature_columns$utility_features,
+              values$feature_columns$location_features,
+              values$feature_columns$location_zones,
+              values$feature_columns$property_characteristics,
+              values$ward_columns
+            )
 
-        # Collect weights for all features
-        for (feat in all_features) {
-          if (grepl("(_na|_NA)$", feat)) {
-            # _na variables get weight 0
-            feature_weights[[feat]] <- 0
+            # Add _na variables
+            if (!is.null(values$all_feature_columns)) {
+              na_features <- values$all_feature_columns[grepl(
+                "(_na|_NA)$",
+                values$all_feature_columns
+              )]
+              all_features <- c(all_features, na_features)
+              all_features <- unique(all_features)
+            }
+
+            for (feat in all_features) {
+              if (grepl("(_na|_NA)$", feat)) {
+                feature_weights[[feat]] <- 0
+              } else {
+                feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
+                input_id <- paste0("weight_", feat_safe, "_", scenario)
+                if (!is.null(input[[input_id]])) {
+                  feature_weights[[feat]] <- input[[input_id]]
+                }
+              }
+            }
+
+            cat("Feature weights collected:", length(feature_weights), "\n")
+
+            # Collect structure type weights (including _na set to 0)
+            structure_weights <- list()
+
+            all_structures <- c(
+              values$commercial_type_columns,
+              values$institutional_type_columns
+            )
+
+            # Add _na structure variables
+            if (!is.null(values$all_structure_columns)) {
+              na_structures <- values$all_structure_columns[grepl(
+                "(_na|_NA)$",
+                values$all_structure_columns
+              )]
+              all_structures <- c(all_structures, na_structures)
+              all_structures <- unique(all_structures)
+            }
+
+            for (struct in all_structures) {
+              if (grepl("(_na|_NA)$", struct)) {
+                structure_weights[[struct]] <- 0
+              } else {
+                struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
+                input_id <- paste0("weight_", struct_safe, "_", scenario)
+                if (!is.null(input[[input_id]])) {
+                  structure_weights[[struct]] <- input[[input_id]]
+                }
+              }
+            }
+
+            cat("Structure weights collected:", length(structure_weights), "\n")
+
+            # Calculate product of feature weights for ALL rows
+            product_weights <- rep(1, n_total_rows)
+
+            for (feat in names(feature_weights)) {
+              if (feat %in% names(data)) {
+                weight <- feature_weights[[feat]]
+                feat_values <- data[[feat]]
+
+                # Apply weight: weight^feature_value
+                product_weights <- product_weights * (weight^feat_values)
+              }
+            }
+
+            # Calculate structure type multipliers for ALL rows
+            structure_multipliers <- rep(1, n_total_rows)
+
+            for (struct in names(structure_weights)) {
+              if (struct %in% names(data)) {
+                weight <- structure_weights[[struct]]
+                struct_values <- data[[struct]]
+
+                # Multiply by weight where structure type is present (value = 1)
+                structure_multipliers <- structure_multipliers *
+                  ifelse(struct_values == 1, weight, 1)
+              }
+            }
+
+            # Get property area for ALL rows
+            property_area <- if ("property_area" %in% names(data)) {
+              data$property_area
+            } else {
+              rep(NA, n_total_rows)
+            }
+
+            # Calculate property value for ALL rows
+            property_value_all <- ifelse(
+              !is.na(property_area) & property_area > 0,
+              inflation_adjusted_base *
+                (property_area^area_weight) *
+                product_weights *
+                structure_multipliers,
+              NA
+            )
+
+            # Get business area for ALL rows
+            business_area_all <- if ("business_area" %in% names(data)) {
+              data$business_area
+            } else {
+              rep(NA, n_total_rows)
+            }
+
+            # Calculate business value for ALL rows
+            business_value_all <- ifelse(
+              !is.na(business_area_all) & business_area_all > 0,
+              inflation_adjusted_base *
+                (business_area_all^area_weight) *
+                product_weights *
+                structure_multipliers,
+              NA
+            )
+
+            cat("\n=== Calculation Summary (ALL rows) ===\n")
+            cat(
+              "Property values calculated:",
+              sum(!is.na(property_value_all)),
+              "of",
+              n_total_rows,
+              "\n"
+            )
+            cat(
+              "Property value range:",
+              ifelse(
+                sum(!is.na(property_value_all)) > 0,
+                paste(
+                  min(property_value_all, na.rm = TRUE),
+                  "-",
+                  max(property_value_all, na.rm = TRUE)
+                ),
+                "All NA"
+              ),
+              "\n"
+            )
+            cat(
+              "Business values calculated:",
+              sum(!is.na(business_value_all)),
+              "of",
+              n_total_rows,
+              "\n"
+            )
+
+            # Create dataframe with calculated values
+            calculated_df <- data.frame(
+              id_property = data$id_property,
+              property_type = data$property_type,
+              property_value = property_value_all,
+              business_value = business_value_all,
+              stringsAsFactors = FALSE
+            )
+
+            # Store in the appropriate scenario slot
+            if (scenario == "existing") {
+              values$calculated_values_existing <- calculated_df
+            } else if (scenario == "scenario_a") {
+              values$calculated_values_scenario_a <- calculated_df
+            } else if (scenario == "scenario_b") {
+              values$calculated_values_scenario_b <- calculated_df
+            }
+
+            cat(
+              "Stored calculated values for",
+              scenario,
+              ":",
+              nrow(calculated_df),
+              "properties\n"
+            )
+            cat("=== Calculation complete for", display_name, "===\n\n")
+          }
+
+          # After all scenarios are calculated, create preview table for the selected scenario
+          incProgress(0.1, detail = "Creating preview table...")
+
+          # Get the selected scenario for preview display
+          preview_scenario <- switch(
+            input$preview_scenario,
+            "Existing" = "existing",
+            "Scenario A" = "scenario_a",
+            "Scenario B" = "scenario_b"
+          )
+
+          # Get the calculated values for the preview scenario
+          preview_calculated <- if (preview_scenario == "existing") {
+            values$calculated_values_existing
+          } else if (preview_scenario == "scenario_a") {
+            values$calculated_values_scenario_a
           } else {
-            feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-            input_id <- paste0("weight_", feat_safe, "_", scenario)
-            weight <- input[[input_id]]
-            feature_weights[[feat]] <- if (is.null(weight)) 1 else weight
+            values$calculated_values_scenario_b
           }
-        }
 
-        cat("Total feature weights collected:", length(feature_weights), "\n")
+          # Recalculate display components for the preview scenario
+          preview_base_value <- input[[paste0("base_value_", preview_scenario)]]
+          preview_inflation <- input[[paste0("inflation_", preview_scenario)]]
+          preview_area_weight <- input[[paste0(
+            "area_weight_",
+            preview_scenario
+          )]]
+          preview_inflation_adjusted_base <- preview_base_value *
+            (1 + preview_inflation / 100)
 
-        incProgress(0.1, detail = "Collecting structure weights...")
+          # Collect preview scenario weights for display
+          preview_feature_weights <- list()
+          all_features <- c(
+            values$feature_columns$structure_features,
+            values$feature_columns$utility_features,
+            values$feature_columns$location_features,
+            values$feature_columns$location_zones,
+            values$feature_columns$property_characteristics,
+            values$ward_columns
+          )
 
-        # Collect all structure weights (including _na set to 0)
-        structure_weights <- list()
+          if (!is.null(values$all_feature_columns)) {
+            na_features <- values$all_feature_columns[grepl(
+              "(_na|_NA)$",
+              values$all_feature_columns
+            )]
+            all_features <- c(all_features, na_features)
+            all_features <- unique(all_features)
+          }
 
-        # Get all structure types (including _na)
-        all_structures <- c(
-          values$commercial_type_columns,
-          values$institutional_type_columns
-        )
+          for (feat in all_features) {
+            if (grepl("(_na|_NA)$", feat)) {
+              preview_feature_weights[[feat]] <- 0
+            } else {
+              feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
+              input_id <- paste0("weight_", feat_safe, "_", preview_scenario)
+              if (!is.null(input[[input_id]])) {
+                preview_feature_weights[[feat]] <- input[[input_id]]
+              }
+            }
+          }
 
-        # Add _na structure variables
-        if (!is.null(values$all_structure_columns)) {
-          na_structures <- values$all_structure_columns[grepl(
-            "(_na|_NA)$",
-            values$all_structure_columns
-          )]
-          all_structures <- c(all_structures, na_structures)
-          all_structures <- unique(all_structures)
-        }
+          # Calculate product weights for preview
+          preview_product_weights <- rep(1, n_total_rows)
+          for (feat in names(preview_feature_weights)) {
+            if (feat %in% names(data)) {
+              weight <- preview_feature_weights[[feat]]
+              feat_values <- data[[feat]]
+              preview_product_weights <- preview_product_weights *
+                (weight^feat_values)
+            }
+          }
 
-        # Collect weights for all structure types
-        for (struct in all_structures) {
-          if (grepl("(_na|_NA)$", struct)) {
-            # _na variables get weight 0
-            structure_weights[[struct]] <- 0
+          # Collect structure weights for preview
+          preview_structure_weights <- list()
+          all_structures <- c(
+            values$commercial_type_columns,
+            values$institutional_type_columns
+          )
+
+          if (!is.null(values$all_structure_columns)) {
+            na_structures <- values$all_structure_columns[grepl(
+              "(_na|_NA)$",
+              values$all_structure_columns
+            )]
+            all_structures <- c(all_structures, na_structures)
+            all_structures <- unique(all_structures)
+          }
+
+          for (struct in all_structures) {
+            if (grepl("(_na|_NA)$", struct)) {
+              preview_structure_weights[[struct]] <- 0
+            } else {
+              struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
+              input_id <- paste0("weight_", struct_safe, "_", preview_scenario)
+              if (!is.null(input[[input_id]])) {
+                preview_structure_weights[[struct]] <- input[[input_id]]
+              }
+            }
+          }
+
+          # Calculate structure multipliers for preview
+          preview_structure_multipliers <- rep(1, n_total_rows)
+          for (struct in names(preview_structure_weights)) {
+            if (struct %in% names(data)) {
+              weight <- preview_structure_weights[[struct]]
+              struct_values <- data[[struct]]
+              preview_structure_multipliers <- preview_structure_multipliers *
+                ifelse(struct_values == 1, weight, 1)
+            }
+          }
+
+          # Get property area
+          property_area <- if ("property_area" %in% names(data)) {
+            data$property_area
           } else {
-            struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
-            input_id <- paste0("weight_", struct_safe, "_", scenario)
-            weight <- input[[input_id]]
-            structure_weights[[struct]] <- if (is.null(weight)) 1 else weight
+            rep(NA, n_total_rows)
           }
-        }
 
-        cat(
-          "Total structure weights collected:",
-          length(structure_weights),
-          "\n"
-        )
+          # Create preview table (showing first N rows for display)
+          n_preview <- min(1000, n_total_rows)
+          preview_indices <- 1:n_preview
 
-        incProgress(
-          0.2,
-          detail = "Calculating property values for ALL properties..."
-        )
-
-        # Calculate product of feature weights for ALL rows
-        product_weights <- rep(1, n_total_rows)
-
-        for (feat in names(feature_weights)) {
-          if (feat %in% names(data)) {
-            weight <- feature_weights[[feat]]
-            feat_values <- data[[feat]]
-
-            # Apply weight: weight^feature_value
-            product_weights <- product_weights * (weight^feat_values)
-          }
-        }
-
-        # Calculate structure type multipliers for ALL rows
-        structure_multipliers <- rep(1, n_total_rows)
-
-        for (struct in names(structure_weights)) {
-          if (struct %in% names(data)) {
-            weight <- structure_weights[[struct]]
-            struct_values <- data[[struct]]
-
-            # Multiply by weight where structure type is present (value = 1)
-            structure_multipliers <- structure_multipliers *
-              ifelse(struct_values == 1, weight, 1)
-          }
-        }
-
-        # Get property area for ALL rows
-        property_area <- if ("property_area" %in% names(data)) {
-          data$property_area
-        } else {
-          rep(NA, n_total_rows)
-        }
-
-        # Calculate property value for ALL rows
-        property_value_all <- ifelse(
-          !is.na(property_area) & property_area > 0,
-          inflation_adjusted_base *
-            (property_area^area_weight) *
-            product_weights *
-            structure_multipliers,
-          NA
-        )
-
-        # Get business area for ALL rows
-        business_area_all <- if ("business_area" %in% names(data)) {
-          data$business_area
-        } else {
-          rep(NA, n_total_rows)
-        }
-
-        # Calculate business value for ALL rows
-        business_value_all <- ifelse(
-          !is.na(business_area_all) & business_area_all > 0,
-          inflation_adjusted_base *
-            (business_area_all^area_weight) *
-            product_weights *
-            structure_multipliers,
-          NA
-        )
-
-        cat("\n=== Calculation Summary (ALL rows) ===\n")
-        cat(
-          "Property values calculated:",
-          sum(!is.na(property_value_all)),
-          "of",
-          n_total_rows,
-          "\n"
-        )
-        cat(
-          "Property value range:",
-          ifelse(
-            sum(!is.na(property_value_all)) > 0,
-            paste(
-              min(property_value_all, na.rm = TRUE),
-              "-",
-              max(property_value_all, na.rm = TRUE)
+          values$preview_data <- data.frame(
+            id_property = data$id_property[preview_indices],
+            property_area = round(property_area[preview_indices], 2),
+            inflation_adjusted_base_value = round(
+              rep(preview_inflation_adjusted_base, n_preview),
+              2
             ),
-            "All NA"
-          ),
-          "\n"
-        )
-        cat(
-          "Business values calculated:",
-          sum(!is.na(business_value_all)),
-          "of",
-          n_total_rows,
-          "\n"
-        )
+            product_of_all_feature_weights = round(
+              preview_product_weights[preview_indices],
+              4
+            ),
+            structure_type_multiplier = round(
+              preview_structure_multipliers[preview_indices],
+              4
+            ),
+            business_area = if ("business_area" %in% names(data)) {
+              round(data$business_area[preview_indices], 2)
+            } else {
+              rep(NA, n_preview)
+            },
+            property_value = round(
+              preview_calculated$property_value[preview_indices],
+              2
+            ),
+            business_value = round(
+              preview_calculated$business_value[preview_indices],
+              2
+            ),
+            stringsAsFactors = FALSE
+          )
 
-        incProgress(0.1, detail = "Storing full calculated values...")
+          cat(
+            "Created preview table with",
+            nrow(values$preview_data),
+            "rows (for display)\n"
+          )
 
-        # Create dataframe with calculated values
-        calculated_df <- data.frame(
-          id_property = data$id_property,
-          property_type = data$property_type,
-          property_value = property_value_all,
-          business_value = business_value_all,
-          stringsAsFactors = FALSE
-        )
+          cat("\n======================================================\n")
+          cat("=== ALL SCENARIO CALCULATIONS COMPLETE ===\n")
+          cat("======================================================\n\n")
 
-        # Store in the appropriate scenario slot
-        if (scenario == "existing") {
-          values$calculated_values_existing <- calculated_df
-        } else if (scenario == "scenario_a") {
-          values$calculated_values_scenario_a <- calculated_df
-        } else if (scenario == "scenario_b") {
-          values$calculated_values_scenario_b <- calculated_df
+          incProgress(0.1, detail = "Complete!")
+
+          # Notify user that all scenarios were calculated
+          showNotification(
+            "All three scenarios calculated successfully!",
+            type = "message",
+            duration = 5
+          )
         }
-
-        cat(
-          "Stored calculated values for",
-          scenario,
-          ":",
-          nrow(calculated_df),
-          "properties\n"
-        )
-
-        incProgress(0.1, detail = "Creating preview table...")
-
-        # Create preview table (showing first N rows for display)
-        n_preview <- min(1000, n_total_rows)
-        preview_indices <- 1:n_preview
-
-        values$preview_data <- data.frame(
-          id_property = data$id_property[preview_indices],
-          property_area = round(property_area[preview_indices], 2),
-          inflation_adjusted_base_value = round(
-            rep(inflation_adjusted_base, n_preview),
-            2
-          ),
-          product_of_all_feature_weights = round(
-            product_weights[preview_indices],
-            4
-          ),
-          structure_type_multiplier = round(
-            structure_multipliers[preview_indices],
-            4
-          ),
-          business_area = if ("business_area" %in% names(data)) {
-            round(data$business_area[preview_indices], 2)
-          } else {
-            rep(NA, n_preview)
-          },
-          property_value = round(property_value_all[preview_indices], 2),
-          business_value = round(business_value_all[preview_indices], 2),
-          stringsAsFactors = FALSE
-        )
-
-        cat(
-          "Created preview table with",
-          nrow(values$preview_data),
-          "rows (for display)\n"
-        )
-        cat("=== Calculation complete ===\n\n")
-
-        incProgress(0.1, detail = "Complete!")
-      })
+      )
     })
 
     # Display preview table
