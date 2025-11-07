@@ -301,15 +301,12 @@ module2_ui <- function(id) {
                                                  ),
                                                  column(
                                                         4,
-                                                        numericInput(
-                                                               ns(
-                                                                      "preview_rows"
+                                                        br(),
+                                                        helpText(
+                                                               icon(
+                                                                      "info-circle"
                                                                ),
-                                                               "Number of rows to preview:",
-                                                               value = 100,
-                                                               min = 10,
-                                                               max = 1000,
-                                                               step = 10
+                                                               "Preview shows ALL properties. Use column filters to search specific subsets."
                                                         )
                                                  ),
                                                  column(

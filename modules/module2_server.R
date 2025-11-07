@@ -743,6 +743,191 @@ module2_server <- function(id, processed_data) {
     })
 
     # ==============================================================================
+    # COPY BUTTON OBSERVERS
+    # ==============================================================================
+
+    # Copy Existing to Scenario A
+    observeEvent(input$copy_existing_to_a, {
+      req(values$feature_columns)
+
+      tryCatch(
+        {
+          # Collect current configuration from Existing
+          config <- collect_module2_config(
+            input = input,
+            scenario_suffix = "existing",
+            feature_columns = values$feature_columns,
+            commercial_type_columns = values$commercial_type_columns,
+            institutional_type_columns = values$institutional_type_columns,
+            ward_columns = values$ward_columns
+          )
+
+          # Update the config reactive value
+          values$scenario_a_config <- config
+
+          # Apply to Scenario A
+          apply_module2_config(
+            session = session,
+            config = config,
+            scenario_suffix = "scenario_a",
+            feature_columns = values$feature_columns,
+            commercial_type_columns = values$commercial_type_columns,
+            institutional_type_columns = values$institutional_type_columns,
+            ward_columns = values$ward_columns
+          )
+
+          showNotification(
+            "Copied Existing configuration to Scenario A",
+            type = "message",
+            duration = 3
+          )
+        },
+        error = function(e) {
+          showNotification(
+            paste("Error copying configuration:", e$message),
+            type = "error",
+            duration = 5
+          )
+        }
+      )
+    })
+
+    # Copy Existing to Scenario B
+    observeEvent(input$copy_existing_to_b, {
+      req(values$feature_columns)
+
+      tryCatch(
+        {
+          # Collect current configuration from Existing
+          config <- collect_module2_config(
+            input = input,
+            scenario_suffix = "existing",
+            feature_columns = values$feature_columns,
+            commercial_type_columns = values$commercial_type_columns,
+            institutional_type_columns = values$institutional_type_columns,
+            ward_columns = values$ward_columns
+          )
+
+          # Update the config reactive value
+          values$scenario_b_config <- config
+
+          # Apply to Scenario B
+          apply_module2_config(
+            session = session,
+            config = config,
+            scenario_suffix = "scenario_b",
+            feature_columns = values$feature_columns,
+            commercial_type_columns = values$commercial_type_columns,
+            institutional_type_columns = values$institutional_type_columns,
+            ward_columns = values$ward_columns
+          )
+
+          showNotification(
+            "Copied Existing configuration to Scenario B",
+            type = "message",
+            duration = 3
+          )
+        },
+        error = function(e) {
+          showNotification(
+            paste("Error copying configuration:", e$message),
+            type = "error",
+            duration = 5
+          )
+        }
+      )
+    })
+
+    # Copy Scenario A to Scenario B
+    observeEvent(input$copy_a_to_b, {
+      req(values$feature_columns)
+
+      tryCatch(
+        {
+          # Collect current configuration from Scenario A
+          config <- collect_module2_config(
+            input = input,
+            scenario_suffix = "scenario_a",
+            feature_columns = values$feature_columns,
+            commercial_type_columns = values$commercial_type_columns,
+            institutional_type_columns = values$institutional_type_columns,
+            ward_columns = values$ward_columns
+          )
+
+          # Update the config reactive value
+          values$scenario_b_config <- config
+
+          # Apply to Scenario B
+          apply_module2_config(
+            session = session,
+            config = config,
+            scenario_suffix = "scenario_b",
+            feature_columns = values$feature_columns,
+            commercial_type_columns = values$commercial_type_columns,
+            institutional_type_columns = values$institutional_type_columns,
+            ward_columns = values$ward_columns
+          )
+
+          showNotification(
+            "Copied Scenario A configuration to Scenario B",
+            type = "message",
+            duration = 3
+          )
+        },
+        error = function(e) {
+          showNotification(
+            paste("Error copying configuration:", e$message),
+            type = "error",
+            duration = 5
+          )
+        }
+      )
+    })
+
+    # Reset all scenarios to defaults
+    observeEvent(input$reset_all, {
+      req(values$defaults)
+
+      tryCatch(
+        {
+          # Apply defaults to all three scenarios
+          for (scenario in c("existing", "scenario_a", "scenario_b")) {
+            apply_module2_config(
+              session = session,
+              config = values$defaults,
+              scenario_suffix = scenario,
+              feature_columns = values$feature_columns,
+              commercial_type_columns = values$commercial_type_columns,
+              institutional_type_columns = values$institutional_type_columns,
+              ward_columns = values$ward_columns
+            )
+
+            # Update config reactive values
+            if (scenario == "existing") {
+              values$existing_config <- values$defaults
+            } else if (scenario == "scenario_a") {
+              values$scenario_a_config <- values$defaults
+            } else if (scenario == "scenario_b") {
+              values$scenario_b_config <- values$defaults
+            }
+          }
+
+          showNotification(
+            "All scenarios reset to default Freetown values",
+            type = "warning",
+            duration = 4
+          )
+        },
+        error = function(e) {
+          showNotification(
+            paste("Error resetting configurations:", e$message),
+            type = "error",
+            duration = 5
+          )
+        }
+      )
+    })
+    # ==============================================================================
     # CALCULATE PREVIEW - UPDATED TO CALCULATE ALL SCENARIOS AT ONCE
     # ==============================================================================
 
