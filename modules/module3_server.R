@@ -1897,6 +1897,20 @@ module3_server <- function(
                 }
               )
 
+              # Get business areas
+              business_areas <- tryCatch(
+                {
+                  if ("business_area" %in% names(preview_data)) {
+                    preview_data$business_area
+                  } else {
+                    rep(0, n_rows)
+                  }
+                },
+                error = function(e) {
+                  rep(0, n_rows)
+                }
+              )
+
               # Calculate business licenses using the existing logic
               business_config <- collect_business_license_config(scenario)
               business_licenses <- rep(0, n_rows)

@@ -760,6 +760,44 @@ module2_server <- function(id, processed_data) {
           data <- processed_data()
           n_total_rows <- nrow(data)
 
+          # DIAGNOSTIC: Check what columns exist in the processed data
+          cat("\n=== DATA STRUCTURE DIAGNOSTIC ===\n")
+          data_cols <- names(data)
+          cat("Total columns in processed_data:", length(data_cols), "\n")
+          cat("Has business_area?", "business_area" %in% data_cols, "\n")
+          cat("Has business_name?", "business_name" %in% data_cols, "\n")
+          cat(
+            "Has business_category?",
+            "business_category" %in% data_cols,
+            "\n"
+          )
+          cat(
+            "Has business_sub_category?",
+            "business_sub_category" %in% data_cols,
+            "\n"
+          )
+
+          if ("business_area" %in% data_cols) {
+            cat(
+              "business_area non-NA count:",
+              sum(!is.na(data$business_area)),
+              "out of",
+              nrow(data),
+              "\n"
+            )
+            if (sum(!is.na(data$business_area)) > 0) {
+              cat(
+                "Sample business_area values:",
+                paste(
+                  head(data$business_area[!is.na(data$business_area)], 5),
+                  collapse = ", "
+                ),
+                "\n"
+              )
+            }
+          }
+          cat("==================================\n\n")
+
           cat("\n======================================================\n")
           cat("=== STARTING CALCULATION FOR ALL THREE SCENARIOS ===\n")
           cat("======================================================\n")
@@ -892,6 +930,55 @@ module2_server <- function(id, processed_data) {
 
             cat("Structure weights collected:", length(structure_weights), "\n")
 
+            # DIAGNOSTIC: Show structure weight details
+            cat("\n=== STRUCTURE WEIGHT DIAGNOSTIC ===\n")
+            cat(
+              "Structure weight names collected:",
+              paste(head(names(structure_weights), 10), collapse = ", "),
+              "\n"
+            )
+            cat(
+              "Sample structure weights:",
+              paste(head(structure_weights, 5), collapse = ", "),
+              "\n"
+            )
+
+            # Check which structure columns exist in data
+            structure_cols_in_data <- names(structure_weights)[
+              names(structure_weights) %in% names(data)
+            ]
+            cat(
+              "Structure columns that exist in data:",
+              length(structure_cols_in_data),
+              "\n"
+            )
+            if (length(structure_cols_in_data) > 0) {
+              cat(
+                "Examples:",
+                paste(head(structure_cols_in_data, 10), collapse = ", "),
+                "\n"
+              )
+            }
+
+            # Show columns in data that look like structure types
+            data_structure_cols <- names(data)[grepl(
+              "^(commercial_type|institutional_type)_",
+              names(data)
+            )]
+            cat(
+              "Structure-like columns in data:",
+              length(data_structure_cols),
+              "\n"
+            )
+            if (length(data_structure_cols) > 0) {
+              cat(
+                "Examples:",
+                paste(head(data_structure_cols, 10), collapse = ", "),
+                "\n"
+              )
+            }
+            cat("===================================\n\n")
+
             # Calculate product of feature weights for ALL rows
             product_weights <- rep(1, n_total_rows)
 
@@ -900,24 +987,89 @@ module2_server <- function(id, processed_data) {
                 weight <- feature_weights[[feat]]
                 feat_values <- data[[feat]]
 
-                # Apply weight: weight^feature_value
-                product_weights <- product_weights * (weight^feat_values)
+                # CRITICAL FIX: Replace NA values with 0 (treat as feature not present)
+                # This prevents NaN when raising negative numbers to NA power
+                feat_values[is.na(feat_values)] <- 0
+
+                # Apply weight: ((weight/100)+1)^feature_value
+                # This matches the formula in the Module 2 diagram
+                product_weights <- product_weights *
+                  (((weight / 100) + 1)^feat_values)
               }
             }
 
+            # DIAGNOSTIC: Check for problematic values
+            cat("\n=== PRODUCT WEIGHTS DIAGNOSTIC ===\n")
+            cat(
+              "Total product_weights calculated:",
+              length(product_weights),
+              "\n"
+            )
+            cat("Product weights with NA:", sum(is.na(product_weights)), "\n")
+            cat("Product weights with NaN:", sum(is.nan(product_weights)), "\n")
+            cat(
+              "Product weights with Inf:",
+              sum(is.infinite(product_weights)),
+              "\n"
+            )
+            cat(
+              "Product weights range (valid values):",
+              min(product_weights[is.finite(product_weights)], na.rm = TRUE),
+              "-",
+              max(product_weights[is.finite(product_weights)], na.rm = TRUE),
+              "\n"
+            )
+            cat("===================================\n\n")
+
             # Calculate structure type multipliers for ALL rows
             structure_multipliers <- rep(1, n_total_rows)
+
+            cat("\n=== STRUCTURE MULTIPLIER CALCULATION ===\n")
+            structures_applied <- 0
 
             for (struct in names(structure_weights)) {
               if (struct %in% names(data)) {
                 weight <- structure_weights[[struct]]
                 struct_values <- data[[struct]]
 
-                # Multiply by weight where structure type is present (value = 1)
+                # Count how many properties have this structure type
+                n_with_struct <- sum(struct_values == 1, na.rm = TRUE)
+                if (n_with_struct > 0) {
+                  cat(
+                    "Applying",
+                    struct,
+                    "weight =",
+                    weight,
+                    "to",
+                    n_with_struct,
+                    "properties\n"
+                  )
+                  structures_applied <- structures_applied + 1
+                }
+
+                # Multiply by (weight/100 + 1) where structure type is present (value = 1)
+                # This matches the formula in the Module 2 diagram
+                # NA values are treated as 0 (structure type not present)
+                struct_values[is.na(struct_values)] <- 0
                 structure_multipliers <- structure_multipliers *
-                  ifelse(struct_values == 1, weight, 1)
+                  ifelse(struct_values == 1, (weight / 100 + 1), 1)
               }
             }
+
+            cat("Total structure types applied:", structures_applied, "\n")
+            cat(
+              "Structure multiplier range:",
+              min(structure_multipliers),
+              "-",
+              max(structure_multipliers),
+              "\n"
+            )
+            cat(
+              "Properties with structure multiplier > 1:",
+              sum(structure_multipliers > 1),
+              "\n"
+            )
+            cat("=========================================\n\n")
 
             # Get property area for ALL rows
             property_area <- if ("property_area" %in% names(data)) {
@@ -927,6 +1079,40 @@ module2_server <- function(id, processed_data) {
             }
 
             # Calculate property value for ALL rows
+            cat("\n=== PROPERTY VALUE CALCULATION DIAGNOSTIC ===\n")
+            cat("Inflation adjusted base:", inflation_adjusted_base, "\n")
+            cat("Area weight:", area_weight, "\n")
+            cat(
+              "Properties with valid area:",
+              sum(!is.na(property_area) & property_area > 0),
+              "\n"
+            )
+            cat(
+              "Sample property areas:",
+              paste(
+                head(property_area[!is.na(property_area)], 5),
+                collapse = ", "
+              ),
+              "\n"
+            )
+            cat(
+              "Sample product_weights:",
+              paste(
+                head(product_weights[!is.na(product_weights)], 5),
+                collapse = ", "
+              ),
+              "\n"
+            )
+            cat(
+              "Sample structure_multipliers:",
+              paste(
+                head(structure_multipliers[!is.na(structure_multipliers)], 5),
+                collapse = ", "
+              ),
+              "\n"
+            )
+            cat("==============================================\n\n")
+
             property_value_all <- ifelse(
               !is.na(property_area) & property_area > 0,
               inflation_adjusted_base *
@@ -1093,8 +1279,12 @@ module2_server <- function(id, processed_data) {
             if (feat %in% names(data)) {
               weight <- preview_feature_weights[[feat]]
               feat_values <- data[[feat]]
+
+              # CRITICAL FIX: Replace NA values with 0
+              feat_values[is.na(feat_values)] <- 0
+
               preview_product_weights <- preview_product_weights *
-                (weight^feat_values)
+                (((weight / 100) + 1)^feat_values)
             }
           }
 
@@ -1132,8 +1322,12 @@ module2_server <- function(id, processed_data) {
             if (struct %in% names(data)) {
               weight <- preview_structure_weights[[struct]]
               struct_values <- data[[struct]]
+
+              # Handle NA values - treat as 0 (structure type not present)
+              struct_values[is.na(struct_values)] <- 0
+
               preview_structure_multipliers <- preview_structure_multipliers *
-                ifelse(struct_values == 1, weight, 1)
+                ifelse(struct_values == 1, (weight / 100 + 1), 1)
             }
           }
 
@@ -1144,15 +1338,15 @@ module2_server <- function(id, processed_data) {
             rep(NA, n_total_rows)
           }
 
-          # Create preview table (showing first N rows for display)
-          n_preview <- min(1000, n_total_rows)
-          preview_indices <- 1:n_preview
+          # Create preview table with ALL rows (DataTable will handle pagination and search)
+          # Note: We calculate all components for all rows, then create full preview table
+          preview_indices <- 1:n_total_rows
 
           values$preview_data <- data.frame(
             id_property = data$id_property[preview_indices],
             property_area = round(property_area[preview_indices], 2),
             inflation_adjusted_base_value = round(
-              rep(preview_inflation_adjusted_base, n_preview),
+              rep(preview_inflation_adjusted_base, n_total_rows),
               2
             ),
             product_of_all_feature_weights = round(
@@ -1166,7 +1360,7 @@ module2_server <- function(id, processed_data) {
             business_area = if ("business_area" %in% names(data)) {
               round(data$business_area[preview_indices], 2)
             } else {
-              rep(NA, n_preview)
+              rep(NA, n_total_rows)
             },
             property_value = round(
               preview_calculated$property_value[preview_indices],
@@ -1180,10 +1374,58 @@ module2_server <- function(id, processed_data) {
           )
 
           cat(
-            "Created preview table with",
+            "Created preview table with ALL",
             nrow(values$preview_data),
-            "rows (for display)\n"
+            "rows (searchable and filterable in DataTable)\n"
           )
+
+          # DIAGNOSTIC: Check business data in preview
+          cat("\n=== PREVIEW BUSINESS DATA DIAGNOSTIC ===\n")
+          cat("Rows in preview:", nrow(values$preview_data), "\n")
+          if ("business_area" %in% names(data)) {
+            biz_in_preview <- sum(!is.na(values$preview_data$business_area))
+            cat("Business_area non-NA in preview:", biz_in_preview, "\n")
+            if (biz_in_preview > 0) {
+              cat(
+                "Sample business_area values:",
+                paste(
+                  head(
+                    values$preview_data$business_area[
+                      !is.na(values$preview_data$business_area)
+                    ],
+                    5
+                  ),
+                  collapse = ", "
+                ),
+                "\n"
+              )
+            }
+          } else {
+            cat("business_area column NOT in source data\n")
+          }
+
+          biz_val_in_preview <- sum(
+            !is.na(values$preview_data$business_value) &
+              values$preview_data$business_value > 0
+          )
+          cat("Business_value > 0 in preview:", biz_val_in_preview, "\n")
+          if (biz_val_in_preview > 0) {
+            cat(
+              "Sample business_value values:",
+              paste(
+                head(
+                  values$preview_data$business_value[
+                    !is.na(values$preview_data$business_value) &
+                      values$preview_data$business_value > 0
+                  ],
+                  5
+                ),
+                collapse = ", "
+              ),
+              "\n"
+            )
+          }
+          cat("=========================================\n\n")
 
           cat("\n======================================================\n")
           cat("=== ALL SCENARIO CALCULATIONS COMPLETE ===\n")
@@ -1193,9 +1435,14 @@ module2_server <- function(id, processed_data) {
 
           # Notify user that all scenarios were calculated
           showNotification(
-            "All three scenarios calculated successfully!",
+            paste0(
+              "Preview complete! All ",
+              nrow(values$preview_data),
+              " properties loaded. Use column filters to find businesses or specific properties. ",
+              "Showing 25 rows per page (adjust with dropdown)."
+            ),
             type = "message",
-            duration = 5
+            duration = 10
           )
         }
       )
@@ -1210,17 +1457,26 @@ module2_server <- function(id, processed_data) {
         options = list(
           scrollX = TRUE,
           pageLength = 25,
-          dom = 'Bfrtip',
-          buttons = c('copy', 'csv', 'excel')
+          lengthMenu = c(10, 25, 50, 100, 500), # Allow user to choose how many rows to display
+          dom = 'Blfrtip', # Added 'l' for length menu
+          buttons = c('copy', 'csv', 'excel'),
+          search = list(regex = FALSE, caseInsensitive = TRUE), # Enable search
+          order = list(list(0, 'asc')), # Default sort by id_property
+          columnDefs = list(
+            list(className = 'dt-center', targets = '_all') # Center align all columns
+          )
         ),
-        extensions = 'Buttons'
+        filter = 'top', # Add column filters at the top
+        extensions = 'Buttons',
+        rownames = FALSE # Don't show row numbers
       ) %>%
         DT::formatRound(
           columns = c(
             'property_area',
             'inflation_adjusted_base_value',
             'property_value',
-            'business_value'
+            'business_value',
+            'business_area' # Added business_area to rounding
           ),
           digits = 2
         ) %>%
