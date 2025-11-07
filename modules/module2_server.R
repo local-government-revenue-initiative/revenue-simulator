@@ -336,9 +336,17 @@ module2_server <- function(id, processed_data) {
     # FEATURE WEIGHT UI GENERATION
     # ==============================================================================
 
-    # Helper function to generate feature weight UI
+    # Helper function to generate feature weight UI with collapsible boxes
     generate_feature_ui <- function(scenario_suffix) {
       req(values$feature_columns)
+
+      # Get the config for this scenario
+      config <- switch(
+        scenario_suffix,
+        "existing" = values$existing_config,
+        "scenario_a" = values$scenario_a_config,
+        "scenario_b" = values$scenario_b_config
+      )
 
       # Get default weights
       defaults <- get_default_weights()
@@ -346,14 +354,27 @@ module2_server <- function(id, processed_data) {
       tagList(
         # Structure Features
         if (length(values$feature_columns$structure_features) > 0) {
-          tagList(
-            h5("Structure Features"),
+          box(
+            title = "Structure Features",
+            width = 12,
+            collapsible = TRUE,
+            collapsed = TRUE,
+            status = "info",
+            solidHeader = FALSE,
             lapply(values$feature_columns$structure_features, function(feat) {
               feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-              default_val <- defaults$feature_weights[[feat]] %||% 0
+
+              # Try to get value from config first, then from defaults
+              default_val <- config$feature_weights[[feat]]
+              if (is.null(default_val)) {
+                default_val <- defaults$feature_weights[[feat]]
+              }
+              if (is.null(default_val)) {
+                default_val <- 0
+              }
 
               fluidRow(
-                column(8, p(feat, style = "margin-top: 5px;")),
+                column(8, p(feat, style = "margin-top: 5px; font-size: 12px;")),
                 column(
                   4,
                   numericInput(
@@ -365,21 +386,33 @@ module2_server <- function(id, processed_data) {
                   )
                 )
               )
-            }),
-            hr()
+            })
           )
         },
 
         # Utility Features
         if (length(values$feature_columns$utility_features) > 0) {
-          tagList(
-            h5("Utility Features"),
+          box(
+            title = "Utility Features",
+            width = 12,
+            collapsible = TRUE,
+            collapsed = TRUE,
+            status = "info",
+            solidHeader = FALSE,
             lapply(values$feature_columns$utility_features, function(feat) {
               feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-              default_val <- defaults$feature_weights[[feat]] %||% 0
+
+              # Try to get value from config first, then from defaults
+              default_val <- config$feature_weights[[feat]]
+              if (is.null(default_val)) {
+                default_val <- defaults$feature_weights[[feat]]
+              }
+              if (is.null(default_val)) {
+                default_val <- 0
+              }
 
               fluidRow(
-                column(8, p(feat, style = "margin-top: 5px;")),
+                column(8, p(feat, style = "margin-top: 5px; font-size: 12px;")),
                 column(
                   4,
                   numericInput(
@@ -391,21 +424,33 @@ module2_server <- function(id, processed_data) {
                   )
                 )
               )
-            }),
-            hr()
+            })
           )
         },
 
         # Location Features
         if (length(values$feature_columns$location_features) > 0) {
-          tagList(
-            h5("Location Features"),
+          box(
+            title = "Location Features",
+            width = 12,
+            collapsible = TRUE,
+            collapsed = TRUE,
+            status = "info",
+            solidHeader = FALSE,
             lapply(values$feature_columns$location_features, function(feat) {
               feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-              default_val <- defaults$feature_weights[[feat]] %||% 0
+
+              # Try to get value from config first, then from defaults
+              default_val <- config$feature_weights[[feat]]
+              if (is.null(default_val)) {
+                default_val <- defaults$feature_weights[[feat]]
+              }
+              if (is.null(default_val)) {
+                default_val <- 0
+              }
 
               fluidRow(
-                column(8, p(feat, style = "margin-top: 5px;")),
+                column(8, p(feat, style = "margin-top: 5px; font-size: 12px;")),
                 column(
                   4,
                   numericInput(
@@ -417,21 +462,33 @@ module2_server <- function(id, processed_data) {
                   )
                 )
               )
-            }),
-            hr()
+            })
           )
         },
 
         # Location Zones
         if (length(values$feature_columns$location_zones) > 0) {
-          tagList(
-            h5("Location Zones"),
+          box(
+            title = "Location Zones",
+            width = 12,
+            collapsible = TRUE,
+            collapsed = TRUE,
+            status = "info",
+            solidHeader = FALSE,
             lapply(values$feature_columns$location_zones, function(feat) {
               feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-              default_val <- defaults$feature_weights[[feat]] %||% 0
+
+              # Try to get value from config first, then from defaults
+              default_val <- config$feature_weights[[feat]]
+              if (is.null(default_val)) {
+                default_val <- defaults$feature_weights[[feat]]
+              }
+              if (is.null(default_val)) {
+                default_val <- 0
+              }
 
               fluidRow(
-                column(8, p(feat, style = "margin-top: 5px;")),
+                column(8, p(feat, style = "margin-top: 5px; font-size: 12px;")),
                 column(
                   4,
                   numericInput(
@@ -443,23 +500,38 @@ module2_server <- function(id, processed_data) {
                   )
                 )
               )
-            }),
-            hr()
+            })
           )
         },
 
         # Property Characteristics
         if (length(values$feature_columns$property_characteristics) > 0) {
-          tagList(
-            h5("Property Characteristics"),
+          box(
+            title = "Property Characteristics",
+            width = 12,
+            collapsible = TRUE,
+            collapsed = TRUE,
+            status = "info",
+            solidHeader = FALSE,
             lapply(
               values$feature_columns$property_characteristics,
               function(feat) {
                 feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-                default_val <- defaults$feature_weights[[feat]] %||% 0
+
+                # Try to get value from config first, then from defaults
+                default_val <- config$feature_weights[[feat]]
+                if (is.null(default_val)) {
+                  default_val <- defaults$feature_weights[[feat]]
+                }
+                if (is.null(default_val)) {
+                  default_val <- 0
+                }
 
                 fluidRow(
-                  column(8, p(feat, style = "margin-top: 5px;")),
+                  column(
+                    8,
+                    p(feat, style = "margin-top: 5px; font-size: 12px;")
+                  ),
                   column(
                     4,
                     numericInput(
@@ -472,21 +544,33 @@ module2_server <- function(id, processed_data) {
                   )
                 )
               }
-            ),
-            hr()
+            )
           )
         },
 
-        # Ward Numbers
+        # Ward Features
         if (length(values$ward_columns) > 0) {
-          tagList(
-            h5("Ward Numbers"),
+          box(
+            title = "Ward Features",
+            width = 12,
+            collapsible = TRUE,
+            collapsed = TRUE,
+            status = "info",
+            solidHeader = FALSE,
             lapply(values$ward_columns, function(feat) {
               feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-              default_val <- defaults$feature_weights[[feat]] %||% 0
+
+              # Try to get value from config first, then from defaults
+              default_val <- config$feature_weights[[feat]]
+              if (is.null(default_val)) {
+                default_val <- defaults$feature_weights[[feat]]
+              }
+              if (is.null(default_val)) {
+                default_val <- 0
+              }
 
               fluidRow(
-                column(8, p(feat, style = "margin-top: 5px;")),
+                column(8, p(feat, style = "margin-top: 5px; font-size: 12px;")),
                 column(
                   4,
                   numericInput(
@@ -611,6 +695,31 @@ module2_server <- function(id, processed_data) {
       generate_structure_ui("scenario_b")
     })
 
+    # ==============================================================================
+    # UPDATE CONFIGURATIONS WHEN BASE PARAMETERS CHANGE
+    # ==============================================================================
+
+    # Update existing config when base parameters change
+    observe({
+      values$existing_config$base_value <- input$base_value_existing
+      values$existing_config$inflation <- input$inflation_existing / 100
+      values$existing_config$area_weight <- input$area_weight_existing
+    })
+
+    # Update scenario A config when base parameters change
+    observe({
+      values$scenario_a_config$base_value <- input$base_value_scenario_a
+      values$scenario_a_config$inflation <- input$inflation_scenario_a / 100
+      values$scenario_a_config$area_weight <- input$area_weight_scenario_a
+    })
+
+    # Update scenario B config when base parameters change
+    observe({
+      values$scenario_b_config$base_value <- input$base_value_scenario_b
+      values$scenario_b_config$inflation <- input$inflation_scenario_b / 100
+      values$scenario_b_config$area_weight <- input$area_weight_scenario_b
+    })
+
     # Calculate inflation-adjusted base values
     output$adjusted_base_existing <- renderText({
       base <- input$base_value_existing
@@ -639,6 +748,9 @@ module2_server <- function(id, processed_data) {
 
     observeEvent(input$calculate_preview, {
       req(processed_data())
+      req(values$feature_columns)
+      req(values$commercial_type_columns)
+      req(values$institutional_type_columns)
 
       withProgress(
         message = "Calculating property values for all scenarios...",
@@ -673,6 +785,37 @@ module2_server <- function(id, processed_data) {
             base_value <- input[[paste0("base_value_", scenario)]]
             inflation <- input[[paste0("inflation_", scenario)]]
             area_weight <- input[[paste0("area_weight_", scenario)]]
+
+            # Validate base parameters
+            if (is.null(base_value) || length(base_value) == 0) {
+              showNotification(
+                paste(
+                  "Missing base_value for",
+                  display_name,
+                  "- using default"
+                ),
+                type = "warning"
+              )
+              base_value <- 231.859128
+            }
+            if (is.null(inflation) || length(inflation) == 0) {
+              showNotification(
+                paste("Missing inflation for", display_name, "- using default"),
+                type = "warning"
+              )
+              inflation <- 0
+            }
+            if (is.null(area_weight) || length(area_weight) == 0) {
+              showNotification(
+                paste(
+                  "Missing area_weight for",
+                  display_name,
+                  "- using default"
+                ),
+                type = "warning"
+              )
+              area_weight <- 0.5
+            }
 
             cat("Base value:", base_value, "\n")
             cat("Inflation:", inflation, "%\n")
@@ -871,12 +1014,13 @@ module2_server <- function(id, processed_data) {
           incProgress(0.1, detail = "Creating preview table...")
 
           # Get the selected scenario for preview display
-          preview_scenario <- switch(
-            input$preview_scenario,
-            "Existing" = "existing",
-            "Scenario A" = "scenario_a",
-            "Scenario B" = "scenario_b"
-          )
+          # Note: input$preview_scenario already returns "existing", "scenario_a", or "scenario_b"
+          preview_scenario <- input$preview_scenario
+
+          # Validate preview_scenario
+          if (is.null(preview_scenario) || length(preview_scenario) == 0) {
+            preview_scenario <- "existing" # Default to existing if not set
+          }
 
           # Get the calculated values for the preview scenario
           preview_calculated <- if (preview_scenario == "existing") {
@@ -894,6 +1038,20 @@ module2_server <- function(id, processed_data) {
             "area_weight_",
             preview_scenario
           )]]
+
+          # Validate inputs
+          if (is.null(preview_base_value) || length(preview_base_value) == 0) {
+            preview_base_value <- 231.859128 # Default base value
+          }
+          if (is.null(preview_inflation) || length(preview_inflation) == 0) {
+            preview_inflation <- 0 # Default inflation
+          }
+          if (
+            is.null(preview_area_weight) || length(preview_area_weight) == 0
+          ) {
+            preview_area_weight <- 0.5 # Default area weight
+          }
+
           preview_inflation_adjusted_base <- preview_base_value *
             (1 + preview_inflation / 100)
 
