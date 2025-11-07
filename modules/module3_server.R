@@ -22,6 +22,59 @@ module3_server <- function(
       business_preview_data = NULL # Add this
     )
 
+    # Helper function to get pre-calculated property and business values
+    # TODO: this should perhaps be in module2_functions.R
+    get_precalculated_values <- function(scenario, preview_data, n_rows) {
+      if (!is.null(calculated_property_values)) {
+        tryCatch(
+          {
+            scenario_values <- calculated_property_values()[[scenario]]
+
+            if (!is.null(scenario_values) && nrow(scenario_values) > 0) {
+              preview_ids <- preview_data$id_property
+              matched_indices <- match(preview_ids, scenario_values$id_property)
+
+              property_values <- scenario_values$property_value[matched_indices]
+              business_values <- scenario_values$business_value[matched_indices]
+
+              property_values[is.na(property_values)] <- 0
+              business_values[is.na(business_values)] <- 0
+
+              cat("\n=== USING PRE-CALCULATED VALUES ===\n")
+              cat("Scenario:", scenario, "\n")
+              cat("Sample property values:", head(property_values, 3), "\n")
+              cat("====================================\n\n")
+
+              return(list(
+                property_values = property_values,
+                business_values = business_values,
+                success = TRUE
+              ))
+            } else {
+              return(list(
+                property_values = rep(100000, n_rows),
+                business_values = rep(50000, n_rows),
+                success = FALSE
+              ))
+            }
+          },
+          error = function(e) {
+            return(list(
+              property_values = rep(100000, n_rows),
+              business_values = rep(50000, n_rows),
+              success = FALSE
+            ))
+          }
+        )
+      } else {
+        return(list(
+          property_values = rep(100000, n_rows),
+          business_values = rep(50000, n_rows),
+          success = FALSE
+        ))
+      }
+    }
+
     # Download handler for Existing scenario
     output$download_tax_config_existing <- downloadHandler(
       filename = function() {
@@ -1368,151 +1421,13 @@ module3_server <- function(
 
               incProgress(0.2, detail = "Getting configurations...")
 
-              # Get property values from Module 2 with error handling
-              if (!is.null(property_configs)) {
-                tryCatch(
-                  {
-                    module2_config <- property_configs()[[scenario]]
-
-                    # Calculate inflation-adjusted base value
-                    inflation_adjusted_base <- module2_config$base_value *
-                      (1 + module2_config$inflation)
-                    area_weight <- module2_config$area_weight
-
-                    # Get property areas
-                    property_areas <- if (
-                      "property_area" %in% names(preview_data)
-                    ) {
-                      preview_data$property_area
-                    } else {
-                      rep(1000, n_rows) # Default area
-                    }
-
-                    incProgress(0.2, detail = "Calculating feature weights...")
-
-                    # Calculate feature weights product for each property
-                    all_features <- names(module2_config$feature_weights)
-                    product_weights <- rep(1, n_rows)
-
-                    for (feat in all_features) {
-                      tryCatch(
-                        {
-                          if (feat %in% names(preview_data)) {
-                            weight <- module2_config$feature_weights[[feat]]
-                            if (!is.null(weight) && !is.na(weight)) {
-                              feature_multiplier <- ifelse(
-                                preview_data[[feat]] == 1,
-                                (weight / 100 + 1),
-                                1
-                              )
-                              product_weights <- product_weights *
-                                feature_multiplier
-                            }
-                          }
-                        },
-                        error = function(e) {
-                          warning(paste(
-                            "Error processing feature",
-                            feat,
-                            ":",
-                            e$message
-                          ))
-                        }
-                      )
-                    }
-
-                    incProgress(
-                      0.1,
-                      detail = "Calculating structure weights..."
-                    )
-
-                    # Calculate structure type weights
-                    all_structures <- names(module2_config$structure_weights)
-                    structure_matrix <- matrix(
-                      0,
-                      nrow = n_rows,
-                      ncol = length(all_structures)
-                    )
-                    weight_vector <- numeric(length(all_structures))
-
-                    for (j in seq_along(all_structures)) {
-                      tryCatch(
-                        {
-                          struct <- all_structures[j]
-
-                          if (struct %in% names(preview_data)) {
-                            col_values <- preview_data[[struct]]
-                            structure_matrix[, j] <- ifelse(
-                              !is.na(col_values) & col_values == 1,
-                              1,
-                              0
-                            )
-
-                            weight <- module2_config$structure_weights[[struct]]
-                            if (is.null(weight)) {
-                              weight <- 0
-                            }
-                            weight_vector[j] <- weight
-                          }
-                        },
-                        error = function(e) {
-                          warning(paste(
-                            "Error processing structure",
-                            struct,
-                            ":",
-                            e$message
-                          ))
-                        }
-                      )
-                    }
-
-                    structure_weights <- structure_matrix %*% weight_vector
-                    structure_weights <- as.vector(structure_weights)
-                    structure_multipliers <- (structure_weights / 100 + 1)
-
-                    # Calculate property values
-                    property_values <- ifelse(
-                      is.na(property_areas) | property_areas <= 0,
-                      NA,
-                      inflation_adjusted_base *
-                        (property_areas^area_weight) *
-                        product_weights *
-                        structure_multipliers
-                    )
-
-                    # Calculate business values similarly
-                    business_areas <- if (
-                      "business_area" %in% names(preview_data)
-                    ) {
-                      preview_data$business_area
-                    } else {
-                      property_areas # Use property areas as fallback
-                    }
-
-                    business_values <- ifelse(
-                      !is.na(business_areas) & business_areas > 0,
-                      inflation_adjusted_base *
-                        (business_areas^area_weight) *
-                        product_weights *
-                        structure_multipliers,
-                      NA
-                    )
-                  },
-                  error = function(e) {
-                    showNotification(
-                      paste("Error calculating property values:", e$message),
-                      type = "warning"
-                    )
-                    # Fallback values
-                    property_values <- rep(100000, n_rows) # Default property value
-                    business_values <- rep(50000, n_rows) # Default business value
-                  }
-                )
-              } else {
-                # No property configs available - use defaults
-                property_values <- rep(100000, n_rows)
-                business_values <- rep(50000, n_rows)
-              }
+              values_result <- get_precalculated_values(
+                scenario,
+                preview_data,
+                n_rows
+              )
+              property_values <- values_result$property_values
+              business_values <- values_result$business_values
 
               incProgress(0.2, detail = "Calculating property taxes...")
 
@@ -1792,131 +1707,13 @@ module3_server <- function(
 
               incProgress(0.2, detail = "Getting configurations...")
 
-              # Get property values from Module 2 (same as existing code)
-              if (!is.null(property_configs)) {
-                tryCatch(
-                  {
-                    module2_config <- property_configs()[[scenario]]
-
-                    # Calculate inflation-adjusted base value
-                    inflation_adjusted_base <- module2_config$base_value *
-                      (1 + module2_config$inflation)
-                    area_weight <- module2_config$area_weight
-
-                    # Get property areas
-                    property_areas <- if (
-                      "property_area" %in% names(preview_data)
-                    ) {
-                      preview_data$property_area
-                    } else {
-                      rep(1000, n_rows) # Default area
-                    }
-
-                    incProgress(0.2, detail = "Calculating feature weights...")
-
-                    # Calculate feature weights product for each property
-                    all_features <- names(module2_config$feature_weights)
-                    product_weights <- rep(1, n_rows)
-
-                    for (feat in all_features) {
-                      tryCatch(
-                        {
-                          if (feat %in% names(preview_data)) {
-                            weight <- module2_config$feature_weights[[feat]]
-                            if (!is.null(weight) && !is.na(weight)) {
-                              feature_multiplier <- ifelse(
-                                preview_data[[feat]] == 1,
-                                (weight / 100 + 1),
-                                1
-                              )
-                              product_weights <- product_weights *
-                                feature_multiplier
-                            }
-                          }
-                        },
-                        error = function(e) {
-                          warning(paste(
-                            "Error processing feature",
-                            feat,
-                            ":",
-                            e$message
-                          ))
-                        }
-                      )
-                    }
-
-                    incProgress(
-                      0.1,
-                      detail = "Calculating structure weights..."
-                    )
-
-                    # Calculate structure type weights
-                    all_structures <- names(module2_config$structure_weights)
-                    structure_matrix <- matrix(
-                      0,
-                      nrow = n_rows,
-                      ncol = length(all_structures)
-                    )
-                    weight_vector <- numeric(length(all_structures))
-
-                    for (j in seq_along(all_structures)) {
-                      tryCatch(
-                        {
-                          struct <- all_structures[j]
-
-                          if (struct %in% names(preview_data)) {
-                            col_values <- preview_data[[struct]]
-                            structure_matrix[, j] <- ifelse(
-                              !is.na(col_values) & col_values == 1,
-                              1,
-                              0
-                            )
-
-                            weight <- module2_config$structure_weights[[struct]]
-                            if (is.null(weight)) {
-                              weight <- 0
-                            }
-                            weight_vector[j] <- weight
-                          }
-                        },
-                        error = function(e) {
-                          warning(paste(
-                            "Error processing structure",
-                            struct,
-                            ":",
-                            e$message
-                          ))
-                        }
-                      )
-                    }
-
-                    structure_weights <- structure_matrix %*% weight_vector
-                    structure_weights <- as.vector(structure_weights)
-                    structure_multipliers <- (structure_weights / 100 + 1)
-
-                    # Calculate property values
-                    property_values <- ifelse(
-                      is.na(property_areas) | property_areas <= 0,
-                      NA,
-                      inflation_adjusted_base *
-                        (property_areas^area_weight) *
-                        product_weights *
-                        structure_multipliers
-                    )
-                  },
-                  error = function(e) {
-                    showNotification(
-                      paste("Error calculating property values:", e$message),
-                      type = "warning"
-                    )
-                    # Fallback values
-                    property_values <- rep(100000, n_rows) # Default property value
-                  }
-                )
-              } else {
-                # No property configs available - use defaults
-                property_values <- rep(100000, n_rows)
-              }
+              values_result <- get_precalculated_values(
+                scenario,
+                preview_data,
+                n_rows
+              )
+              property_values <- values_result$property_values
+              business_values <- values_result$business_values
 
               incProgress(0.2, detail = "Calculating property taxes...")
 
@@ -2076,102 +1873,13 @@ module3_server <- function(
 
               incProgress(0.3, detail = "Getting configurations...")
 
-              # Calculate business values (reuse logic from existing calculate_preview)
-              if (!is.null(property_configs)) {
-                tryCatch(
-                  {
-                    module2_config <- property_configs()[[scenario]]
-
-                    # Calculate inflation-adjusted base value
-                    inflation_adjusted_base <- module2_config$base_value *
-                      (1 + module2_config$inflation)
-                    area_weight <- module2_config$area_weight
-
-                    # Get business areas
-                    business_areas <- if (
-                      "business_area" %in% names(preview_data)
-                    ) {
-                      preview_data$business_area
-                    } else if ("property_area" %in% names(preview_data)) {
-                      preview_data$property_area # Use property area as fallback
-                    } else {
-                      rep(1000, n_rows) # Default area
-                    }
-
-                    # Calculate feature weights product for each property
-                    all_features <- names(module2_config$feature_weights)
-                    product_weights <- rep(1, n_rows)
-
-                    for (feat in all_features) {
-                      if (feat %in% names(preview_data)) {
-                        weight <- module2_config$feature_weights[[feat]]
-                        if (!is.null(weight) && !is.na(weight)) {
-                          feature_multiplier <- ifelse(
-                            preview_data[[feat]] == 1,
-                            (weight / 100 + 1),
-                            1
-                          )
-                          product_weights <- product_weights *
-                            feature_multiplier
-                        }
-                      }
-                    }
-
-                    # Calculate structure type weights
-                    all_structures <- names(module2_config$structure_weights)
-                    structure_matrix <- matrix(
-                      0,
-                      nrow = n_rows,
-                      ncol = length(all_structures)
-                    )
-                    weight_vector <- numeric(length(all_structures))
-
-                    for (j in seq_along(all_structures)) {
-                      struct <- all_structures[j]
-                      if (struct %in% names(preview_data)) {
-                        col_values <- preview_data[[struct]]
-                        structure_matrix[, j] <- ifelse(
-                          !is.na(col_values) & col_values == 1,
-                          1,
-                          0
-                        )
-
-                        weight <- module2_config$structure_weights[[struct]]
-                        if (is.null(weight)) {
-                          weight <- 0
-                        }
-                        weight_vector[j] <- weight
-                      }
-                    }
-
-                    structure_weights <- structure_matrix %*% weight_vector
-                    structure_weights <- as.vector(structure_weights)
-                    structure_multipliers <- (structure_weights / 100 + 1)
-
-                    # Calculate business values
-                    business_values <- ifelse(
-                      is.na(business_areas) | business_areas <= 0,
-                      NA,
-                      inflation_adjusted_base *
-                        (business_areas^area_weight) *
-                        product_weights *
-                        structure_multipliers
-                    )
-                  },
-                  error = function(e) {
-                    showNotification(
-                      paste("Error calculating business values:", e$message),
-                      type = "warning"
-                    )
-                    business_values <- rep(50000, n_rows) # Default business value
-                    business_areas <- rep(1000, n_rows) # Default area
-                  }
-                )
-              } else {
-                # No property configs available - use defaults
-                business_values <- rep(50000, n_rows)
-                business_areas <- rep(1000, n_rows)
-              }
+              values_result <- get_precalculated_values(
+                scenario,
+                preview_data,
+                n_rows
+              )
+              property_values <- values_result$property_values
+              business_values <- values_result$business_values
 
               incProgress(0.4, detail = "Calculating business licenses...")
 
