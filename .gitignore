@@ -8,3 +8,13 @@ issues.txt
 tests/
 archive_versions/
 data/validation/
+
+# Don't need to upload temporary configurations to GitHub 
+configs/ 
+
+# Test data that doesn't need to be on GitHub
+data/businesses_really_short.csv
+data/moptax2_scenario.json
+data/property_data_all_short.csv
+data/property_data_really_short.csv
+data/property_data_all.rds
