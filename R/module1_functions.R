@@ -154,9 +154,9 @@ extract_combined_data <- function(data_bundle) {
   possible_names <- c(
     "combined_data",
     "combined_data_sample_rows",
-    "freetown_data",
-    "kenema_data",
-    "makeni_data",
+    "freetown_data_all",
+    "kenema_data_all",
+    "makeni_data_all",
     "data"
   )
 
