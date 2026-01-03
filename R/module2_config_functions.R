@@ -1,14 +1,14 @@
-# ==============================================================================
-# MODULE 2: Configuration Save/Load Functions - COMPLETE FIXED VERSION
-# ==============================================================================
-# This file contains ALL fixes:
-# 1. location_zones included in collect and apply functions
-# 2. Proper space-to-underscore conversion for structure type names
-#
-# Replace the entire content of: R/module2_config_functions.R
-# ==============================================================================
+# R/module2_config_functions.R
+# Module 2: Configuration Save/Load Functions
 
-# Function to collect all Module 2 configuration from inputs
+#' Collect all Module 2 configuration from inputs
+#' @param input Shiny input object
+#' @param scenario_suffix Scenario identifier ("existing", "scenario_a", "scenario_b")
+#' @param feature_columns List of categorized feature columns
+#' @param commercial_type_columns Vector of commercial type column names
+#' @param institutional_type_columns Vector of institutional type column names
+#' @param ward_columns Vector of ward column names
+#' @return Configuration list
 collect_module2_config <- function(
   input,
   scenario_suffix,
@@ -34,12 +34,12 @@ collect_module2_config <- function(
     structure_type_weights = list()
   )
 
-  # FIXED: Collect all feature weights INCLUDING location_zones
+  # Collect all feature weights
   all_features <- c(
     feature_columns$structure_features,
     feature_columns$utility_features,
     feature_columns$location_features,
-    feature_columns$location_zones, # <--- FIXED: Added this line!
+    feature_columns$location_zones,
     feature_columns$property_characteristics,
     ward_columns
   )
@@ -47,81 +47,40 @@ collect_module2_config <- function(
   for (feat in all_features) {
     feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
     input_id <- paste0("weight_", feat_safe, "_", scenario_suffix)
-    weight_value <- input[[input_id]]
-
-    if (!is.null(weight_value)) {
-      config$feature_weights[[feat]] <- weight_value
+    if (!is.null(input[[input_id]])) {
+      config$feature_weights[[feat]] <- input[[input_id]]
     }
   }
 
-  # Collect all structure type weights
+  # Collect structure type weights
   all_structures <- c(commercial_type_columns, institutional_type_columns)
 
   for (struct in all_structures) {
-    # FIXED: Convert spaces to underscores so configs are consistent
-    # Data columns may have spaces like 'commercial_type_Car Dealership'
-    # We want to save as 'commercial_type_Car_Dealership' in the JSON
-    struct_clean <- gsub(" ", "_", struct)
-
-    # Additional sanitization for special characters
-    struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct_clean)
-    struct_safe <- gsub("_+", "_", struct_safe) # Replace multiple underscores
-
+    struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
     input_id <- paste0("weight_", struct_safe, "_", scenario_suffix)
-    weight_value <- input[[input_id]]
-
-    if (!is.null(weight_value)) {
-      # Save with cleaned name (spaces converted to underscores)
-      config$structure_type_weights[[struct_clean]] <- weight_value
+    if (!is.null(input[[input_id]])) {
+      # Store with both original name and safe name for compatibility
+      config$structure_type_weights[[struct]] <- input[[input_id]]
+      config$structure_type_weights[[struct_safe]] <- input[[input_id]]
     }
   }
 
   return(config)
 }
 
-# Function to save configuration to JSON file
-save_module2_config <- function(config, scenario_name = NULL) {
-  if (is.null(scenario_name)) {
-    scenario_name <- config$scenario
-  }
-
-  # Convert to JSON with pretty formatting
-  config_json <- jsonlite::toJSON(config, auto_unbox = TRUE, pretty = TRUE)
-
-  # Create filename with timestamp
-  filename <- paste0(
-    "module2_",
-    scenario_name,
-    "_",
-    format(Sys.time(), "%Y%m%d_%H%M%S"),
-    ".json"
-  )
-
-  # Create temporary file
-  temp_file <- tempfile(fileext = ".json")
-  writeLines(config_json, temp_file)
-
-  return(list(
-    filepath = temp_file,
-    filename = filename,
-    config = config
-  ))
-}
-
-# Function to load configuration from JSON
-load_module2_config <- function(filepath) {
+#' Load Module 2 configuration from file
+#' @param file_path Path to JSON configuration file
+#' @return Configuration list
+load_module2_config <- function(file_path) {
   tryCatch(
     {
-      # Read JSON from file
-      config_json <- readLines(filepath, warn = FALSE)
-      config_json <- paste(config_json, collapse = "\n")
-
-      # Parse JSON back to list
-      config <- jsonlite::fromJSON(config_json, simplifyVector = FALSE)
+      config_json <- readLines(file_path, warn = FALSE)
+      config <- jsonlite::fromJSON(
+        paste(config_json, collapse = "\n"),
+        simplifyVector = FALSE
+      )
 
       # Validate it's a Module 2 config
-      # This check ensures that the loaded configuration file is intended for Module 2,
-      # preventing accidental loading of incompatible or incorrect configuration files.
       if (is.null(config$module) || config$module != "module2") {
         stop("This is not a valid Module 2 configuration file")
       }
@@ -134,7 +93,14 @@ load_module2_config <- function(filepath) {
   )
 }
 
-# FIXED: Function to apply loaded configuration with proper name matching
+#' Apply loaded configuration to Module 2 inputs
+#' @param session Shiny session object
+#' @param config Configuration list from load_module2_config
+#' @param scenario_suffix Scenario to apply to
+#' @param feature_columns List of categorized feature columns
+#' @param commercial_type_columns Vector of commercial type column names
+#' @param institutional_type_columns Vector of institutional type column names
+#' @param ward_columns Vector of ward column names
 apply_module2_config <- function(
   session,
   config,
@@ -161,12 +127,12 @@ apply_module2_config <- function(
     value = config$area_weight
   )
 
-  # Update all feature weights (including location_zones)
+  # Update feature weights
   all_features <- c(
     feature_columns$structure_features,
     feature_columns$utility_features,
     feature_columns$location_features,
-    feature_columns$location_zones, # FIXED: Include location zones
+    feature_columns$location_zones,
     feature_columns$property_characteristics,
     ward_columns
   )
@@ -183,43 +149,22 @@ apply_module2_config <- function(
     }
   }
 
-  # ============================================================================
-  # FIXED: Update structure type weights with proper name matching
-  # ============================================================================
-  # KEY INSIGHT: Data columns have SPACES ('commercial_type_Car Dealership')
-  #              Config keys have UNDERSCORES ('commercial_type_Car_Dealership')
-  #              We need to convert the data column name to match config format
-  # ============================================================================
-
+  # Update structure type weights
   all_structures <- c(commercial_type_columns, institutional_type_columns)
 
   for (struct in all_structures) {
-    # The data column might have spaces: "commercial_type_Golf Clubhouse"
-    # The config key has underscores: "commercial_type_Golf_Clubhouse"
-    # We need to convert the data column name to match the config format
+    # Try to find the weight in config (could be stored with original or safe name)
+    struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
 
-    # PRIMARY STRATEGY: Convert spaces to underscores to match config keys
-    struct_normalized <- gsub(" ", "_", struct)
-    weight_value <- config$structure_type_weights[[struct_normalized]]
-
-    # FALLBACK 1: Try exact match (if column already uses underscores)
-    if (is.null(weight_value)) {
+    weight_value <- NULL
+    if (!is.null(config$structure_type_weights[[struct]])) {
       weight_value <- config$structure_type_weights[[struct]]
+    } else if (!is.null(config$structure_type_weights[[struct_safe]])) {
+      weight_value <- config$structure_type_weights[[struct_safe]]
     }
 
-    # FALLBACK 2: Try with spaces (for old configs)
-    if (is.null(weight_value)) {
-      struct_with_spaces <- gsub("_", " ", struct_normalized)
-      weight_value <- config$structure_type_weights[[struct_with_spaces]]
-    }
-
-    # Apply the weight if found
     if (!is.null(weight_value)) {
-      struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
-      struct_safe <- gsub("_+", "_", struct_safe)
-
       input_id <- paste0("weight_", struct_safe, "_", scenario_suffix)
-
       updateNumericInput(
         session,
         input_id,

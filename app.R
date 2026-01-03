@@ -28,6 +28,7 @@ options(shiny.maxRequestSize = 100 * 1024^2) # 100MB max file size for large RDS
 # Source all module functions
 source("R/module1_functions.R")
 source("R/module2_functions.R")
+source("R/module2_config_functions.R")
 source("R/module3_functions.R")
 source("R/module4_functions.R")
 source("R/module5_functions.R")

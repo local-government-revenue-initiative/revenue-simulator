@@ -1,4 +1,5 @@
 # modules/module2_ui.R
+# Module 2: Value Parameters UI - Updated with dynamic parameter defaults
 
 module2_ui <- function(id) {
        ns <- NS(id)
@@ -12,173 +13,98 @@ module2_ui <- function(id) {
                             status = "primary",
                             solidHeader = TRUE,
 
-                            # Scenario action buttons
-                            fluidRow(
-                                   column(
-                                          12,
-                                          p(
-                                                 "Configure parameters for all three scenarios. Changes are saved automatically."
-                                          ),
-                                          actionButton(
-                                                 ns("copy_existing_to_a"),
-                                                 "Copy Existing → Scenario A",
-                                                 icon = icon("copy"),
-                                                 class = "btn-info btn-sm"
-                                          ),
-                                          actionButton(
-                                                 ns("copy_existing_to_b"),
-                                                 "Copy Existing → Scenario B",
-                                                 icon = icon("copy"),
-                                                 class = "btn-info btn-sm"
-                                          ),
-                                          actionButton(
-                                                 ns("copy_a_to_b"),
-                                                 "Copy Scenario A → Scenario B",
-                                                 icon = icon("copy"),
-                                                 class = "btn-info btn-sm"
-                                          ),
-                                          actionButton(
-                                                 ns("reset_all"),
-                                                 "Reset All to Defaults",
-                                                 icon = icon("undo"),
-                                                 class = "btn-warning btn-sm"
-                                          )
+                            # General note
+                            div(
+                                   class = "alert alert-info",
+                                   style = "margin-bottom: 20px;",
+                                   HTML(
+                                          "<strong><i class='fa fa-info-circle'></i> General Note:</strong><br>
+            Avoid any specific currency or length of measurement unit. 
+            For example, do not specify dollars or feet. 
+            Default values are loaded from the city's parameter configuration."
                                    )
                             ),
 
-                            hr(),
-
-                            # Tabbed interface for different parameter groups
+                            # Main tabset
                             tabsetPanel(
-                                   id = ns("param_tabs"),
+                                   id = ns("main_tabs"),
 
-                                   # Tab 1: Base Value and Inflation
+                                   # Tab 1: Base Values and Area Weight
                                    tabPanel(
-                                          "Base Value & Inflation",
+                                          "Base Values",
                                           br(),
+                                          p(
+                                                 "Configure the base value, inflation adjustment, and area weight for each scenario.",
+                                                 "These parameters form the foundation of property value calculations."
+                                          ),
+                                          br(),
+
+                                          fluidRow(
+                                                 # Existing Scenario
+                                                 column(
+                                                        4,
+                                                        box(
+                                                               title = "Existing Scenario",
+                                                               width = 12,
+                                                               status = "primary",
+                                                               solidHeader = TRUE,
+                                                               uiOutput(ns(
+                                                                      "base_params_existing"
+                                                               ))
+                                                        )
+                                                 ),
+                                                 # Scenario A
+                                                 column(
+                                                        4,
+                                                        box(
+                                                               title = "Alternative Scenario A",
+                                                               width = 12,
+                                                               status = "info",
+                                                               solidHeader = TRUE,
+                                                               uiOutput(ns(
+                                                                      "base_params_scenario_a"
+                                                               ))
+                                                        )
+                                                 ),
+                                                 # Scenario B
+                                                 column(
+                                                        4,
+                                                        box(
+                                                               title = "Alternative Scenario B",
+                                                               width = 12,
+                                                               status = "info",
+                                                               solidHeader = TRUE,
+                                                               uiOutput(ns(
+                                                                      "base_params_scenario_b"
+                                                               ))
+                                                        )
+                                                 )
+                                          ),
+
+                                          hr(),
+
+                                          # Calculate button
                                           fluidRow(
                                                  column(
-                                                        4,
-                                                        h4("Existing Scenario"),
-                                                        numericInput(
-                                                               ns(
-                                                                      "base_value_existing"
+                                                        12,
+                                                        div(
+                                                               style = "text-align: center;",
+                                                               actionButton(
+                                                                      ns(
+                                                                             "calculate_values"
+                                                                      ),
+                                                                      "Calculate Property Values for All Scenarios",
+                                                                      class = "btn-success btn-lg",
+                                                                      icon = icon(
+                                                                             "calculator"
+                                                                      )
                                                                ),
-                                                               label = "Base Value",
-                                                               value = 231.859128,
-                                                               step = 0.01
-                                                        ),
-                                                        numericInput(
-                                                               ns(
-                                                                      "inflation_existing"
-                                                               ),
-                                                               label = "Inflation Adjustment %",
-                                                               value = 0,
-                                                               step = 0.1
-                                                        ),
-                                                        helpText(
-                                                               "0% = no adjustment, 50% = 50% inflation"
-                                                        ),
-                                                        h5(
-                                                               "Inflation-Adjusted Base Value:"
-                                                        ),
-                                                        verbatimTextOutput(ns(
-                                                               "adjusted_base_existing"
-                                                        )),
-                                                        numericInput(
-                                                               ns(
-                                                                      "area_weight_existing"
-                                                               ),
-                                                               label = "Area Weight",
-                                                               value = 0.5,
-                                                               step = 0.01
-                                                        ),
-                                                        helpText(
-                                                               "Freetown uses 0.5"
-                                                        )
-                                                 ),
-                                                 column(
-                                                        4,
-                                                        h4(
-                                                               "Alternative Scenario A"
-                                                        ),
-                                                        numericInput(
-                                                               ns(
-                                                                      "base_value_scenario_a"
-                                                               ),
-                                                               label = "Base Value",
-                                                               value = 231.859128,
-                                                               step = 0.01
-                                                        ),
-                                                        numericInput(
-                                                               ns(
-                                                                      "inflation_scenario_a"
-                                                               ),
-                                                               label = "Inflation Adjustment %",
-                                                               value = 0,
-                                                               step = 0.1
-                                                        ),
-                                                        helpText(
-                                                               "0% = no adjustment, 50% = 50% inflation"
-                                                        ),
-                                                        h5(
-                                                               "Inflation-Adjusted Base Value:"
-                                                        ),
-                                                        verbatimTextOutput(ns(
-                                                               "adjusted_base_scenario_a"
-                                                        )),
-                                                        numericInput(
-                                                               ns(
-                                                                      "area_weight_scenario_a"
-                                                               ),
-                                                               label = "Area Weight",
-                                                               value = 0.5,
-                                                               step = 0.01
-                                                        ),
-                                                        helpText(
-                                                               "Freetown uses 0.5"
-                                                        )
-                                                 ),
-                                                 column(
-                                                        4,
-                                                        h4(
-                                                               "Alternative Scenario B"
-                                                        ),
-                                                        numericInput(
-                                                               ns(
-                                                                      "base_value_scenario_b"
-                                                               ),
-                                                               label = "Base Value",
-                                                               value = 231.859128,
-                                                               step = 0.01
-                                                        ),
-                                                        numericInput(
-                                                               ns(
-                                                                      "inflation_scenario_b"
-                                                               ),
-                                                               label = "Inflation Adjustment %",
-                                                               value = 0,
-                                                               step = 0.1
-                                                        ),
-                                                        helpText(
-                                                               "0% = no adjustment, 50% = 50% inflation"
-                                                        ),
-                                                        h5(
-                                                               "Inflation-Adjusted Base Value:"
-                                                        ),
-                                                        verbatimTextOutput(ns(
-                                                               "adjusted_base_scenario_b"
-                                                        )),
-                                                        numericInput(
-                                                               ns(
-                                                                      "area_weight_scenario_b"
-                                                               ),
-                                                               label = "Area Weight",
-                                                               value = 0.5,
-                                                               step = 0.01
-                                                        ),
-                                                        helpText(
-                                                               "Freetown uses 0.5"
+                                                               br(),
+                                                               br(),
+                                                               helpText(
+                                                                      "Click to calculate property and business values using the current parameters.",
+                                                                      "Results will be available in Module 4."
+                                                               )
                                                         )
                                                  )
                                           )
@@ -189,19 +115,17 @@ module2_ui <- function(id) {
                                           "Property Feature Weights",
                                           br(),
                                           p(
-                                                 "Weights for property features typically range from -250 to 250. Negative weights decrease value, positive weights increase value."
+                                                 "Weights for property features typically range from -250 to 250. ",
+                                                 "Negative weights decrease value, positive weights increase value. ",
+                                                 "Default values are loaded from the city's parameter configuration."
                                           ),
                                           br(),
 
-                                          # Dynamic UI for each scenario's features with collapsible sections
                                           fluidRow(
                                                  column(
                                                         4,
                                                         h4("Existing Scenario"),
                                                         div(
-                                                               id = ns(
-                                                                      "feature_sections_existing"
-                                                               ),
                                                                style = "max-height: 600px; overflow-y: auto;",
                                                                uiOutput(ns(
                                                                       "features_ui_existing"
@@ -214,9 +138,6 @@ module2_ui <- function(id) {
                                                                "Alternative Scenario A"
                                                         ),
                                                         div(
-                                                               id = ns(
-                                                                      "feature_sections_scenario_a"
-                                                               ),
                                                                style = "max-height: 600px; overflow-y: auto;",
                                                                uiOutput(ns(
                                                                       "features_ui_scenario_a"
@@ -229,9 +150,6 @@ module2_ui <- function(id) {
                                                                "Alternative Scenario B"
                                                         ),
                                                         div(
-                                                               id = ns(
-                                                                      "feature_sections_scenario_b"
-                                                               ),
                                                                style = "max-height: 600px; overflow-y: auto;",
                                                                uiOutput(ns(
                                                                       "features_ui_scenario_b"
@@ -246,7 +164,9 @@ module2_ui <- function(id) {
                                           "Structure Type Weights",
                                           br(),
                                           p(
-                                                 "Weights for structure types can range up to 5,000. These weights are applied to commercial and institutional property types."
+                                                 "Weights for structure types can range from -100 to 5,000. ",
+                                                 "These weights are applied to commercial and institutional property types. ",
+                                                 "Default values are loaded from the city's parameter configuration."
                                           ),
                                           br(),
 
@@ -254,35 +174,49 @@ module2_ui <- function(id) {
                                                  column(
                                                         4,
                                                         h4("Existing Scenario"),
-                                                        uiOutput(ns(
-                                                               "structure_ui_existing"
-                                                        ))
+                                                        div(
+                                                               style = "max-height: 600px; overflow-y: auto;",
+                                                               uiOutput(ns(
+                                                                      "structure_ui_existing"
+                                                               ))
+                                                        )
                                                  ),
                                                  column(
                                                         4,
                                                         h4(
                                                                "Alternative Scenario A"
                                                         ),
-                                                        uiOutput(ns(
-                                                               "structure_ui_scenario_a"
-                                                        ))
+                                                        div(
+                                                               style = "max-height: 600px; overflow-y: auto;",
+                                                               uiOutput(ns(
+                                                                      "structure_ui_scenario_a"
+                                                               ))
+                                                        )
                                                  ),
                                                  column(
                                                         4,
                                                         h4(
                                                                "Alternative Scenario B"
                                                         ),
-                                                        uiOutput(ns(
-                                                               "structure_ui_scenario_b"
-                                                        ))
+                                                        div(
+                                                               style = "max-height: 600px; overflow-y: auto;",
+                                                               uiOutput(ns(
+                                                                      "structure_ui_scenario_b"
+                                                               ))
+                                                        )
                                                  )
                                           )
                                    ),
 
-                                   # Tab 4: Data Preview
+                                   # Tab 4: Preview Calculations
                                    tabPanel(
-                                          "Data Preview",
+                                          "Preview Calculations",
                                           br(),
+                                          p(
+                                                 "Preview calculated property values for a specific scenario. ",
+                                                 "Use the search and filter features to find specific properties."
+                                          ),
+
                                           fluidRow(
                                                  column(
                                                         4,
@@ -290,23 +224,13 @@ module2_ui <- function(id) {
                                                                ns(
                                                                       "preview_scenario"
                                                                ),
-                                                               "Select Scenario to Preview:",
+                                                               label = "Select Scenario to Preview",
                                                                choices = c(
-                                                                      "Existing" = "existing",
+                                                                      "Existing Scenario" = "existing",
                                                                       "Scenario A" = "scenario_a",
                                                                       "Scenario B" = "scenario_b"
                                                                ),
                                                                selected = "existing"
-                                                        )
-                                                 ),
-                                                 column(
-                                                        4,
-                                                        br(),
-                                                        helpText(
-                                                               icon(
-                                                                      "info-circle"
-                                                               ),
-                                                               "Preview shows ALL properties. Use column filters to search specific subsets."
                                                         )
                                                  ),
                                                  column(
@@ -322,6 +246,14 @@ module2_ui <- function(id) {
                                                                ),
                                                                class = "btn-primary"
                                                         )
+                                                 ),
+                                                 column(
+                                                        4,
+                                                        br(),
+                                                        helpText(
+                                                               "Click to generate a preview of calculated values. ",
+                                                               "Use column filters to search specific subsets."
+                                                        )
                                                  )
                                           ),
                                           br(),
@@ -329,6 +261,7 @@ module2_ui <- function(id) {
                                                  "preview_table"
                                           ))
                                    ),
+
                                    # Tab 5: Save/Load Configurations
                                    tabPanel(
                                           "Save/Load Configurations",
@@ -340,19 +273,20 @@ module2_ui <- function(id) {
                                                                "Save and Load Complete Configurations"
                                                         ),
                                                         p(
-                                                               "Use these controls to save your current parameter settings to JSON files, or load previously saved configurations."
+                                                               "Use these controls to save your current parameter settings to JSON files, ",
+                                                               "or load previously saved configurations."
                                                         ),
                                                         p(
-                                                               "Saved configurations include: base values, inflation adjustments, area weights, all feature weights, and all structure type weights."
+                                                               "Saved configurations include: base values, inflation adjustments, ",
+                                                               "area weights, all feature weights, and all structure type weights."
                                                         ),
-
                                                         hr()
                                                  )
                                           ),
 
-                                          # Three columns for three scenarios
+                                          # Three columns for scenarios
                                           fluidRow(
-                                                 # Existing Scenario
+                                                 # Existing
                                                  column(
                                                         4,
                                                         box(
@@ -360,29 +294,26 @@ module2_ui <- function(id) {
                                                                width = 12,
                                                                status = "primary",
                                                                solidHeader = TRUE,
-
                                                                h5(
                                                                       "Download Current Configuration"
                                                                ),
                                                                p(
-                                                                      "Save the current Existing Scenario parameters to a JSON file.",
+                                                                      "Save the current parameters to a JSON file.",
                                                                       style = "font-size: 12px; color: #666;"
                                                                ),
                                                                downloadButton(
                                                                       ns(
                                                                              "download_config_existing"
                                                                       ),
-                                                                      "Download Existing Configuration",
+                                                                      "Download Configuration",
                                                                       icon = icon(
                                                                              "download"
                                                                       ),
                                                                       class = "btn-success btn-block"
                                                                ),
-
                                                                br(),
                                                                hr(),
                                                                br(),
-
                                                                h5(
                                                                       "Upload Configuration"
                                                                ),
@@ -401,17 +332,15 @@ module2_ui <- function(id) {
                                                                       buttonLabel = "Browse...",
                                                                       placeholder = "Select JSON file"
                                                                ),
-
                                                                helpText(
                                                                       icon(
                                                                              "info-circle"
                                                                       ),
-                                                                      " After uploading, all parameters will be updated automatically.",
+                                                                      " After uploading, all parameters will be updated.",
                                                                       style = "color: #666; font-size: 11px;"
                                                                )
                                                         )
                                                  ),
-
                                                  # Scenario A
                                                  column(
                                                         4,
@@ -420,29 +349,26 @@ module2_ui <- function(id) {
                                                                width = 12,
                                                                status = "info",
                                                                solidHeader = TRUE,
-
                                                                h5(
                                                                       "Download Current Configuration"
                                                                ),
                                                                p(
-                                                                      "Save the current Scenario A parameters to a JSON file.",
+                                                                      "Save the current parameters to a JSON file.",
                                                                       style = "font-size: 12px; color: #666;"
                                                                ),
                                                                downloadButton(
                                                                       ns(
                                                                              "download_config_scenario_a"
                                                                       ),
-                                                                      "Download Scenario A Configuration",
+                                                                      "Download Configuration",
                                                                       icon = icon(
                                                                              "download"
                                                                       ),
                                                                       class = "btn-success btn-block"
                                                                ),
-
                                                                br(),
                                                                hr(),
                                                                br(),
-
                                                                h5(
                                                                       "Upload Configuration"
                                                                ),
@@ -461,17 +387,15 @@ module2_ui <- function(id) {
                                                                       buttonLabel = "Browse...",
                                                                       placeholder = "Select JSON file"
                                                                ),
-
                                                                helpText(
                                                                       icon(
                                                                              "info-circle"
                                                                       ),
-                                                                      " After uploading, all parameters will be updated automatically.",
+                                                                      " After uploading, all parameters will be updated.",
                                                                       style = "color: #666; font-size: 11px;"
                                                                )
                                                         )
                                                  ),
-
                                                  # Scenario B
                                                  column(
                                                         4,
@@ -480,29 +404,26 @@ module2_ui <- function(id) {
                                                                width = 12,
                                                                status = "info",
                                                                solidHeader = TRUE,
-
                                                                h5(
                                                                       "Download Current Configuration"
                                                                ),
                                                                p(
-                                                                      "Save the current Scenario B parameters to a JSON file.",
+                                                                      "Save the current parameters to a JSON file.",
                                                                       style = "font-size: 12px; color: #666;"
                                                                ),
                                                                downloadButton(
                                                                       ns(
                                                                              "download_config_scenario_b"
                                                                       ),
-                                                                      "Download Scenario B Configuration",
+                                                                      "Download Configuration",
                                                                       icon = icon(
                                                                              "download"
                                                                       ),
                                                                       class = "btn-success btn-block"
                                                                ),
-
                                                                br(),
                                                                hr(),
                                                                br(),
-
                                                                h5(
                                                                       "Upload Configuration"
                                                                ),
@@ -521,124 +442,45 @@ module2_ui <- function(id) {
                                                                       buttonLabel = "Browse...",
                                                                       placeholder = "Select JSON file"
                                                                ),
-
                                                                helpText(
                                                                       icon(
                                                                              "info-circle"
                                                                       ),
-                                                                      " After uploading, all parameters will be updated automatically.",
+                                                                      " After uploading, all parameters will be updated.",
                                                                       style = "color: #666; font-size: 11px;"
                                                                )
                                                         )
                                                  )
                                           ),
 
-                                          br(),
-
-                                          # Usage instructions
+                                          # Tips section
                                           fluidRow(
                                                  column(
                                                         12,
-                                                        box(
-                                                               title = "How to Use Save/Load",
-                                                               width = 12,
-                                                               status = "warning",
-                                                               solidHeader = TRUE,
-                                                               collapsible = TRUE,
-                                                               collapsed = TRUE,
-
-                                                               h5(
-                                                                      "Saving Configurations"
+                                                        hr(),
+                                                        h4("Tips"),
+                                                        tags$ul(
+                                                               tags$li(
+                                                                      strong(
+                                                                             "Naming:"
+                                                                      ),
+                                                                      " Downloaded files include the scenario name and timestamp."
                                                                ),
-                                                               tags$ol(
-                                                                      tags$li(
-                                                                             "Adjust all parameters (base value, inflation, area weight, feature weights, structure type weights) as desired"
+                                                               tags$li(
+                                                                      strong(
+                                                                             "Cloning:"
                                                                       ),
-                                                                      tags$li(
-                                                                             "Click the 'Download' button for the scenario you want to save"
-                                                                      ),
-                                                                      tags$li(
-                                                                             "A JSON file will be downloaded with a timestamped filename (e.g., module2_existing_20250117_143052.json)"
-                                                                      ),
-                                                                      tags$li(
-                                                                             "Store this file in a safe location or share it with colleagues"
-                                                                      )
+                                                                      " To copy settings between scenarios, download from one and upload to another."
                                                                ),
-
-                                                               br(),
-
-                                                               h5(
-                                                                      "Loading Configurations"
-                                                               ),
-                                                               tags$ol(
-                                                                      tags$li(
-                                                                             "Click 'Browse...' under the scenario you want to load into"
+                                                               tags$li(
+                                                                      strong(
+                                                                             "Archiving:"
                                                                       ),
-                                                                      tags$li(
-                                                                             "Select a previously saved JSON configuration file"
-                                                                      ),
-                                                                      tags$li(
-                                                                             "The system will automatically update all parameters to match the saved configuration"
-                                                                      ),
-                                                                      tags$li(
-                                                                             "A notification will confirm successful loading and show when the configuration was saved"
-                                                                      ),
-                                                                      tags$li(
-                                                                             "Navigate through the tabs to see all updated parameters"
-                                                                      )
-                                                               ),
-
-                                                               br(),
-
-                                                               h5("Tips"),
-                                                               tags$ul(
-                                                                      tags$li(
-                                                                             strong(
-                                                                                    "Naming:"
-                                                                             ),
-                                                                             " Downloaded files include the scenario name and timestamp for easy identification"
-                                                                      ),
-                                                                      tags$li(
-                                                                             strong(
-                                                                                    "Cloning:"
-                                                                             ),
-                                                                             " To clone Scenario A to Scenario B, download from A and upload to B"
-                                                                      ),
-                                                                      tags$li(
-                                                                             strong(
-                                                                                    "Archiving:"
-                                                                             ),
-                                                                             " Create a folder to organize configurations by policy scenario or date"
-                                                                      ),
-                                                                      tags$li(
-                                                                             strong(
-                                                                                    "Validation:"
-                                                                             ),
-                                                                             " The system validates files to ensure they're Module 2 configurations"
-                                                                      ),
-                                                                      tags$li(
-                                                                             strong(
-                                                                                    "Sharing:"
-                                                                             ),
-                                                                             " JSON files can be emailed or stored in cloud drives for team collaboration"
-                                                                      )
+                                                                      " Save configurations before making significant changes."
                                                                )
                                                         )
                                                  )
                                           )
-                                   )
-                            ),
-
-                            hr(),
-
-                            # Configuration summary
-                            fluidRow(
-                                   column(
-                                          12,
-                                          h4("Configuration Summary"),
-                                          verbatimTextOutput(ns(
-                                                 "config_summary"
-                                          ))
                                    )
                             )
                      )

@@ -1,594 +1,365 @@
 # modules/module2_server.R
+# Module 2: Value Parameters - Updated to use parameter tables
 
-source("R/module2_config_functions.R")
-
-module2_server <- function(id, processed_data) {
+module2_server <- function(
+  id,
+  processed_data,
+  param_additions = reactive(NULL),
+  param_features = reactive(NULL),
+  param_prop_struct_type = reactive(NULL)
+) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    # Reactive values to store configurations
+    # ==========================================================================
+    # REACTIVE VALUES
+    # ==========================================================================
     values <- reactiveValues(
+      # Column information from data
+      feature_columns = NULL,
+      all_feature_columns = NULL,
+      commercial_type_columns = NULL,
+      institutional_type_columns = NULL,
+      all_structure_columns = NULL,
+      ward_columns = NULL,
+
+      # Default weights from parameters
+      default_feature_weights = list(),
+      default_structure_weights = list(),
+      default_base_value = 231.859128,
+      default_area_weight = 0.5,
+
+      # Feature metadata for UI
+
+      feature_metadata = NULL,
+
+      # Scenario configurations
       existing_config = NULL,
       scenario_a_config = NULL,
       scenario_b_config = NULL,
-      feature_columns = list(),
-      structure_columns = list(),
-      commercial_type_columns = list(),
-      institutional_type_columns = list(),
-      ward_columns = list(),
-      preview_data = NULL,
-      defaults = NULL,
-      calculated_values_existing = NULL,
-      calculated_values_scenario_a = NULL,
-      calculated_values_scenario_b = NULL
+
+      # Calculated values
+      calculated_existing = NULL,
+      calculated_scenario_a = NULL,
+      calculated_scenario_b = NULL,
+
+      # Preview data
+      preview_data = NULL
     )
 
-    # Initialize with defaults
-    observe({
-      if (is.null(values$defaults)) {
-        values$defaults <- get_default_weights()
+    # ==========================================================================
+    # INITIALIZATION - Extract columns and build defaults from parameters
+    # ==========================================================================
 
-        # Initialize all configs with proper structure
-        values$existing_config <- values$defaults
-        values$scenario_a_config <- values$defaults
-        values$scenario_b_config <- values$defaults
-      }
-    })
-
-    # In the observe block that initializes when processed data is available:
+    # Initialize when data becomes available
     observe({
       req(processed_data())
       data <- processed_data()
+      col_names <- names(data)
 
-      # Get feature columns from the processed data
-      all_columns <- names(data)
+      # Categorize feature columns
+      values$feature_columns <- categorize_feature_columns(col_names)
+      values$all_feature_columns <- get_all_feature_columns(col_names)
 
-      # Remove non-feature columns
-      feature_cols <- all_columns[
-        !all_columns %in%
-          c(
-            "id_property",
-            "coordinate_lat",
-            "coordinate_lng",
-            "property_area",
-            "made_payment",
-            "business_name",
-            "business_area",
-            "business_category",
-            "business_sub_category"
-          )
-      ]
+      # Get structure type columns
+      struct_cols <- get_structure_type_columns(col_names)
+      values$commercial_type_columns <- struct_cols$commercial_type_columns
+      values$institutional_type_columns <- struct_cols$institutional_type_columns
+      values$all_structure_columns <- c(
+        struct_cols$commercial_type_columns,
+        struct_cols$institutional_type_columns
+      )
 
-      # Group features by category (excluding _na for UI)
-      values$feature_columns <- group_feature_columns(feature_cols)
-      values$structure_columns <- get_structure_type_columns(feature_cols)
+      # Ward columns
+      values$ward_columns <- col_names[grepl("^ward_number_\\d+$", col_names)]
 
-      # Store all feature columns (including _na) for calculations
-      values$all_feature_columns <- get_all_feature_columns(all_columns)
-      values$all_structure_columns <- get_all_structure_columns(feature_cols)
-
-      # Separate commercial and institutional types (excluding _na for UI)
-      values$commercial_type_columns <- feature_cols[
-        grepl("^commercial_type_", feature_cols) &
-          !grepl("(_na|_NA)$", feature_cols)
-      ]
-      values$institutional_type_columns <- feature_cols[
-        grepl("^institutional_type_", feature_cols) &
-          !grepl("(_na|_NA)$", feature_cols)
-      ]
-
-      values$ward_columns <- feature_cols[
-        grepl("^ward_number_[0-9]+", feature_cols) &
-          !grepl("(_na|_NA)$", feature_cols)
-      ]
+      cat("=== Module 2 Initialization ===\n")
+      cat("Feature columns found:", length(values$all_feature_columns), "\n")
+      cat(
+        "Commercial type columns:",
+        length(values$commercial_type_columns),
+        "\n"
+      )
+      cat(
+        "Institutional type columns:",
+        length(values$institutional_type_columns),
+        "\n"
+      )
+      cat("Ward columns:", length(values$ward_columns), "\n")
     })
 
-    output$download_config_existing <- downloadHandler(
-      filename = function() {
-        paste0(
-          "module2_existing_",
-          format(Sys.time(), "%Y%m%d_%H%M%S"),
-          ".json"
+    # Build default weights from parameter tables
+    observe({
+      # Build feature weights from param_features
+      if (!is.null(param_features())) {
+        values$default_feature_weights <- build_feature_weights_from_params(
+          param_features()
         )
-      },
-      content = function(file) {
-        tryCatch(
-          {
-            # Collect current configuration
-            config <- collect_module2_config(
-              input = input,
-              scenario_suffix = "existing",
-              feature_columns = values$feature_columns,
-              commercial_type_columns = values$commercial_type_columns,
-              institutional_type_columns = values$institutional_type_columns,
-              ward_columns = values$ward_columns
-            )
-
-            # Convert to JSON and write to file
-            config_json <- jsonlite::toJSON(
-              config,
-              auto_unbox = TRUE,
-              pretty = TRUE
-            )
-            writeLines(config_json, file)
-
-            showNotification(
-              "Configuration downloaded successfully!",
-              type = "message"
-            )
-          },
-          error = function(e) {
-            showNotification(
-              paste("Error downloading configuration:", e$message),
-              type = "error"
-            )
-          }
+        values$feature_metadata <- get_feature_metadata(param_features())
+        cat(
+          "Feature weights loaded from parameters:",
+          length(values$default_feature_weights),
+          "\n"
         )
       }
-    )
 
-    # Download handler for Scenario A
-    output$download_config_scenario_a <- downloadHandler(
-      filename = function() {
-        paste0(
-          "module2_scenario_a_",
-          format(Sys.time(), "%Y%m%d_%H%M%S"),
-          ".json"
+      # Build structure weights from param_prop_struct_type
+      if (!is.null(param_prop_struct_type())) {
+        values$default_structure_weights <- build_structure_weights_from_params(
+          param_prop_struct_type()
         )
-      },
-      content = function(file) {
-        tryCatch(
-          {
-            # Collect current configuration
-            config <- collect_module2_config(
-              input = input,
-              scenario_suffix = "scenario_a",
-              feature_columns = values$feature_columns,
-              commercial_type_columns = values$commercial_type_columns,
-              institutional_type_columns = values$institutional_type_columns,
-              ward_columns = values$ward_columns
-            )
-
-            # Convert to JSON and write to file
-            config_json <- jsonlite::toJSON(
-              config,
-              auto_unbox = TRUE,
-              pretty = TRUE
-            )
-            writeLines(config_json, file)
-
-            showNotification(
-              "Configuration downloaded successfully!",
-              type = "message"
-            )
-          },
-          error = function(e) {
-            showNotification(
-              paste("Error downloading configuration:", e$message),
-              type = "error"
-            )
-          }
+        cat(
+          "Structure weights loaded from parameters:",
+          length(values$default_structure_weights),
+          "\n"
         )
       }
-    )
 
-    # Download handler for Scenario B
-    output$download_config_scenario_b <- downloadHandler(
-      filename = function() {
-        paste0(
-          "module2_scenario_b_",
-          format(Sys.time(), "%Y%m%d_%H%M%S"),
-          ".json"
-        )
-      },
-      content = function(file) {
-        tryCatch(
-          {
-            # Collect current configuration
-            config <- collect_module2_config(
-              input = input,
-              scenario_suffix = "scenario_b",
-              feature_columns = values$feature_columns,
-              commercial_type_columns = values$commercial_type_columns,
-              institutional_type_columns = values$institutional_type_columns,
-              ward_columns = values$ward_columns
-            )
-
-            # Convert to JSON and write to file
-            config_json <- jsonlite::toJSON(
-              config,
-              auto_unbox = TRUE,
-              pretty = TRUE
-            )
-            writeLines(config_json, file)
-
-            showNotification(
-              "Configuration downloaded successfully!",
-              type = "message"
-            )
-          },
-          error = function(e) {
-            showNotification(
-              paste("Error downloading configuration:", e$message),
-              type = "error"
-            )
-          }
-        )
+      # Get base parameters from param_additions
+      if (!is.null(param_additions())) {
+        base_params <- get_base_params_from_additions(param_additions())
+        values$default_base_value <- base_params$base_value
+        values$default_area_weight <- base_params$area_weight
+        cat("Base value from parameters:", values$default_base_value, "\n")
+        cat("Area weight from parameters:", values$default_area_weight, "\n")
       }
-    )
+    })
 
-    # ==============================================================================
-    # UPLOAD OBSERVERS - Add these to your module server function
-    # ==============================================================================
+    # ==========================================================================
+    # HELPER FUNCTION - Get default weight for a feature
+    # ==========================================================================
 
-    # Upload handler for Existing scenario
-    observeEvent(input$upload_config_existing, {
-      req(input$upload_config_existing)
+    get_feature_default <- function(feature_name) {
+      # Try to match feature name to parameter table
+      # Feature columns in data might be like "wall_material_Masonry"
+      # We need to match against param_features which has "wall_material" as feature
 
-      tryCatch(
-        {
-          # Load configuration from uploaded file
-          config <- load_module2_config(input$upload_config_existing$datapath)
+      # First try direct match
+      if (feature_name %in% names(values$default_feature_weights)) {
+        return(values$default_feature_weights[[feature_name]])
+      }
 
-          # Update the config
-          values$existing_config <- config
+      # Try to extract base feature name and option
+      # e.g., "wall_condition_Good" -> feature="wall_condition", option="Good"
+      parts <- strsplit(feature_name, "_(?=[^_]+$)", perl = TRUE)[[1]]
+      if (length(parts) == 2) {
+        base_feature <- parts[1]
+        option <- parts[2]
 
-          # Apply ALL configuration values to inputs
-          apply_module2_config(
-            session = session,
-            config = config,
-            scenario_suffix = "existing",
-            feature_columns = values$feature_columns,
-            commercial_type_columns = values$commercial_type_columns,
-            institutional_type_columns = values$institutional_type_columns,
-            ward_columns = values$ward_columns
-          )
-
-          showNotification(
-            "Existing scenario configuration uploaded successfully!",
-            type = "message"
-          )
-        },
-        error = function(e) {
-          showNotification(
-            paste("Error uploading configuration:", e$message),
-            type = "error"
-          )
+        # Look up in param_features
+        pf <- param_features()
+        if (!is.null(pf)) {
+          match_row <- pf[
+            pf$feature == base_feature & pf$feature_options == option,
+          ]
+          if (nrow(match_row) > 0) {
+            return(match_row$weight_feature_option[1])
+          }
         }
+      }
+
+      # Default to 0 if not found
+      return(0)
+    }
+
+    get_structure_default <- function(struct_col_name) {
+      # struct_col_name is like "commercial_type_Bank"
+      if (struct_col_name %in% names(values$default_structure_weights)) {
+        return(values$default_structure_weights[[struct_col_name]])
+      }
+      return(0)
+    }
+
+    # ==========================================================================
+    # ADJUSTED BASE VALUE OUTPUTS
+    # ==========================================================================
+
+    output$adjusted_base_existing <- renderText({
+      req(input$base_value_existing, input$inflation_existing)
+      adjusted <- input$base_value_existing *
+        (1 + input$inflation_existing / 100)
+      format(round(adjusted, 2), big.mark = ",")
+    })
+
+    output$adjusted_base_scenario_a <- renderText({
+      req(input$base_value_scenario_a, input$inflation_scenario_a)
+      adjusted <- input$base_value_scenario_a *
+        (1 + input$inflation_scenario_a / 100)
+      format(round(adjusted, 2), big.mark = ",")
+    })
+
+    output$adjusted_base_scenario_b <- renderText({
+      req(input$base_value_scenario_b, input$inflation_scenario_b)
+      adjusted <- input$base_value_scenario_b *
+        (1 + input$inflation_scenario_b / 100)
+      format(round(adjusted, 2), big.mark = ",")
+    })
+
+    # ==========================================================================
+    # DYNAMIC UI - Base Value Inputs (with parameter-based defaults)
+    # ==========================================================================
+
+    output$base_params_existing <- renderUI({
+      tagList(
+        numericInput(
+          ns("base_value_existing"),
+          label = "Base Value",
+          value = values$default_base_value,
+          step = 0.01
+        ),
+        numericInput(
+          ns("inflation_existing"),
+          label = "Inflation Adjustment %",
+          value = 0,
+          step = 0.1
+        ),
+        helpText("0% = no adjustment, 50% = 50% inflation"),
+        h5("Inflation-Adjusted Base Value:"),
+        verbatimTextOutput(ns("adjusted_base_existing")),
+        numericInput(
+          ns("area_weight_existing"),
+          label = "Area Weight",
+          value = values$default_area_weight,
+          step = 0.01
+        ),
+        helpText("Default from city parameters")
       )
     })
 
-    # Upload handler for Scenario A
-    observeEvent(input$upload_config_scenario_a, {
-      req(input$upload_config_scenario_a)
-
-      tryCatch(
-        {
-          # Load configuration from uploaded file
-          config <- load_module2_config(input$upload_config_scenario_a$datapath)
-
-          # Update the config
-          values$scenario_a_config <- config
-
-          # Apply ALL configuration values to inputs
-          apply_module2_config(
-            session = session,
-            config = config,
-            scenario_suffix = "scenario_a",
-            feature_columns = values$feature_columns,
-            commercial_type_columns = values$commercial_type_columns,
-            institutional_type_columns = values$institutional_type_columns,
-            ward_columns = values$ward_columns
-          )
-
-          showNotification(
-            "Scenario A configuration uploaded successfully!",
-            type = "message"
-          )
-        },
-        error = function(e) {
-          showNotification(
-            paste("Error uploading configuration:", e$message),
-            type = "error"
-          )
-        }
+    output$base_params_scenario_a <- renderUI({
+      tagList(
+        numericInput(
+          ns("base_value_scenario_a"),
+          label = "Base Value",
+          value = values$default_base_value,
+          step = 0.01
+        ),
+        numericInput(
+          ns("inflation_scenario_a"),
+          label = "Inflation Adjustment %",
+          value = 0,
+          step = 0.1
+        ),
+        helpText("0% = no adjustment, 50% = 50% inflation"),
+        h5("Inflation-Adjusted Base Value:"),
+        verbatimTextOutput(ns("adjusted_base_scenario_a")),
+        numericInput(
+          ns("area_weight_scenario_a"),
+          label = "Area Weight",
+          value = values$default_area_weight,
+          step = 0.01
+        ),
+        helpText("Default from city parameters")
       )
     })
 
-    # Upload handler for Scenario B
-    observeEvent(input$upload_config_scenario_b, {
-      req(input$upload_config_scenario_b)
-
-      tryCatch(
-        {
-          # Load configuration from uploaded file
-          config <- load_module2_config(input$upload_config_scenario_b$datapath)
-
-          # Update the config
-          values$scenario_b_config <- config
-
-          # Apply ALL configuration values to inputs
-          apply_module2_config(
-            session = session,
-            config = config,
-            scenario_suffix = "scenario_b",
-            feature_columns = values$feature_columns,
-            commercial_type_columns = values$commercial_type_columns,
-            institutional_type_columns = values$institutional_type_columns,
-            ward_columns = values$ward_columns
-          )
-
-          showNotification(
-            "Scenario B configuration uploaded successfully!",
-            type = "message"
-          )
-        },
-        error = function(e) {
-          showNotification(
-            paste("Error uploading configuration:", e$message),
-            type = "error"
-          )
-        }
+    output$base_params_scenario_b <- renderUI({
+      tagList(
+        numericInput(
+          ns("base_value_scenario_b"),
+          label = "Base Value",
+          value = values$default_base_value,
+          step = 0.01
+        ),
+        numericInput(
+          ns("inflation_scenario_b"),
+          label = "Inflation Adjustment %",
+          value = 0,
+          step = 0.1
+        ),
+        helpText("0% = no adjustment, 50% = 50% inflation"),
+        h5("Inflation-Adjusted Base Value:"),
+        verbatimTextOutput(ns("adjusted_base_scenario_b")),
+        numericInput(
+          ns("area_weight_scenario_b"),
+          label = "Area Weight",
+          value = values$default_area_weight,
+          step = 0.01
+        ),
+        helpText("Default from city parameters")
       )
     })
 
-    # ==============================================================================
-    # FEATURE WEIGHT UI GENERATION
-    # ==============================================================================
+    # ==========================================================================
+    # DYNAMIC UI - Feature Weight Generation
+    # ==========================================================================
 
-    # Helper function to generate feature weight UI with collapsible boxes
     generate_feature_ui <- function(scenario_suffix) {
       req(values$feature_columns)
 
-      # Get the config for this scenario
-      config <- switch(
-        scenario_suffix,
-        "existing" = values$existing_config,
-        "scenario_a" = values$scenario_a_config,
-        "scenario_b" = values$scenario_b_config
-      )
+      # Group features by category using metadata if available
+      create_feature_inputs <- function(feature_list, title) {
+        if (length(feature_list) == 0) {
+          return(NULL)
+        }
 
-      # Get default weights
-      defaults <- get_default_weights()
+        box(
+          title = title,
+          width = 12,
+          collapsible = TRUE,
+          collapsed = TRUE,
+          status = "info",
+          solidHeader = FALSE,
+          lapply(feature_list, function(feat) {
+            feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
+            default_val <- get_feature_default(feat)
+
+            # Try to get display label from metadata
+            display_name <- feat
+            if (!is.null(values$feature_metadata)) {
+              meta_match <- values$feature_metadata[
+                values$feature_metadata$feature == feat,
+              ]
+              if (nrow(meta_match) > 0) {
+                display_name <- meta_match$feature_label[1]
+              }
+            }
+
+            fluidRow(
+              column(
+                8,
+                p(display_name, style = "margin-top: 5px; font-size: 12px;")
+              ),
+              column(
+                4,
+                numericInput(
+                  ns(paste0("weight_", feat_safe, "_", scenario_suffix)),
+                  label = NULL,
+                  value = default_val,
+                  step = 1,
+                  width = "100%"
+                )
+              )
+            )
+          })
+        )
+      }
 
       tagList(
-        # Structure Features
-        if (length(values$feature_columns$structure_features) > 0) {
-          box(
-            title = "Structure Features",
-            width = 12,
-            collapsible = TRUE,
-            collapsed = TRUE,
-            status = "info",
-            solidHeader = FALSE,
-            lapply(values$feature_columns$structure_features, function(feat) {
-              feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-
-              # Try to get value from config first, then from defaults
-              default_val <- config$feature_weights[[feat]]
-              if (is.null(default_val)) {
-                default_val <- defaults$feature_weights[[feat]]
-              }
-              if (is.null(default_val)) {
-                default_val <- 0
-              }
-
-              fluidRow(
-                column(8, p(feat, style = "margin-top: 5px; font-size: 12px;")),
-                column(
-                  4,
-                  numericInput(
-                    ns(paste0("weight_", feat_safe, "_", scenario_suffix)),
-                    label = NULL,
-                    value = default_val,
-                    step = 1,
-                    width = "100%"
-                  )
-                )
-              )
-            })
-          )
-        },
-
-        # Utility Features
-        if (length(values$feature_columns$utility_features) > 0) {
-          box(
-            title = "Utility Features",
-            width = 12,
-            collapsible = TRUE,
-            collapsed = TRUE,
-            status = "info",
-            solidHeader = FALSE,
-            lapply(values$feature_columns$utility_features, function(feat) {
-              feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-
-              # Try to get value from config first, then from defaults
-              default_val <- config$feature_weights[[feat]]
-              if (is.null(default_val)) {
-                default_val <- defaults$feature_weights[[feat]]
-              }
-              if (is.null(default_val)) {
-                default_val <- 0
-              }
-
-              fluidRow(
-                column(8, p(feat, style = "margin-top: 5px; font-size: 12px;")),
-                column(
-                  4,
-                  numericInput(
-                    ns(paste0("weight_", feat_safe, "_", scenario_suffix)),
-                    label = NULL,
-                    value = default_val,
-                    step = 1,
-                    width = "100%"
-                  )
-                )
-              )
-            })
-          )
-        },
-
-        # Location Features
-        if (length(values$feature_columns$location_features) > 0) {
-          box(
-            title = "Location Features",
-            width = 12,
-            collapsible = TRUE,
-            collapsed = TRUE,
-            status = "info",
-            solidHeader = FALSE,
-            lapply(values$feature_columns$location_features, function(feat) {
-              feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-
-              # Try to get value from config first, then from defaults
-              default_val <- config$feature_weights[[feat]]
-              if (is.null(default_val)) {
-                default_val <- defaults$feature_weights[[feat]]
-              }
-              if (is.null(default_val)) {
-                default_val <- 0
-              }
-
-              fluidRow(
-                column(8, p(feat, style = "margin-top: 5px; font-size: 12px;")),
-                column(
-                  4,
-                  numericInput(
-                    ns(paste0("weight_", feat_safe, "_", scenario_suffix)),
-                    label = NULL,
-                    value = default_val,
-                    step = 1,
-                    width = "100%"
-                  )
-                )
-              )
-            })
-          )
-        },
-
-        # Location Zones
-        if (length(values$feature_columns$location_zones) > 0) {
-          box(
-            title = "Location Zones",
-            width = 12,
-            collapsible = TRUE,
-            collapsed = TRUE,
-            status = "info",
-            solidHeader = FALSE,
-            lapply(values$feature_columns$location_zones, function(feat) {
-              feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-
-              # Try to get value from config first, then from defaults
-              default_val <- config$feature_weights[[feat]]
-              if (is.null(default_val)) {
-                default_val <- defaults$feature_weights[[feat]]
-              }
-              if (is.null(default_val)) {
-                default_val <- 0
-              }
-
-              fluidRow(
-                column(8, p(feat, style = "margin-top: 5px; font-size: 12px;")),
-                column(
-                  4,
-                  numericInput(
-                    ns(paste0("weight_", feat_safe, "_", scenario_suffix)),
-                    label = NULL,
-                    value = default_val,
-                    step = 1,
-                    width = "100%"
-                  )
-                )
-              )
-            })
-          )
-        },
-
-        # Property Characteristics
-        if (length(values$feature_columns$property_characteristics) > 0) {
-          box(
-            title = "Property Characteristics",
-            width = 12,
-            collapsible = TRUE,
-            collapsed = TRUE,
-            status = "info",
-            solidHeader = FALSE,
-            lapply(
-              values$feature_columns$property_characteristics,
-              function(feat) {
-                feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-
-                # Try to get value from config first, then from defaults
-                default_val <- config$feature_weights[[feat]]
-                if (is.null(default_val)) {
-                  default_val <- defaults$feature_weights[[feat]]
-                }
-                if (is.null(default_val)) {
-                  default_val <- 0
-                }
-
-                fluidRow(
-                  column(
-                    8,
-                    p(feat, style = "margin-top: 5px; font-size: 12px;")
-                  ),
-                  column(
-                    4,
-                    numericInput(
-                      ns(paste0("weight_", feat_safe, "_", scenario_suffix)),
-                      label = NULL,
-                      value = default_val,
-                      step = 1,
-                      width = "100%"
-                    )
-                  )
-                )
-              }
-            )
-          )
-        },
-
-        # Ward Features
-        if (length(values$ward_columns) > 0) {
-          box(
-            title = "Ward Features",
-            width = 12,
-            collapsible = TRUE,
-            collapsed = TRUE,
-            status = "info",
-            solidHeader = FALSE,
-            lapply(values$ward_columns, function(feat) {
-              feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-
-              # Try to get value from config first, then from defaults
-              default_val <- config$feature_weights[[feat]]
-              if (is.null(default_val)) {
-                default_val <- defaults$feature_weights[[feat]]
-              }
-              if (is.null(default_val)) {
-                default_val <- 0
-              }
-
-              fluidRow(
-                column(8, p(feat, style = "margin-top: 5px; font-size: 12px;")),
-                column(
-                  4,
-                  numericInput(
-                    ns(paste0("weight_", feat_safe, "_", scenario_suffix)),
-                    label = NULL,
-                    value = default_val,
-                    step = 1,
-                    width = "100%"
-                  )
-                )
-              )
-            })
-          )
-        }
+        create_feature_inputs(
+          values$feature_columns$structure_features,
+          "Structure Features"
+        ),
+        create_feature_inputs(
+          values$feature_columns$utility_features,
+          "Utility Features"
+        ),
+        create_feature_inputs(
+          values$feature_columns$location_features,
+          "Location Features"
+        ),
+        create_feature_inputs(
+          values$feature_columns$location_zones,
+          "Location Zones"
+        ),
+        create_feature_inputs(
+          values$ward_columns,
+          "Ward Weights"
+        )
       )
     }
 
-    # Render feature weight UIs for each scenario
+    # Render feature UIs
     output$features_ui_existing <- renderUI({
       req(values$feature_columns)
       generate_feature_ui("existing")
@@ -604,877 +375,134 @@ module2_server <- function(id, processed_data) {
       generate_feature_ui("scenario_b")
     })
 
-    # ==============================================================================
-    # STRUCTURE WEIGHT UI GENERATION
-    # ==============================================================================
+    # ==========================================================================
+    # DYNAMIC UI - Structure Type Weight Generation
+    # ==========================================================================
 
-    # Helper function to generate structure weight UI
     generate_structure_ui <- function(scenario_suffix) {
-      req(
-        values$commercial_type_columns,
-        values$institutional_type_columns
-      )
+      req(values$commercial_type_columns, values$institutional_type_columns)
 
-      # Get default weights
-      defaults <- get_default_weights()
+      create_structure_inputs <- function(struct_cols, title) {
+        if (length(struct_cols) == 0) {
+          return(NULL)
+        }
+
+        tagList(
+          h4(title),
+          lapply(struct_cols, function(col) {
+            col_safe <- gsub("[^A-Za-z0-9_]", "_", col)
+            # Extract display name (remove prefix)
+            col_display <- gsub("^(commercial|institutional)_type_", "", col)
+            default_val <- get_structure_default(col)
+
+            div(
+              class = "form-group",
+              style = "margin-bottom: 10px;",
+              fluidRow(
+                column(
+                  8,
+                  tags$label(col_display, style = "font-size: 12px;")
+                ),
+                column(
+                  4,
+                  numericInput(
+                    ns(paste0("weight_", col_safe, "_", scenario_suffix)),
+                    label = NULL,
+                    value = default_val,
+                    min = -100,
+                    max = 5000,
+                    step = 1,
+                    width = "100%"
+                  )
+                )
+              )
+            )
+          })
+        )
+      }
 
       tagList(
-        h4("Commercial Types"),
-        lapply(values$commercial_type_columns, function(col) {
-          col_safe <- gsub("[^A-Za-z0-9_]", "_", col)
-          col_display <- gsub("^commercial_type_", "", col)
-          default_val <- defaults$structure_weights[[col]] %||% 0
-
-          div(
-            class = "form-group",
-            style = "margin-bottom: 10px;",
-            tags$label(
-              `for` = paste0("weight_", col_safe, "_", scenario_suffix),
-              col_display
-            ),
-            numericInput(
-              inputId = ns(paste0("weight_", col_safe, "_", scenario_suffix)),
-              label = NULL,
-              value = default_val,
-              min = -100,
-              max = 5000,
-              step = 1,
-              width = "100%"
-            )
-          )
-        }),
-        h4("Institutional Types"),
-        lapply(values$institutional_type_columns, function(col) {
-          col_safe <- gsub("[^A-Za-z0-9_]", "_", col)
-          col_display <- gsub("^institutional_type_", "", col)
-          default_val <- defaults$structure_weights[[col]] %||% 0
-
-          div(
-            class = "form-group",
-            style = "margin-bottom: 10px;",
-            tags$label(
-              `for` = paste0("weight_", col_safe, "_", scenario_suffix),
-              col_display
-            ),
-            numericInput(
-              inputId = ns(paste0("weight_", col_safe, "_", scenario_suffix)),
-              label = NULL,
-              value = default_val,
-              min = -100,
-              max = 5000,
-              step = 1,
-              width = "100%"
-            )
-          )
-        })
+        create_structure_inputs(
+          values$commercial_type_columns,
+          "Commercial Types"
+        ),
+        br(),
+        create_structure_inputs(
+          values$institutional_type_columns,
+          "Institutional Types"
+        )
       )
     }
 
-    # Render structure weight UIs for each scenario
+    # Render structure UIs
     output$structure_ui_existing <- renderUI({
-      req(
-        values$commercial_type_columns,
-        values$institutional_type_columns
-      )
+      req(values$commercial_type_columns)
       generate_structure_ui("existing")
     })
 
     output$structure_ui_scenario_a <- renderUI({
-      req(
-        values$commercial_type_columns,
-        values$institutional_type_columns
-      )
+      req(values$commercial_type_columns)
       generate_structure_ui("scenario_a")
     })
 
     output$structure_ui_scenario_b <- renderUI({
-      req(
-        values$commercial_type_columns,
-        values$institutional_type_columns
-      )
+      req(values$commercial_type_columns)
       generate_structure_ui("scenario_b")
     })
 
-    # ==============================================================================
-    # UPDATE CONFIGURATIONS WHEN BASE PARAMETERS CHANGE
-    # ==============================================================================
+    # ==========================================================================
+    # CALCULATION - Calculate Property Values
+    # ==========================================================================
 
-    # Update existing config when base parameters change
-    observe({
-      values$existing_config$base_value <- input$base_value_existing
-      values$existing_config$inflation <- input$inflation_existing / 100
-      values$existing_config$area_weight <- input$area_weight_existing
-    })
-
-    # Update scenario A config when base parameters change
-    observe({
-      values$scenario_a_config$base_value <- input$base_value_scenario_a
-      values$scenario_a_config$inflation <- input$inflation_scenario_a / 100
-      values$scenario_a_config$area_weight <- input$area_weight_scenario_a
-    })
-
-    # Update scenario B config when base parameters change
-    observe({
-      values$scenario_b_config$base_value <- input$base_value_scenario_b
-      values$scenario_b_config$inflation <- input$inflation_scenario_b / 100
-      values$scenario_b_config$area_weight <- input$area_weight_scenario_b
-    })
-
-    # Calculate inflation-adjusted base values
-    output$adjusted_base_existing <- renderText({
-      base <- input$base_value_existing
-      inflation <- input$inflation_existing
-      adjusted <- base * (1 + inflation / 100)
-      format(adjusted, digits = 2, big.mark = ",")
-    })
-
-    output$adjusted_base_scenario_a <- renderText({
-      base <- input$base_value_scenario_a
-      inflation <- input$inflation_scenario_a
-      adjusted <- base * (1 + inflation / 100)
-      format(adjusted, digits = 2, big.mark = ",")
-    })
-
-    output$adjusted_base_scenario_b <- renderText({
-      base <- input$base_value_scenario_b
-      inflation <- input$inflation_scenario_b
-      adjusted <- base * (1 + inflation / 100)
-      format(adjusted, digits = 2, big.mark = ",")
-    })
-
-    # ==============================================================================
-    # COPY BUTTON OBSERVERS
-    # ==============================================================================
-
-    # Copy Existing to Scenario A
-    observeEvent(input$copy_existing_to_a, {
-      req(values$feature_columns)
-
-      tryCatch(
-        {
-          # Collect current configuration from Existing
-          config <- collect_module2_config(
-            input = input,
-            scenario_suffix = "existing",
-            feature_columns = values$feature_columns,
-            commercial_type_columns = values$commercial_type_columns,
-            institutional_type_columns = values$institutional_type_columns,
-            ward_columns = values$ward_columns
-          )
-
-          # Update the config reactive value
-          values$scenario_a_config <- config
-
-          # Apply to Scenario A
-          apply_module2_config(
-            session = session,
-            config = config,
-            scenario_suffix = "scenario_a",
-            feature_columns = values$feature_columns,
-            commercial_type_columns = values$commercial_type_columns,
-            institutional_type_columns = values$institutional_type_columns,
-            ward_columns = values$ward_columns
-          )
-
-          showNotification(
-            "Copied Existing configuration to Scenario A",
-            type = "message",
-            duration = 3
-          )
-        },
-        error = function(e) {
-          showNotification(
-            paste("Error copying configuration:", e$message),
-            type = "error",
-            duration = 5
-          )
-        }
-      )
-    })
-
-    # Copy Existing to Scenario B
-    observeEvent(input$copy_existing_to_b, {
-      req(values$feature_columns)
-
-      tryCatch(
-        {
-          # Collect current configuration from Existing
-          config <- collect_module2_config(
-            input = input,
-            scenario_suffix = "existing",
-            feature_columns = values$feature_columns,
-            commercial_type_columns = values$commercial_type_columns,
-            institutional_type_columns = values$institutional_type_columns,
-            ward_columns = values$ward_columns
-          )
-
-          # Update the config reactive value
-          values$scenario_b_config <- config
-
-          # Apply to Scenario B
-          apply_module2_config(
-            session = session,
-            config = config,
-            scenario_suffix = "scenario_b",
-            feature_columns = values$feature_columns,
-            commercial_type_columns = values$commercial_type_columns,
-            institutional_type_columns = values$institutional_type_columns,
-            ward_columns = values$ward_columns
-          )
-
-          showNotification(
-            "Copied Existing configuration to Scenario B",
-            type = "message",
-            duration = 3
-          )
-        },
-        error = function(e) {
-          showNotification(
-            paste("Error copying configuration:", e$message),
-            type = "error",
-            duration = 5
-          )
-        }
-      )
-    })
-
-    # Copy Scenario A to Scenario B
-    observeEvent(input$copy_a_to_b, {
-      req(values$feature_columns)
-
-      tryCatch(
-        {
-          # Collect current configuration from Scenario A
-          config <- collect_module2_config(
-            input = input,
-            scenario_suffix = "scenario_a",
-            feature_columns = values$feature_columns,
-            commercial_type_columns = values$commercial_type_columns,
-            institutional_type_columns = values$institutional_type_columns,
-            ward_columns = values$ward_columns
-          )
-
-          # Update the config reactive value
-          values$scenario_b_config <- config
-
-          # Apply to Scenario B
-          apply_module2_config(
-            session = session,
-            config = config,
-            scenario_suffix = "scenario_b",
-            feature_columns = values$feature_columns,
-            commercial_type_columns = values$commercial_type_columns,
-            institutional_type_columns = values$institutional_type_columns,
-            ward_columns = values$ward_columns
-          )
-
-          showNotification(
-            "Copied Scenario A configuration to Scenario B",
-            type = "message",
-            duration = 3
-          )
-        },
-        error = function(e) {
-          showNotification(
-            paste("Error copying configuration:", e$message),
-            type = "error",
-            duration = 5
-          )
-        }
-      )
-    })
-
-    # Reset all scenarios to defaults
-    observeEvent(input$reset_all, {
-      req(values$defaults)
-
-      tryCatch(
-        {
-          # Apply defaults to all three scenarios
-          for (scenario in c("existing", "scenario_a", "scenario_b")) {
-            apply_module2_config(
-              session = session,
-              config = values$defaults,
-              scenario_suffix = scenario,
-              feature_columns = values$feature_columns,
-              commercial_type_columns = values$commercial_type_columns,
-              institutional_type_columns = values$institutional_type_columns,
-              ward_columns = values$ward_columns
-            )
-
-            # Update config reactive values
-            if (scenario == "existing") {
-              values$existing_config <- values$defaults
-            } else if (scenario == "scenario_a") {
-              values$scenario_a_config <- values$defaults
-            } else if (scenario == "scenario_b") {
-              values$scenario_b_config <- values$defaults
-            }
-          }
-
-          showNotification(
-            "All scenarios reset to default Freetown values",
-            type = "warning",
-            duration = 4
-          )
-        },
-        error = function(e) {
-          showNotification(
-            paste("Error resetting configurations:", e$message),
-            type = "error",
-            duration = 5
-          )
-        }
-      )
-    })
-    # ==============================================================================
-    # CALCULATE PREVIEW - UPDATED TO CALCULATE ALL SCENARIOS AT ONCE
-    # ==============================================================================
-
-    observeEvent(input$calculate_preview, {
+    observeEvent(input$calculate_values, {
       req(processed_data())
-      req(values$feature_columns)
-      req(values$commercial_type_columns)
-      req(values$institutional_type_columns)
+      data <- processed_data()
+      n_rows <- nrow(data)
 
-      withProgress(
-        message = "Calculating property values for all scenarios...",
-        value = 0,
-        {
-          # Get full dataset (ALL rows)
-          data <- processed_data()
-          n_total_rows <- nrow(data)
+      withProgress(message = "Calculating property values...", value = 0, {
+        for (scenario in c("existing", "scenario_a", "scenario_b")) {
+          incProgress(1 / 3, detail = paste("Processing", scenario))
 
-          # DIAGNOSTIC: Check what columns exist in the processed data
-          cat("\n=== DATA STRUCTURE DIAGNOSTIC ===\n")
-          data_cols <- names(data)
-          cat("Total columns in processed_data:", length(data_cols), "\n")
-          cat("Has business_area?", "business_area" %in% data_cols, "\n")
-          cat("Has business_name?", "business_name" %in% data_cols, "\n")
-          cat(
-            "Has business_category?",
-            "business_category" %in% data_cols,
-            "\n"
-          )
-          cat(
-            "Has business_sub_category?",
-            "business_sub_category" %in% data_cols,
-            "\n"
-          )
+          # Get base parameters
+          base_value <- input[[paste0("base_value_", scenario)]] %||%
+            values$default_base_value
+          inflation <- input[[paste0("inflation_", scenario)]] %||% 0
+          area_weight <- input[[paste0("area_weight_", scenario)]] %||%
+            values$default_area_weight
 
-          if ("business_area" %in% data_cols) {
-            cat(
-              "business_area non-NA count:",
-              sum(!is.na(data$business_area)),
-              "out of",
-              nrow(data),
-              "\n"
-            )
-            if (sum(!is.na(data$business_area)) > 0) {
-              cat(
-                "Sample business_area values:",
-                paste(
-                  head(data$business_area[!is.na(data$business_area)], 5),
-                  collapse = ", "
-                ),
-                "\n"
-              )
-            }
-          }
-          cat("==================================\n\n")
+          inflation_adjusted_base <- base_value * (1 + inflation / 100)
 
-          cat("\n======================================================\n")
-          cat("=== STARTING CALCULATION FOR ALL THREE SCENARIOS ===\n")
-          cat("======================================================\n")
-          cat("Total rows to process:", n_total_rows, "\n\n")
-
-          # Loop through all three scenarios
-          scenarios_to_calculate <- c("existing", "scenario_a", "scenario_b")
-          scenario_display_names <- c("Existing", "Scenario A", "Scenario B")
-
-          for (i in seq_along(scenarios_to_calculate)) {
-            scenario <- scenarios_to_calculate[i]
-            display_name <- scenario_display_names[i]
-
-            incProgress(
-              0.25,
-              detail = paste("Calculating", display_name, "scenario...")
-            )
-
-            cat("\n=== Starting calculation for", display_name, "===\n")
-            cat("Scenario:", scenario, "\n")
-
-            # Get base parameters for this scenario
-            base_value <- input[[paste0("base_value_", scenario)]]
-            inflation <- input[[paste0("inflation_", scenario)]]
-            area_weight <- input[[paste0("area_weight_", scenario)]]
-
-            # Validate base parameters
-            if (is.null(base_value) || length(base_value) == 0) {
-              showNotification(
-                paste(
-                  "Missing base_value for",
-                  display_name,
-                  "- using default"
-                ),
-                type = "warning"
-              )
-              base_value <- 231.859128
-            }
-            if (is.null(inflation) || length(inflation) == 0) {
-              showNotification(
-                paste("Missing inflation for", display_name, "- using default"),
-                type = "warning"
-              )
-              inflation <- 0
-            }
-            if (is.null(area_weight) || length(area_weight) == 0) {
-              showNotification(
-                paste(
-                  "Missing area_weight for",
-                  display_name,
-                  "- using default"
-                ),
-                type = "warning"
-              )
-              area_weight <- 0.5
-            }
-
-            cat("Base value:", base_value, "\n")
-            cat("Inflation:", inflation, "%\n")
-            cat("Area weight:", area_weight, "\n")
-
-            # Calculate inflation-adjusted base
-            inflation_adjusted_base <- base_value * (1 + inflation / 100)
-
-            # Collect all feature weights (including _na set to 0)
-            feature_weights <- list()
-
-            all_features <- c(
-              values$feature_columns$structure_features,
-              values$feature_columns$utility_features,
-              values$feature_columns$location_features,
-              values$feature_columns$location_zones,
-              values$feature_columns$property_characteristics,
-              values$ward_columns
-            )
-
-            # Add _na variables
-            if (!is.null(values$all_feature_columns)) {
-              na_features <- values$all_feature_columns[grepl(
-                "(_na|_NA)$",
-                values$all_feature_columns
-              )]
-              all_features <- c(all_features, na_features)
-              all_features <- unique(all_features)
-            }
-
-            for (feat in all_features) {
-              if (grepl("(_na|_NA)$", feat)) {
-                feature_weights[[feat]] <- 0
-              } else {
-                feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-                input_id <- paste0("weight_", feat_safe, "_", scenario)
-                if (!is.null(input[[input_id]])) {
-                  feature_weights[[feat]] <- input[[input_id]]
-                }
-              }
-            }
-
-            cat("Feature weights collected:", length(feature_weights), "\n")
-
-            # Collect structure type weights (including _na set to 0)
-            structure_weights <- list()
-
-            all_structures <- c(
-              values$commercial_type_columns,
-              values$institutional_type_columns
-            )
-
-            # Add _na structure variables
-            if (!is.null(values$all_structure_columns)) {
-              na_structures <- values$all_structure_columns[grepl(
-                "(_na|_NA)$",
-                values$all_structure_columns
-              )]
-              all_structures <- c(all_structures, na_structures)
-              all_structures <- unique(all_structures)
-            }
-
-            for (struct in all_structures) {
-              if (grepl("(_na|_NA)$", struct)) {
-                structure_weights[[struct]] <- 0
-              } else {
-                struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
-                input_id <- paste0("weight_", struct_safe, "_", scenario)
-                if (!is.null(input[[input_id]])) {
-                  structure_weights[[struct]] <- input[[input_id]]
-                }
-              }
-            }
-
-            cat("Structure weights collected:", length(structure_weights), "\n")
-
-            # DIAGNOSTIC: Show structure weight details
-            cat("\n=== STRUCTURE WEIGHT DIAGNOSTIC ===\n")
-            cat(
-              "Structure weight names collected:",
-              paste(head(names(structure_weights), 10), collapse = ", "),
-              "\n"
-            )
-            cat(
-              "Sample structure weights:",
-              paste(head(structure_weights, 5), collapse = ", "),
-              "\n"
-            )
-
-            # Check which structure columns exist in data
-            structure_cols_in_data <- names(structure_weights)[
-              names(structure_weights) %in% names(data)
-            ]
-            cat(
-              "Structure columns that exist in data:",
-              length(structure_cols_in_data),
-              "\n"
-            )
-            if (length(structure_cols_in_data) > 0) {
-              cat(
-                "Examples:",
-                paste(head(structure_cols_in_data, 10), collapse = ", "),
-                "\n"
-              )
-            }
-
-            # Show columns in data that look like structure types
-            data_structure_cols <- names(data)[grepl(
-              "^(commercial_type|institutional_type)_",
-              names(data)
-            )]
-            cat(
-              "Structure-like columns in data:",
-              length(data_structure_cols),
-              "\n"
-            )
-            if (length(data_structure_cols) > 0) {
-              cat(
-                "Examples:",
-                paste(head(data_structure_cols, 10), collapse = ", "),
-                "\n"
-              )
-            }
-            cat("===================================\n\n")
-
-            # Calculate product of feature weights for ALL rows
-            product_weights <- rep(1, n_total_rows)
-
-            for (feat in names(feature_weights)) {
-              if (feat %in% names(data)) {
-                weight <- feature_weights[[feat]]
-                feat_values <- data[[feat]]
-
-                # CRITICAL FIX: Replace NA values with 0 (treat as feature not present)
-                # This prevents NaN when raising negative numbers to NA power
-                feat_values[is.na(feat_values)] <- 0
-
-                # Apply weight: ((weight/100)+1)^feature_value
-                # This matches the formula in the Module 2 diagram
-                product_weights <- product_weights *
-                  (((weight / 100) + 1)^feat_values)
-              }
-            }
-
-            # DIAGNOSTIC: Check for problematic values
-            cat("\n=== PRODUCT WEIGHTS DIAGNOSTIC ===\n")
-            cat(
-              "Total product_weights calculated:",
-              length(product_weights),
-              "\n"
-            )
-            cat("Product weights with NA:", sum(is.na(product_weights)), "\n")
-            cat("Product weights with NaN:", sum(is.nan(product_weights)), "\n")
-            cat(
-              "Product weights with Inf:",
-              sum(is.infinite(product_weights)),
-              "\n"
-            )
-            cat(
-              "Product weights range (valid values):",
-              min(product_weights[is.finite(product_weights)], na.rm = TRUE),
-              "-",
-              max(product_weights[is.finite(product_weights)], na.rm = TRUE),
-              "\n"
-            )
-            cat("===================================\n\n")
-
-            # Calculate structure type multipliers for ALL rows
-            structure_multipliers <- rep(1, n_total_rows)
-
-            cat("\n=== STRUCTURE MULTIPLIER CALCULATION ===\n")
-            structures_applied <- 0
-
-            for (struct in names(structure_weights)) {
-              if (struct %in% names(data)) {
-                weight <- structure_weights[[struct]]
-                struct_values <- data[[struct]]
-
-                # Count how many properties have this structure type
-                n_with_struct <- sum(struct_values == 1, na.rm = TRUE)
-                if (n_with_struct > 0) {
-                  cat(
-                    "Applying",
-                    struct,
-                    "weight =",
-                    weight,
-                    "to",
-                    n_with_struct,
-                    "properties\n"
-                  )
-                  structures_applied <- structures_applied + 1
-                }
-
-                # Multiply by (weight/100 + 1) where structure type is present (value = 1)
-                # This matches the formula in the Module 2 diagram
-                # NA values are treated as 0 (structure type not present)
-                struct_values[is.na(struct_values)] <- 0
-                structure_multipliers <- structure_multipliers *
-                  ifelse(struct_values == 1, (weight / 100 + 1), 1)
-              }
-            }
-
-            cat("Total structure types applied:", structures_applied, "\n")
-            cat(
-              "Structure multiplier range:",
-              min(structure_multipliers),
-              "-",
-              max(structure_multipliers),
-              "\n"
-            )
-            cat(
-              "Properties with structure multiplier > 1:",
-              sum(structure_multipliers > 1),
-              "\n"
-            )
-            cat("=========================================\n\n")
-
-            # Get property area for ALL rows
-            property_area <- if ("property_area" %in% names(data)) {
-              data$property_area
-            } else {
-              rep(NA, n_total_rows)
-            }
-
-            # Calculate property value for ALL rows
-            cat("\n=== PROPERTY VALUE CALCULATION DIAGNOSTIC ===\n")
-            cat("Inflation adjusted base:", inflation_adjusted_base, "\n")
-            cat("Area weight:", area_weight, "\n")
-            cat(
-              "Properties with valid area:",
-              sum(!is.na(property_area) & property_area > 0),
-              "\n"
-            )
-            cat(
-              "Sample property areas:",
-              paste(
-                head(property_area[!is.na(property_area)], 5),
-                collapse = ", "
-              ),
-              "\n"
-            )
-            cat(
-              "Sample product_weights:",
-              paste(
-                head(product_weights[!is.na(product_weights)], 5),
-                collapse = ", "
-              ),
-              "\n"
-            )
-            cat(
-              "Sample structure_multipliers:",
-              paste(
-                head(structure_multipliers[!is.na(structure_multipliers)], 5),
-                collapse = ", "
-              ),
-              "\n"
-            )
-            cat("==============================================\n\n")
-
-            property_value_all <- ifelse(
-              !is.na(property_area) & property_area > 0,
-              inflation_adjusted_base *
-                (property_area^area_weight) *
-                product_weights *
-                structure_multipliers,
-              NA
-            )
-
-            # Get business area for ALL rows
-            business_area_all <- if ("business_area" %in% names(data)) {
-              data$business_area
-            } else {
-              rep(NA, n_total_rows)
-            }
-
-            # Calculate business value for ALL rows
-            business_value_all <- ifelse(
-              !is.na(business_area_all) & business_area_all > 0,
-              inflation_adjusted_base *
-                (business_area_all^area_weight) *
-                product_weights *
-                structure_multipliers,
-              NA
-            )
-
-            cat("\n=== Calculation Summary (ALL rows) ===\n")
-            cat(
-              "Property values calculated:",
-              sum(!is.na(property_value_all)),
-              "of",
-              n_total_rows,
-              "\n"
-            )
-            cat(
-              "Property value range:",
-              ifelse(
-                sum(!is.na(property_value_all)) > 0,
-                paste(
-                  min(property_value_all, na.rm = TRUE),
-                  "-",
-                  max(property_value_all, na.rm = TRUE)
-                ),
-                "All NA"
-              ),
-              "\n"
-            )
-            cat(
-              "Business values calculated:",
-              sum(!is.na(business_value_all)),
-              "of",
-              n_total_rows,
-              "\n"
-            )
-
-            # Create dataframe with calculated values
-            calculated_df <- data.frame(
-              id_property = data$id_property,
-              property_type = data$property_type,
-              property_value = property_value_all,
-              business_value = business_value_all,
-              stringsAsFactors = FALSE
-            )
-
-            # Store in the appropriate scenario slot
-            if (scenario == "existing") {
-              values$calculated_values_existing <- calculated_df
-            } else if (scenario == "scenario_a") {
-              values$calculated_values_scenario_a <- calculated_df
-            } else if (scenario == "scenario_b") {
-              values$calculated_values_scenario_b <- calculated_df
-            }
-
-            cat(
-              "Stored calculated values for",
-              scenario,
-              ":",
-              nrow(calculated_df),
-              "properties\n"
-            )
-            cat("=== Calculation complete for", display_name, "===\n\n")
-          }
-
-          # After all scenarios are calculated, create preview table for the selected scenario
-          incProgress(0.1, detail = "Creating preview table...")
-
-          # Get the selected scenario for preview display
-          # Note: input$preview_scenario already returns "existing", "scenario_a", or "scenario_b"
-          preview_scenario <- input$preview_scenario
-
-          # Validate preview_scenario
-          if (is.null(preview_scenario) || length(preview_scenario) == 0) {
-            preview_scenario <- "existing" # Default to existing if not set
-          }
-
-          # Get the calculated values for the preview scenario
-          preview_calculated <- if (preview_scenario == "existing") {
-            values$calculated_values_existing
-          } else if (preview_scenario == "scenario_a") {
-            values$calculated_values_scenario_a
-          } else {
-            values$calculated_values_scenario_b
-          }
-
-          # Recalculate display components for the preview scenario
-          preview_base_value <- input[[paste0("base_value_", preview_scenario)]]
-          preview_inflation <- input[[paste0("inflation_", preview_scenario)]]
-          preview_area_weight <- input[[paste0(
-            "area_weight_",
-            preview_scenario
-          )]]
-
-          # Validate inputs
-          if (is.null(preview_base_value) || length(preview_base_value) == 0) {
-            preview_base_value <- 231.859128 # Default base value
-          }
-          if (is.null(preview_inflation) || length(preview_inflation) == 0) {
-            preview_inflation <- 0 # Default inflation
-          }
-          if (
-            is.null(preview_area_weight) || length(preview_area_weight) == 0
-          ) {
-            preview_area_weight <- 0.5 # Default area weight
-          }
-
-          preview_inflation_adjusted_base <- preview_base_value *
-            (1 + preview_inflation / 100)
-
-          # Collect preview scenario weights for display
-          preview_feature_weights <- list()
+          # Collect feature weights
+          feature_weights <- list()
           all_features <- c(
             values$feature_columns$structure_features,
             values$feature_columns$utility_features,
             values$feature_columns$location_features,
             values$feature_columns$location_zones,
-            values$feature_columns$property_characteristics,
             values$ward_columns
           )
 
+          # Include _NA features with weight 0
           if (!is.null(values$all_feature_columns)) {
             na_features <- values$all_feature_columns[grepl(
               "(_na|_NA)$",
               values$all_feature_columns
             )]
-            all_features <- c(all_features, na_features)
-            all_features <- unique(all_features)
+            all_features <- unique(c(all_features, na_features))
           }
 
           for (feat in all_features) {
             if (grepl("(_na|_NA)$", feat)) {
-              preview_feature_weights[[feat]] <- 0
+              feature_weights[[feat]] <- 0
             } else {
               feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
-              input_id <- paste0("weight_", feat_safe, "_", preview_scenario)
-              if (!is.null(input[[input_id]])) {
-                preview_feature_weights[[feat]] <- input[[input_id]]
-              }
+              input_id <- paste0("weight_", feat_safe, "_", scenario)
+              feature_weights[[feat]] <- input[[input_id]] %||% 0
             }
           }
 
-          # Calculate product weights for preview
-          preview_product_weights <- rep(1, n_total_rows)
-          for (feat in names(preview_feature_weights)) {
-            if (feat %in% names(data)) {
-              weight <- preview_feature_weights[[feat]]
-              feat_values <- data[[feat]]
-
-              # CRITICAL FIX: Replace NA values with 0
-              feat_values[is.na(feat_values)] <- 0
-
-              preview_product_weights <- preview_product_weights *
-                (((weight / 100) + 1)^feat_values)
-            }
-          }
-
-          # Collect structure weights for preview
-          preview_structure_weights <- list()
+          # Collect structure weights
+          structure_weights <- list()
           all_structures <- c(
             values$commercial_type_columns,
             values$institutional_type_columns
@@ -1485,304 +513,269 @@ module2_server <- function(id, processed_data) {
               "(_na|_NA)$",
               values$all_structure_columns
             )]
-            all_structures <- c(all_structures, na_structures)
-            all_structures <- unique(all_structures)
+            all_structures <- unique(c(all_structures, na_structures))
           }
 
           for (struct in all_structures) {
             if (grepl("(_na|_NA)$", struct)) {
-              preview_structure_weights[[struct]] <- 0
+              structure_weights[[struct]] <- 0
             } else {
               struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
-              input_id <- paste0("weight_", struct_safe, "_", preview_scenario)
-              if (!is.null(input[[input_id]])) {
-                preview_structure_weights[[struct]] <- input[[input_id]]
-              }
+              input_id <- paste0("weight_", struct_safe, "_", scenario)
+              structure_weights[[struct]] <- input[[input_id]] %||% 0
             }
           }
 
-          # Calculate structure multipliers for preview
-          preview_structure_multipliers <- rep(1, n_total_rows)
-          for (struct in names(preview_structure_weights)) {
+          # Calculate product of feature weights
+          product_weights <- rep(1, n_rows)
+          for (feat in names(feature_weights)) {
+            if (feat %in% names(data)) {
+              weight <- feature_weights[[feat]]
+              feat_values <- data[[feat]]
+              feat_values[is.na(feat_values)] <- 0
+              product_weights <- product_weights *
+                (((weight / 100) + 1)^feat_values)
+            }
+          }
+
+          # Calculate structure multipliers
+          structure_multipliers <- rep(1, n_rows)
+          for (struct in names(structure_weights)) {
             if (struct %in% names(data)) {
-              weight <- preview_structure_weights[[struct]]
+              weight <- structure_weights[[struct]]
               struct_values <- data[[struct]]
-
-              # Handle NA values - treat as 0 (structure type not present)
               struct_values[is.na(struct_values)] <- 0
-
-              preview_structure_multipliers <- preview_structure_multipliers *
+              structure_multipliers <- structure_multipliers *
                 ifelse(struct_values == 1, (weight / 100 + 1), 1)
             }
           }
 
-          # Get property area
-          property_area <- if ("property_area" %in% names(data)) {
-            data$property_area
-          } else {
-            rep(NA, n_total_rows)
-          }
+          # Get areas
+          property_area <- data$property_area %||% rep(NA, n_rows)
+          business_area <- data$business_area %||% rep(NA, n_rows)
 
-          # Create preview table with ALL rows (DataTable will handle pagination and search)
-          # Note: We calculate all components for all rows, then create full preview table
-          preview_indices <- 1:n_total_rows
+          # Calculate property values
+          property_values <- ifelse(
+            !is.na(property_area) & property_area > 0,
+            inflation_adjusted_base *
+              (property_area^area_weight) *
+              product_weights *
+              structure_multipliers,
+            NA
+          )
 
-          values$preview_data <- data.frame(
-            id_property = data$id_property[preview_indices],
-            property_area = round(property_area[preview_indices], 2),
-            inflation_adjusted_base_value = round(
-              rep(preview_inflation_adjusted_base, n_total_rows),
-              2
-            ),
-            product_of_all_feature_weights = round(
-              preview_product_weights[preview_indices],
-              4
-            ),
-            structure_type_multiplier = round(
-              preview_structure_multipliers[preview_indices],
-              4
-            ),
-            business_area = if ("business_area" %in% names(data)) {
-              round(data$business_area[preview_indices], 2)
-            } else {
-              rep(NA, n_total_rows)
-            },
-            property_value = round(
-              preview_calculated$property_value[preview_indices],
-              2
-            ),
-            business_value = round(
-              preview_calculated$business_value[preview_indices],
-              2
-            ),
+          # Calculate business values
+          business_values <- ifelse(
+            !is.na(business_area) & business_area > 0,
+            inflation_adjusted_base *
+              (business_area^area_weight) *
+              product_weights *
+              structure_multipliers,
+            NA
+          )
+
+          # Store calculated values
+          calculated_df <- data.frame(
+            id_property = data$id_property,
+            property_type = data$property_type,
+            property_value = property_values,
+            business_value = business_values,
             stringsAsFactors = FALSE
           )
 
-          cat(
-            "Created preview table with ALL",
-            nrow(values$preview_data),
-            "rows (searchable and filterable in DataTable)\n"
-          )
-
-          # DIAGNOSTIC: Check business data in preview
-          cat("\n=== PREVIEW BUSINESS DATA DIAGNOSTIC ===\n")
-          cat("Rows in preview:", nrow(values$preview_data), "\n")
-          if ("business_area" %in% names(data)) {
-            biz_in_preview <- sum(!is.na(values$preview_data$business_area))
-            cat("Business_area non-NA in preview:", biz_in_preview, "\n")
-            if (biz_in_preview > 0) {
-              cat(
-                "Sample business_area values:",
-                paste(
-                  head(
-                    values$preview_data$business_area[
-                      !is.na(values$preview_data$business_area)
-                    ],
-                    5
-                  ),
-                  collapse = ", "
-                ),
-                "\n"
-              )
-            }
+          if (scenario == "existing") {
+            values$calculated_existing <- calculated_df
+          } else if (scenario == "scenario_a") {
+            values$calculated_scenario_a <- calculated_df
           } else {
-            cat("business_area column NOT in source data\n")
+            values$calculated_scenario_b <- calculated_df
           }
-
-          biz_val_in_preview <- sum(
-            !is.na(values$preview_data$business_value) &
-              values$preview_data$business_value > 0
-          )
-          cat("Business_value > 0 in preview:", biz_val_in_preview, "\n")
-          if (biz_val_in_preview > 0) {
-            cat(
-              "Sample business_value values:",
-              paste(
-                head(
-                  values$preview_data$business_value[
-                    !is.na(values$preview_data$business_value) &
-                      values$preview_data$business_value > 0
-                  ],
-                  5
-                ),
-                collapse = ", "
-              ),
-              "\n"
-            )
-          }
-          cat("=========================================\n\n")
-
-          cat("\n======================================================\n")
-          cat("=== ALL SCENARIO CALCULATIONS COMPLETE ===\n")
-          cat("======================================================\n\n")
-
-          incProgress(0.1, detail = "Complete!")
-
-          # Notify user that all scenarios were calculated
-          showNotification(
-            paste0(
-              "Preview complete! All ",
-              nrow(values$preview_data),
-              " properties loaded. Use column filters to find businesses or specific properties. ",
-              "Showing 25 rows per page (adjust with dropdown)."
-            ),
-            type = "message",
-            duration = 10
-          )
         }
+      })
+
+      showNotification(
+        "Property values calculated for all scenarios!",
+        type = "message"
       )
     })
 
-    # Display preview table
+    # ==========================================================================
+    # PREVIEW TABLE
+    # ==========================================================================
+
+    observeEvent(input$calculate_preview, {
+      req(processed_data(), input$preview_scenario)
+      data <- processed_data()
+      scenario <- input$preview_scenario
+      n_rows <- nrow(data)
+
+      # Get parameters for preview scenario
+      base_value <- input[[paste0("base_value_", scenario)]] %||%
+        values$default_base_value
+      inflation <- input[[paste0("inflation_", scenario)]] %||% 0
+      area_weight <- input[[paste0("area_weight_", scenario)]] %||%
+        values$default_area_weight
+
+      inflation_adjusted_base <- base_value * (1 + inflation / 100)
+
+      # Collect feature weights for preview
+      feature_weights <- list()
+      all_features <- c(
+        values$feature_columns$structure_features,
+        values$feature_columns$utility_features,
+        values$feature_columns$location_features,
+        values$feature_columns$location_zones,
+        values$ward_columns
+      )
+
+      for (feat in all_features) {
+        feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
+        input_id <- paste0("weight_", feat_safe, "_", scenario)
+        feature_weights[[feat]] <- input[[input_id]] %||% 0
+      }
+
+      # Calculate product weights
+      product_weights <- rep(1, n_rows)
+      for (feat in names(feature_weights)) {
+        if (feat %in% names(data)) {
+          weight <- feature_weights[[feat]]
+          feat_values <- data[[feat]]
+          feat_values[is.na(feat_values)] <- 0
+          product_weights <- product_weights *
+            (((weight / 100) + 1)^feat_values)
+        }
+      }
+
+      # Collect structure weights
+      structure_weights <- list()
+      all_structures <- c(
+        values$commercial_type_columns,
+        values$institutional_type_columns
+      )
+
+      for (struct in all_structures) {
+        struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
+        input_id <- paste0("weight_", struct_safe, "_", scenario)
+        structure_weights[[struct]] <- input[[input_id]] %||% 0
+      }
+
+      # Calculate structure multipliers
+      structure_multipliers <- rep(1, n_rows)
+      for (struct in names(structure_weights)) {
+        if (struct %in% names(data)) {
+          weight <- structure_weights[[struct]]
+          struct_values <- data[[struct]]
+          struct_values[is.na(struct_values)] <- 0
+          structure_multipliers <- structure_multipliers *
+            ifelse(struct_values == 1, (weight / 100 + 1), 1)
+        }
+      }
+
+      # Build preview data
+      property_area <- data$property_area %||% rep(NA, n_rows)
+      business_area <- data$business_area %||% rep(NA, n_rows)
+
+      property_values <- ifelse(
+        !is.na(property_area) & property_area > 0,
+        inflation_adjusted_base *
+          (property_area^area_weight) *
+          product_weights *
+          structure_multipliers,
+        NA
+      )
+
+      business_values <- ifelse(
+        !is.na(business_area) & business_area > 0,
+        inflation_adjusted_base *
+          (business_area^area_weight) *
+          product_weights *
+          structure_multipliers,
+        NA
+      )
+
+      values$preview_data <- data.frame(
+        id_property = data$id_property,
+        property_area = round(property_area, 2),
+        inflation_adjusted_base_value = round(inflation_adjusted_base, 2),
+        product_of_all_feature_weights = round(product_weights, 4),
+        structure_type_multiplier = round(structure_multipliers, 4),
+        business_area = round(business_area, 2),
+        property_value = round(property_values, 2),
+        business_value = round(business_values, 2),
+        stringsAsFactors = FALSE
+      )
+    })
+
     output$preview_table <- DT::renderDataTable({
       req(values$preview_data)
-
       DT::datatable(
         values$preview_data,
         options = list(
-          scrollX = TRUE,
           pageLength = 25,
-          lengthMenu = c(10, 25, 50, 100, 500), # Allow user to choose how many rows to display
-          dom = 'Blfrtip', # Added 'l' for length menu
-          buttons = c('copy', 'csv', 'excel'),
-          search = list(regex = FALSE, caseInsensitive = TRUE), # Enable search
-          order = list(list(0, 'asc')), # Default sort by id_property
-          columnDefs = list(
-            list(className = 'dt-center', targets = '_all') # Center align all columns
-          )
+          scrollX = TRUE,
+          dom = "Bfrtip",
+          buttons = c("copy", "csv", "excel")
         ),
-        filter = 'top', # Add column filters at the top
-        extensions = 'Buttons',
-        rownames = FALSE # Don't show row numbers
-      ) %>%
-        DT::formatRound(
-          columns = c(
-            'property_area',
-            'inflation_adjusted_base_value',
-            'property_value',
-            'business_value',
-            'business_area' # Added business_area to rounding
-          ),
-          digits = 2
-        ) %>%
-        DT::formatRound(
-          columns = c(
-            'product_of_all_feature_weights',
-            'structure_type_multiplier'
-          ),
-          digits = 4
-        ) %>%
-        DT::formatCurrency(
-          columns = c('property_value', 'business_value'),
-          currency = "",
-          interval = 3,
-          mark = ","
-        )
+        filter = "top",
+        rownames = FALSE
+      )
     })
 
-    # Configuration summary
-    output$config_summary <- renderPrint({
-      cat("=== Configuration Summary ===\n\n")
+    # ==========================================================================
+    # COLLECT CONFIGURATIONS FOR RETURN
+    # ==========================================================================
 
-      for (scenario in c("Existing", "Scenario A", "Scenario B")) {
-        scenario_key <- tolower(gsub(" ", "_", scenario))
-
-        cat(scenario, ":\n")
-        cat("  Base Value:", input[[paste0("base_value_", scenario_key)]], "\n")
-        cat("  Inflation:", input[[paste0("inflation_", scenario_key)]], "%\n")
-        cat(
-          "  Inflation-Adjusted Base:",
-          format(
-            input[[paste0("base_value_", scenario_key)]] *
-              (1 + input[[paste0("inflation_", scenario_key)]] / 100),
-            digits = 2,
-            big.mark = ","
-          ),
-          "\n"
-        )
-        cat(
-          "  Area Weight:",
-          input[[paste0("area_weight_", scenario_key)]],
-          "\n\n"
-        )
-      }
-    })
-
-    # Collect all configurations for return
     get_all_configs <- reactive({
-      # Collect weights from all inputs for each scenario
       scenarios <- list()
 
       for (scenario in c("existing", "scenario_a", "scenario_b")) {
         config <- list(
-          base_value = input[[paste0("base_value_", scenario)]],
-          inflation = input[[paste0("inflation_", scenario)]] / 100,
-          area_weight = input[[paste0("area_weight_", scenario)]],
+          base_value = input[[paste0("base_value_", scenario)]] %||%
+            values$default_base_value,
+          inflation = (input[[paste0("inflation_", scenario)]] %||% 0) / 100,
+          area_weight = input[[paste0("area_weight_", scenario)]] %||%
+            values$default_area_weight,
           feature_weights = list(),
           structure_weights = list()
         )
 
-        # Collect all feature weights (including _na variables set to 0)
+        # Collect feature weights
         all_features <- c(
           values$feature_columns$structure_features,
           values$feature_columns$utility_features,
           values$feature_columns$location_features,
           values$feature_columns$location_zones,
-          values$feature_columns$property_characteristics,
           values$ward_columns
         )
 
-        # Add _na variables to the complete list
         if (!is.null(values$all_feature_columns)) {
           na_features <- values$all_feature_columns[grepl(
             "(_na|_NA)$",
             values$all_feature_columns
           )]
-          all_features <- c(all_features, na_features)
-          all_features <- unique(all_features)
+          all_features <- unique(c(all_features, na_features))
         }
 
         for (feat in all_features) {
           if (grepl("(_na|_NA)$", feat)) {
-            # Set _na variables to weight 0
             config$feature_weights[[feat]] <- 0
           } else {
             feat_safe <- gsub("[^A-Za-z0-9_]", "_", feat)
             input_id <- paste0("weight_", feat_safe, "_", scenario)
-            if (!is.null(input[[input_id]])) {
-              config$feature_weights[[feat]] <- input[[input_id]]
-            }
+            config$feature_weights[[feat]] <- input[[input_id]] %||% 0
           }
         }
 
-        # Collect structure type weights (including _na variables set to 0)
+        # Collect structure weights
         all_structures <- c(
           values$commercial_type_columns,
           values$institutional_type_columns
         )
 
-        # Add _na structure variables
-        if (!is.null(values$all_structure_columns)) {
-          na_structures <- values$all_structure_columns[grepl(
-            "(_na|_NA)$",
-            values$all_structure_columns
-          )]
-          all_structures <- c(all_structures, na_structures)
-          all_structures <- unique(all_structures)
-        }
-
         for (struct in all_structures) {
-          if (grepl("(_na|_NA)$", struct)) {
-            # Set _na variables to weight 0
-            config$structure_weights[[struct]] <- 0
-          } else {
-            # CRITICAL FIX: Sanitize the struct name before creating input_id
-            struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
-            input_id <- paste0("weight_", struct_safe, "_", scenario)
-            if (!is.null(input[[input_id]])) {
-              config$structure_weights[[struct]] <- input[[input_id]]
-            }
-          }
+          struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
+          input_id <- paste0("weight_", struct_safe, "_", scenario)
+          config$structure_weights[[struct]] <- input[[input_id]] %||% 0
         }
 
         scenarios[[scenario]] <- config
@@ -1791,22 +784,174 @@ module2_server <- function(id, processed_data) {
       scenarios
     })
 
-    # Create reactive to expose calculated values for Module 3
     get_calculated_values <- reactive({
-      # Return all three scenarios as a named list
       list(
-        existing = values$calculated_values_existing,
-        scenario_a = values$calculated_values_scenario_a,
-        scenario_b = values$calculated_values_scenario_b
+        existing = values$calculated_existing,
+        scenario_a = values$calculated_scenario_a,
+        scenario_b = values$calculated_scenario_b
       )
     })
 
-    # Return BOTH configurations and calculated values
-    return(
-      list(
-        configs = get_all_configs,
-        calculated_values = get_calculated_values
-      )
+    # ==========================================================================
+    # SAVE/LOAD CONFIGURATION HANDLERS
+    # ==========================================================================
+
+    # Download handlers
+    output$download_config_existing <- downloadHandler(
+      filename = function() {
+        paste0(
+          "module2_existing_",
+          format(Sys.time(), "%Y%m%d_%H%M%S"),
+          ".json"
+        )
+      },
+      content = function(file) {
+        config <- collect_module2_config(
+          input,
+          "existing",
+          values$feature_columns,
+          values$commercial_type_columns,
+          values$institutional_type_columns,
+          values$ward_columns
+        )
+        writeLines(
+          jsonlite::toJSON(config, auto_unbox = TRUE, pretty = TRUE),
+          file
+        )
+      }
     )
+
+    output$download_config_scenario_a <- downloadHandler(
+      filename = function() {
+        paste0(
+          "module2_scenario_a_",
+          format(Sys.time(), "%Y%m%d_%H%M%S"),
+          ".json"
+        )
+      },
+      content = function(file) {
+        config <- collect_module2_config(
+          input,
+          "scenario_a",
+          values$feature_columns,
+          values$commercial_type_columns,
+          values$institutional_type_columns,
+          values$ward_columns
+        )
+        writeLines(
+          jsonlite::toJSON(config, auto_unbox = TRUE, pretty = TRUE),
+          file
+        )
+      }
+    )
+
+    output$download_config_scenario_b <- downloadHandler(
+      filename = function() {
+        paste0(
+          "module2_scenario_b_",
+          format(Sys.time(), "%Y%m%d_%H%M%S"),
+          ".json"
+        )
+      },
+      content = function(file) {
+        config <- collect_module2_config(
+          input,
+          "scenario_b",
+          values$feature_columns,
+          values$commercial_type_columns,
+          values$institutional_type_columns,
+          values$ward_columns
+        )
+        writeLines(
+          jsonlite::toJSON(config, auto_unbox = TRUE, pretty = TRUE),
+          file
+        )
+      }
+    )
+
+    # Upload handlers
+    observeEvent(input$upload_config_existing, {
+      req(input$upload_config_existing)
+      tryCatch(
+        {
+          config <- load_module2_config(input$upload_config_existing$datapath)
+          apply_module2_config(
+            session,
+            config,
+            "existing",
+            values$feature_columns,
+            values$commercial_type_columns,
+            values$institutional_type_columns,
+            values$ward_columns
+          )
+          showNotification(
+            "Existing scenario configuration uploaded!",
+            type = "message"
+          )
+        },
+        error = function(e) {
+          showNotification(paste("Error:", e$message), type = "error")
+        }
+      )
+    })
+
+    observeEvent(input$upload_config_scenario_a, {
+      req(input$upload_config_scenario_a)
+      tryCatch(
+        {
+          config <- load_module2_config(input$upload_config_scenario_a$datapath)
+          apply_module2_config(
+            session,
+            config,
+            "scenario_a",
+            values$feature_columns,
+            values$commercial_type_columns,
+            values$institutional_type_columns,
+            values$ward_columns
+          )
+          showNotification(
+            "Scenario A configuration uploaded!",
+            type = "message"
+          )
+        },
+        error = function(e) {
+          showNotification(paste("Error:", e$message), type = "error")
+        }
+      )
+    })
+
+    observeEvent(input$upload_config_scenario_b, {
+      req(input$upload_config_scenario_b)
+      tryCatch(
+        {
+          config <- load_module2_config(input$upload_config_scenario_b$datapath)
+          apply_module2_config(
+            session,
+            config,
+            "scenario_b",
+            values$feature_columns,
+            values$commercial_type_columns,
+            values$institutional_type_columns,
+            values$ward_columns
+          )
+          showNotification(
+            "Scenario B configuration uploaded!",
+            type = "message"
+          )
+        },
+        error = function(e) {
+          showNotification(paste("Error:", e$message), type = "error")
+        }
+      )
+    })
+
+    # ==========================================================================
+    # RETURN VALUES
+    # ==========================================================================
+
+    return(list(
+      configs = get_all_configs,
+      calculated_values = get_calculated_values
+    ))
   })
 }
