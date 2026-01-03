@@ -1,4 +1,5 @@
 # modules/module1_ui.R
+# Simplified Module 1: City Selection, Authentication, and Data Loading
 
 module1_ui <- function(id) {
   ns <- NS(id)
@@ -6,8 +7,9 @@ module1_ui <- function(id) {
   tabItem(
     tabName = "module1",
     fluidRow(
+      # Main input box
       box(
-        title = "Module 1: Data Input & Preprocessing",
+        title = "Module 1: Data Input",
         width = 12,
         status = "primary",
         solidHeader = TRUE,
@@ -18,8 +20,8 @@ module1_ui <- function(id) {
           style = "margin-bottom: 20px; background-color: #fff3cd; border-color: #ffeaa7; color: #856404;",
           HTML(
             "<strong><i class='fa fa-exclamation-triangle'></i> Beta Testing Phase:</strong><br>
-                This tool is currently in a beta testing phase. Reports of errors and suggestions are welcomed. 
-                Please communicate them to Evan."
+            This tool is currently in a beta testing phase. Reports of errors and suggestions are welcomed. 
+            Please communicate them to Evan."
           )
         ),
 
@@ -28,159 +30,148 @@ module1_ui <- function(id) {
           style = "margin-bottom: 20px;",
           HTML(
             "<strong><i class='fa fa-book'></i> User Guide:</strong> 
-        <a href='https://docs.google.com/document/d/1Sh7cF1IgW6cRaLCgS_T8PnBTkNPqO3er2Li9E3KOGZg/edit?usp=sharing' 
-           target='_blank' 
-           style='color: #007bff; text-decoration: underline;'>
-          Link to guide for using the simulator
-        </a>"
+            <a href='https://docs.google.com/document/d/1Sh7cF1IgW6cRaLCgS_T8PnBTkNPqO3er2Li9E3KOGZg/edit?usp=sharing' 
+               target='_blank' 
+               style='color: #007bff; text-decoration: underline;'>
+              Link to guide for using the simulator
+            </a>"
           )
         ),
 
-        # File upload section
-        h4("Step 1: Upload Data Files"),
+        hr(),
+
+        # City selection and authentication
+        h4("Step 1: Select City and Authenticate"),
         fluidRow(
           column(
             4,
-            fileInput(
-              ns("property_file"),
-              "Upload Property Data CSV",
-              accept = c(".csv")
-            ),
-            verbatimTextOutput(ns("property_status"))
+            selectInput(
+              ns("city_select"),
+              label = "Select City",
+              choices = c(
+                "Choose a city..." = "",
+                "Freetown" = "freetown",
+                "Kenema" = "kenema",
+                "Makeni" = "makeni"
+              ),
+              selected = ""
+            )
           ),
           column(
             4,
-            fileInput(
-              ns("payment_file"),
-              "Upload Payment Data CSV",
-              accept = c(".csv")
-            ),
-            verbatimTextOutput(ns("payment_status"))
+            passwordInput(
+              ns("password"),
+              label = "Enter Password",
+              placeholder = "Enter city password"
+            )
           ),
           column(
             4,
-            fileInput(
-              ns("business_file"),
-              "Upload Business Data CSV",
-              accept = c(".csv")
-            ),
-            verbatimTextOutput(ns("business_status"))
-          )
-        ),
-
-        hr(),
-
-        # Column mapping section
-        h4("Step 2: Map Columns"),
-        conditionalPanel(
-          condition = paste0("output['", ns("files_uploaded"), "']"),
-
-          tabsetPanel(
-            tabPanel(
-              "Property Columns",
-              br(),
-              uiOutput(ns("property_mapping_ui")),
-              br(),
+            div(
+              style = "margin-top: 25px;",
               actionButton(
-                ns("validate_property"),
-                "Validate Property Mapping",
-                class = "btn-primary"
-              )
-            ),
-            tabPanel(
-              "Payment Columns",
-              br(),
-              uiOutput(ns("payment_mapping_ui")),
-              br(),
-              actionButton(
-                ns("validate_payment"),
-                "Validate Payment Mapping",
-                class = "btn-primary"
-              )
-            ),
-            tabPanel(
-              "Business Columns",
-              br(),
-              uiOutput(ns("business_mapping_ui")),
-              br(),
-              actionButton(
-                ns("validate_business"),
-                "Validate Business Mapping",
-                class = "btn-primary"
+                ns("load_data"),
+                "Load Data",
+                class = "btn-primary",
+                icon = icon("sign-in-alt")
               )
             )
           )
         ),
 
+        # Authentication status message
+        uiOutput(ns("auth_status")),
+
         hr(),
 
-        # Processing section with explanatory text
+        # Data preview section (only shown after successful authentication)
         conditionalPanel(
-          condition = paste0("output['", ns("mappings_validated"), "']"),
-          h4("Step 3: Process Data"),
+          condition = paste0("output['", ns("data_loaded"), "']"),
 
-          # Add informative alert box
-          div(
-            class = "alert alert-info",
-            style = "margin-bottom: 20px;",
-            HTML(
-              "<strong><i class='fa fa-info-circle'></i> Data Processing Note:</strong><br><br>
-                  The processed data will have a row for each property-business combination:<br>
-                  <ul style='margin-bottom: 0;'>
-                    <li>If a property has multiple uses (domestic, commercial, institutional), each appears as a separate row</li>
-                    <li>If the property has businesses, they will be matched to the commercial row first (if available), 
-                        then domestic, then institutional</li>
-                    <li>Multiple businesses at the same property will result in multiple rows</li>
-                    <li>Business data will not be duplicated across different property types</li>
-                  </ul>"
+          h4("Step 2: Review Data Summary"),
+
+          # Summary statistics
+          fluidRow(
+            column(
+              4,
+              valueBoxOutput(ns("total_properties"), width = 12)
+            ),
+            column(
+              4,
+              valueBoxOutput(ns("total_businesses"), width = 12)
+            ),
+            column(
+              4,
+              valueBoxOutput(ns("total_rows"), width = 12)
             )
           ),
 
-          actionButton(
-            ns("process_data"),
-            "Process and Merge Data",
-            class = "btn-success btn-lg"
-          ),
-          br(),
-          br(),
-          verbatimTextOutput(ns("processing_status"))
-        )
-      )
-    ),
-
-    # Preview section
-    conditionalPanel(
-      condition = paste0("output['", ns("data_processed"), "']"),
-      fluidRow(
-        box(
-          title = "Processed Data Preview",
-          width = 12,
-          status = "success",
-          collapsible = TRUE,
-          DT::dataTableOutput(ns("processed_preview"))
-        )
-      ),
-      fluidRow(
-        box(
-          title = "Data Summary",
-          width = 12,
-          status = "info",
-          collapsible = TRUE,
-
-          # Add explanation at the top of the summary
-          div(
-            class = "well well-sm",
-            style = "background-color: #f0f8ff; border-left: 4px solid #3498db;",
-            HTML(
-              "<strong>Understanding the Processed Data:</strong><br>
-                  Each row represents either:<br>
-                  • A property with a specific use type (when no businesses are present), OR<br>
-                  • A property-business combination (when businesses exist at that property)<br><br>
-                  This means a single property ID may appear multiple times if it has multiple uses or multiple businesses."
+          # Property type breakdown
+          fluidRow(
+            column(
+              6,
+              box(
+                title = "Properties by Type",
+                width = 12,
+                status = "info",
+                solidHeader = FALSE,
+                tableOutput(ns("property_type_summary"))
+              )
+            ),
+            column(
+              6,
+              box(
+                title = "Payment Status",
+                width = 12,
+                status = "info",
+                solidHeader = FALSE,
+                tableOutput(ns("payment_summary"))
+              )
             )
           ),
 
-          verbatimTextOutput(ns("data_summary"))
+          hr(),
+
+          # Data preview table
+          h4("Step 3: Preview Data"),
+          p(
+            "Search for specific properties by ID to verify data loaded correctly."
+          ),
+          fluidRow(
+            column(
+              4,
+              textInput(
+                ns("search_property_id"),
+                label = "Search by Property ID",
+                placeholder = "e.g., FCC0000007"
+              )
+            ),
+            column(
+              2,
+              div(
+                style = "margin-top: 25px;",
+                actionButton(
+                  ns("search_btn"),
+                  "Search",
+                  class = "btn-info",
+                  icon = icon("search")
+                )
+              )
+            )
+          ),
+          DT::dataTableOutput(ns("data_preview")),
+
+          hr(),
+
+          # Confirmation to proceed
+          div(
+            class = "alert alert-success",
+            style = "margin-top: 20px;",
+            HTML(
+              "<strong><i class='fa fa-check-circle'></i> Data Loaded Successfully!</strong><br>
+              You can now proceed to Module 2 to configure value parameters."
+            )
+          )
         )
       )
     )

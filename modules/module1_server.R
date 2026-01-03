@@ -1,511 +1,383 @@
 # modules/module1_server.R
+# Simplified Module 1: City Selection, Authentication, and Data Loading
 
 module1_server <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
-    
-    # Reactive values to store data
-    values <- reactiveValues(
-      property_data = NULL,
-      payment_data = NULL,
-      business_data = NULL,
-      property_mapping = list(),
-      payment_mapping = list(),
-      business_mapping = list(),
-      processed_data = NULL,
-      mappings_validated = FALSE
+
+    # Define city passwords (in production, consider more secure storage)
+    city_passwords <- list(
+      freetown = "6CW8FQR7+2X",
+      kenema = "kenema_password",
+      makeni = "makeni_password"
     )
-    
-    # File upload handlers
-    observeEvent(input$property_file, {
-      req(input$property_file)
-      result <- read_csv_safe(input$property_file$datapath)
-      if (result$success) {
-        values$property_data <- result$data
-        output$property_status <- renderText("✓ File uploaded successfully")
-      } else {
-        output$property_status <- renderText(paste("✗ Error:", result$error))
-      }
-    })
-    
-    observeEvent(input$payment_file, {
-      req(input$payment_file)
-      result <- read_csv_safe(input$payment_file$datapath)
-      if (result$success) {
-        values$payment_data <- result$data
-        output$payment_status <- renderText("✓ File uploaded successfully")
-      } else {
-        output$payment_status <- renderText(paste("✗ Error:", result$error))
-      }
-    })
-    
-    observeEvent(input$business_file, {
-      req(input$business_file)
-      result <- read_csv_safe(input$business_file$datapath)
-      if (result$success) {
-        values$business_data <- result$data
-        output$business_status <- renderText("✓ File uploaded successfully")
-      } else {
-        output$business_status <- renderText(paste("✗ Error:", result$error))
-      }
-    })
-    
-    # Check if all files are uploaded
-    output$files_uploaded <- reactive({
-      !is.null(values$property_data) && 
-        !is.null(values$payment_data) && 
-        !is.null(values$business_data)
-    })
-    outputOptions(output, "files_uploaded", suspendWhenHidden = FALSE)
-    
-    # Generate column mapping UIs
-    output$property_mapping_ui <- renderUI({
-      req(values$property_data)
-      
 
-      
-      suggestions <- suggest_column_mapping(values$property_data, property_columns)
-      
-      tagList(
-        h5("Map your CSV columns to standard property fields:"),
-        p("Required fields are marked with *"),
-        br(),
-        lapply(property_columns, function(col) {
-          is_required <- col == "id_property"
-          label <- if(is_required) paste0(col, " *") else col
-          
-          selectInput(
-            ns(paste0("map_prop_", col)),
-            label = label,
-            choices = c("(none)" = "", names(values$property_data)),  # Fixed here
-            selected = suggestions[[col]]
-          )
-        })
-      )
-    })
-    
-      property_columns <- c("id_property", "coordinate_lat", "coordinate_lng", 
-                            "property_area", "property_type", "commercial_type",
-                            "institutional_type", "street_access", "drainage",
-                            "potential_to_build", "wall_material", "wall_condition",
-                            "has_veranda", "roof_material", "roof_condition",
-                            "window_material", "air_conditioning", "has_security",
-                            "has_pool", "has_outbuilding", "street_quality",
-                            "domestic_use_groundfloor", "street_lanes",
-                            "main_road_high_visibility", "has_water",
-                            # Old prefixed columns
-                            "old_tourist_area", "old_environmental_hazard",
-                            "old_informal_settlement", "old_commercial_corridor",
-                            # New location features  
-                            "aberdeen_lumley_tourist", "juba_levuma_tourist",
-                            "buffered_commercial_corridors", "cbd", "dock_industrial",
-                            "kissy_industrial_area", "kissy_texaco_terminal_area",
-                            "grassfield_industrial_area",
-                            "wellington_industrial_estate", "hazardous_zones",
-                            "informal_settlements",
-                            # Ward columns
-                            "ward_number", "ward_rank")
+    # Reactive values to store loaded data
+    values <- reactiveValues(
+      authenticated = FALSE,
+      city = NULL,
+      combined_data = NULL,
+      param_additions = NULL,
+      param_features = NULL,
+      param_prop_struct_type = NULL,
+      param_tax_min_rate = NULL,
+      param_license = NULL
+    )
 
-    output$payment_mapping_ui <- renderUI({
-      req(values$payment_data)
-      
-      payment_columns <- c("id_property", "made_payment")
-      suggestions <- suggest_column_mapping(values$payment_data, payment_columns)
-      
-      tagList(
-        h5("Map your CSV columns to standard payment fields:"),
-        p("All fields are required *"),
-        br(),
-        lapply(payment_columns, function(col) {
-          selectInput(
-            ns(paste0("map_pay_", col)),
-            label = paste0(col, " *"),
-            choices = c("(none)" = "", names(values$payment_data)),  # Fixed here
-            selected = suggestions[[col]]
+    # Handle data loading and authentication
+    observeEvent(input$load_data, {
+      req(input$city_select, input$password)
+
+      city <- input$city_select
+      password <- input$password
+
+      # Validate city selection
+
+      if (city == "") {
+        output$auth_status <- renderUI({
+          div(
+            class = "alert alert-danger",
+            style = "margin-top: 15px;",
+            HTML("<i class='fa fa-times-circle'></i> Please select a city.")
           )
         })
-      )
-    })
-    
-    output$business_mapping_ui <- renderUI({
-      req(values$business_data)
-      
-      business_columns <- c("id_property", "id_business", "business_name", "business_area", 
-                      "business_category", "business_sub_category")  # Added business_sub_category
-      suggestions <- suggest_column_mapping(values$business_data, business_columns)
-      
-      tagList(
-        h5("Map your CSV columns to standard business fields:"),
-        p("Required fields are marked with *"),
-        br(),
-        lapply(business_columns, function(col) {
-          is_required <- col %in% c("id_property", "business_area", "business_category")
-          label <- if(is_required) paste0(col, " *") else col
-          
-          selectInput(
-            ns(paste0("map_bus_", col)),
-            label = label,
-            choices = c("(none)" = "", names(values$business_data)),
-            selected = suggestions[[col]]
+        return()
+      }
+
+      # Validate password
+      correct_password <- city_passwords[[city]]
+      if (is.null(correct_password) || password != correct_password) {
+        output$auth_status <- renderUI({
+          div(
+            class = "alert alert-danger",
+            style = "margin-top: 15px;",
+            HTML(
+              "<i class='fa fa-times-circle'></i> Incorrect password. Please try again."
+            )
           )
         })
-      )
-    })
-    
-    # Validation handlers
-    observeEvent(input$validate_property, {
-      # Collect mappings
-      property_columns <- c("id_property", "coordinate_lat", "coordinate_lng", 
-                            "property_area", "property_type", "commercial_type",
-                            "institutional_type", "street_access", "drainage",
-                            "potential_to_build", "wall_material", "wall_condition",
-                            "has_veranda", "roof_material", "roof_condition",
-                            "window_material", "air_conditioning", "has_security",
-                            "has_pool", "has_outbuilding", "street_quality",
-                            "domestic_use_groundfloor", "street_lanes",
-                            "main_road_high_visibility", "has_water",
-                            # Old prefixed columns
-                            "old_tourist_area", "old_environmental_hazard",
-                            "old_informal_settlement", "old_commercial_corridor",
-                            # New location features  
-                            "aberdeen_lumley_tourist", "juba_levuma_tourist",
-                            "buffered_commercial_corridors", "cbd", "dock_industrial",
-                            "kissy_industrial_area", "kissy_texaco_terminal_area",
-                            "wellington_industrial_estate", "hazardous_zones",
-                            "informal_settlements",
-                            # Ward columns
-                            "ward_number", "ward_rank")
-      
-      mapping <- list()
-      for (col in property_columns) {
-        val <- input[[paste0("map_prop_", col)]]
-        if (!is.null(val) && val != "") {
-          mapping[[col]] <- val
-        }
+        values$authenticated <- FALSE
+        return()
       }
-      
-      # Validate
-      errors <- validate_column_mapping(values$property_data, mapping, c("id_property"))
-      
-      if (length(errors) == 0) {
-        values$property_mapping <- mapping
-        showNotification("Property mapping validated successfully!", 
-                         type = "message",  # Changed from "success" to "message"
-                         duration = 5)
-      } else {
-        showNotification(paste("Validation errors:", paste(errors, collapse = ", ")), 
-                         type = "error", 
-                         duration = 10)
+
+      # Construct file path
+      data_file <- file.path("data", paste0(city, "_data.rds"))
+
+      # Check if file exists
+      if (!file.exists(data_file)) {
+        output$auth_status <- renderUI({
+          div(
+            class = "alert alert-danger",
+            style = "margin-top: 15px;",
+            HTML(
+              paste0(
+                "<i class='fa fa-times-circle'></i> Data file not found: ",
+                data_file,
+                "<br>Please ensure the data file is in the correct location."
+              )
+            )
+          )
+        })
+        values$authenticated <- FALSE
+        return()
       }
-    })
-    
-    observeEvent(input$validate_payment, {
-      mapping <- list(
-        id_property = input$map_pay_id_property,
-        made_payment = input$map_pay_made_payment
-      )
-      
-      errors <- validate_column_mapping(values$payment_data, mapping, 
-                                        c("id_property", "made_payment"))
-      
-      if (length(errors) == 0) {
-        values$payment_mapping <- mapping
-        showNotification("Payment mapping validated successfully!", 
-                         type = "message",  # Changed from "success" to "message"
-                         duration = 5)
-      } else {
-        showNotification(paste("Validation errors:", paste(errors, collapse = ", ")), 
-                         type = "error", 
-                         duration = 10)
-      }
-    })
-    
-    observeEvent(input$validate_business, {
-      mapping <- list(
-        id_property = input$map_bus_id_property,
-        business_name = input$map_bus_business_name,
-        business_area = input$map_bus_business_area,
-        business_category = input$map_bus_business_category,
-        business_sub_category = input$map_bus_business_sub_category  # Added this line
-      )
-      
-      errors <- validate_column_mapping(values$business_data, mapping, 
-                                        c("id_property", "business_area", "business_category"))
-      
-      if (length(errors) == 0) {
-        values$business_mapping <- mapping
-        showNotification("Business mapping validated successfully!", 
-                         type = "message",
-                         duration = 5)
-      } else {
-        showNotification(paste("Validation errors:", paste(errors, collapse = ", ")), 
-                         type = "error", 
-                         duration = 10)
-      }
-    })
-    
-    # Check if all mappings are validated
-    observe({
-      values$mappings_validated <- length(values$property_mapping) > 0 &&
-        length(values$payment_mapping) > 0 &&
-        length(values$business_mapping) > 0
-    })
-    
-    output$mappings_validated <- reactive({
-      values$mappings_validated
-    })
-    outputOptions(output, "mappings_validated", suspendWhenHidden = FALSE)
-    
-    # Process data
-    observeEvent(input$process_data, {
-      withProgress(message = 'Processing data...', value = 0, {
-        
-        incProgress(0.2, detail = "Processing property data...")
-        
-        # Process property data
-        processed_property <- process_property_data(values$property_data, 
-                                                    values$property_mapping)
-        
-        incProgress(0.2, detail = "Processing payment data...")
-        
-        # Process payment data (simpler - just rename)
-        processed_payment <- values$payment_data
-        for (std_name in names(values$payment_mapping)) {
-          if (values$payment_mapping[[std_name]] != "") {
-            processed_payment <- processed_payment %>%
-              rename(!!std_name := !!values$payment_mapping[[std_name]])
+
+      # Load data with progress indicator
+      withProgress(message = "Loading data...", value = 0, {
+        incProgress(0.2, detail = "Reading data file...")
+
+        tryCatch(
+          {
+            # Load the RDS file
+            data_bundle <- readRDS(data_file)
+
+            incProgress(0.3, detail = "Extracting combined data...")
+
+            # Extract components from the bundle
+            # The RDS file contains a list with named elements
+            # We need to handle different possible naming conventions
+
+            # Get combined data (try different possible names)
+            combined_data_names <- c(
+              "combined_data",
+              "combined_data_sample_rows",
+              paste0(city, "_data"),
+              "data"
+            )
+
+            for (name in combined_data_names) {
+              if (name %in% names(data_bundle)) {
+                values$combined_data <- data_bundle[[name]]
+                break
+              }
+            }
+
+            if (is.null(values$combined_data)) {
+              # If no matching name found, try the first element if it's a data frame
+              first_elem <- data_bundle[[1]]
+              if (is.data.frame(first_elem)) {
+                values$combined_data <- first_elem
+              } else {
+                stop("Could not find combined data in the data bundle.")
+              }
+            }
+
+            incProgress(0.2, detail = "Extracting parameters...")
+
+            # Extract parameter tables
+            values$param_additions <- data_bundle[["param_additions"]]
+            values$param_features <- data_bundle[["param_features"]]
+            values$param_prop_struct_type <- data_bundle[[
+              "param_prop_struct_type"
+            ]]
+            values$param_tax_min_rate <- data_bundle[["param_tax_min_rate"]]
+            values$param_license <- data_bundle[["param_license"]]
+
+            incProgress(0.2, detail = "Finalizing...")
+
+            # Mark as authenticated and store city
+            values$authenticated <- TRUE
+            values$city <- city
+
+            # Success message
+            output$auth_status <- renderUI({
+              div(
+                class = "alert alert-success",
+                style = "margin-top: 15px;",
+                HTML(
+                  paste0(
+                    "<i class='fa fa-check-circle'></i> Successfully loaded data for ",
+                    tools::toTitleCase(city),
+                    "."
+                  )
+                )
+              )
+            })
+
+            incProgress(0.1, detail = "Done!")
+          },
+          error = function(e) {
+            output$auth_status <- renderUI({
+              div(
+                class = "alert alert-danger",
+                style = "margin-top: 15px;",
+                HTML(
+                  paste0(
+                    "<i class='fa fa-times-circle'></i> Error loading data: ",
+                    e$message
+                  )
+                )
+              )
+            })
+            values$authenticated <- FALSE
           }
-        }
-        
-        incProgress(0.2, detail = "Processing business data...")
-        
-        # Process business data
-        processed_business <- values$business_data
-        for (std_name in names(values$business_mapping)) {
-          if (!is.null(values$business_mapping[[std_name]]) && 
-              values$business_mapping[[std_name]] != "") {
-            processed_business <- processed_business %>%
-              rename(!!std_name := !!values$business_mapping[[std_name]])
-          }
-        }
-        
-        incProgress(0.2, detail = "Merging datasets...")
-        
-        # Merge all datasets
-        values$processed_data <- merge_datasets(
-          processed_property, 
-          processed_payment, 
-          processed_business,
-          "id_property", "id_property", "id_property"
         )
-        
-        # ============================================
-        # DIAGNOSTIC: Check if id_business made it through
-        # ============================================
-        cat("\n=== MODULE 1 DIAGNOSTIC: id_business after merge ===\n")
-        cat("Columns in processed_data:", paste(names(values$processed_data), collapse=", "), "\n")
-        cat("Has id_business?", "id_business" %in% names(values$processed_data), "\n")
-
-        if ("id_business" %in% names(values$processed_data)) {
-          cat("Total rows:", nrow(values$processed_data), "\n")
-          cat("Rows with id_business (non-NA):", sum(!is.na(values$processed_data$id_business)), "\n")
-          cat("Unique id_business count:", length(unique(values$processed_data$id_business[!is.na(values$processed_data$id_business)])), "\n")
-          cat("Sample id_business values (first 10):", 
-              paste(head(values$processed_data$id_business[!is.na(values$processed_data$id_business)], 10), collapse=", "), "\n")
-          
-          # Check if businesses have id_business
-          has_biz <- !is.na(values$processed_data$business_name)
-          cat("Rows with business_name:", sum(has_biz), "\n")
-          cat("Of those, rows with id_business:", sum(!is.na(values$processed_data$id_business[has_biz])), "\n")
-        } else {
-          cat("❌ ERROR: id_business NOT found in merged data!\n")
-          cat("Checking processed_business before merge...\n")
-          if ("id_business" %in% names(processed_business)) {
-            cat("✓ id_business WAS in processed_business\n")
-            cat("Sample values:", paste(head(processed_business$id_business, 10), collapse=", "), "\n")
-          } else {
-            cat("❌ id_business NOT in processed_business either!\n")
-          }
-        }
-        cat("===============================================\n\n")
-
-        incProgress(0.2, detail = "Complete!")
-      })
-      
-      output$processing_status <- renderText({
-        paste("✓ Data processed successfully!",
-              "\nTotal properties:", nrow(values$processed_data),
-              "\nTotal columns:", ncol(values$processed_data))
       })
     })
-    
-    # Check if data is processed
-    output$data_processed <- reactive({
-      !is.null(values$processed_data)
+
+    # Output: Data loaded flag for conditional panel
+    output$data_loaded <- reactive({
+      values$authenticated && !is.null(values$combined_data)
     })
-    outputOptions(output, "data_processed", suspendWhenHidden = FALSE)
-    
-    # Preview processed data
-    output$processed_preview <- DT::renderDataTable({
-      req(values$processed_data)
-      DT::datatable(
-        values$processed_data,
-        options = list(
-          scrollX = TRUE,
-          pageLength = 10,
-          dom = 'Bfrtip'
-        )
+    outputOptions(output, "data_loaded", suspendWhenHidden = FALSE)
+
+    # Output: Total properties value box
+    output$total_properties <- renderValueBox({
+      req(values$combined_data)
+      n_properties <- length(unique(values$combined_data$id_property))
+      valueBox(
+        value = format(n_properties, big.mark = ","),
+        subtitle = "Unique Properties",
+        icon = icon("home"),
+        color = "blue"
       )
     })
-    
-    # Simplified data summary section for module1_server.R
-    # Data summary
-    output$data_summary <- renderPrint({
-      req(values$processed_data)
-      
-      cat("=== DATA MERGE SUMMARY ===\n\n")
-      
-      # Basic counts
-      cat("Total Rows in Processed Data:", nrow(values$processed_data), "\n")
-      cat("Unique Properties:", length(unique(values$processed_data$id_property)), "\n")
-      cat("Total Columns:", ncol(values$processed_data), "\n\n")
-      
-      # Property type breakdown (now we can use the original column!)
-      if ("property_type" %in% names(values$processed_data)) {
-        cat("=== PROPERTY TYPES ===\n")
-        cat("Property Type Distribution in Processed Data:\n")
-        print(table(values$processed_data$property_type, useNA = "ifany"))
-        cat("\n")
-        
-        # Count unique properties by type
-        cat("Unique Properties by Type:\n")
-        type_summary <- values$processed_data %>%
-          group_by(property_type, id_property) %>%
-          slice(1) %>%
+
+    # Output: Total businesses value box
+    output$total_businesses <- renderValueBox({
+      req(values$combined_data)
+      # Count non-NA business IDs
+      n_businesses <- sum(!is.na(values$combined_data$id_business))
+      valueBox(
+        value = format(n_businesses, big.mark = ","),
+        subtitle = "Business Records",
+        icon = icon("building"),
+        color = "green"
+      )
+    })
+
+    # Output: Total rows value box
+    output$total_rows <- renderValueBox({
+      req(values$combined_data)
+      n_rows <- nrow(values$combined_data)
+      valueBox(
+        value = format(n_rows, big.mark = ","),
+        subtitle = "Total Data Rows",
+        icon = icon("database"),
+        color = "purple"
+      )
+    })
+
+    # Output: Property type summary table
+    output$property_type_summary <- renderTable(
+      {
+        req(values$combined_data)
+
+        values$combined_data %>%
           group_by(property_type) %>%
-          summarise(n_unique_properties = n(), .groups = 'drop')
-        print(as.data.frame(type_summary))
-        cat("\n")
-      }
-      
-      # Business merge statistics
-      cat("=== BUSINESS MERGE STATISTICS ===\n")
-      
-      # Original business count
-      cat("Original Businesses in Input:", nrow(values$business_data), "\n")
-      
-      # Count businesses in processed data
-      if ("business_name" %in% names(values$processed_data)) {
-        n_business_rows <- sum(!is.na(values$processed_data$business_name))
-        cat("Rows with Business Data:", n_business_rows, "\n")
-        
-        if (n_business_rows > 0) {
-          # Check for business duplication
-          if (n_business_rows == nrow(values$business_data)) {
-            cat("✓ All businesses matched exactly once (no duplication)\n")
-          } else if (n_business_rows < nrow(values$business_data)) {
-            cat("⚠ Some businesses did not match any property\n")
-            cat("  Unmatched businesses:", nrow(values$business_data) - n_business_rows, "\n")
-          } else {
-            cat("⚠ Unexpected: More business rows than original businesses\n")
-            cat("  This should not happen with the current merge logic\n")
-          }
-        }
-      }
-      
-      # Properties with multiple rows
-      cat("\n=== MULTI-ROW PROPERTIES ===\n")
-      multi_row_props <- values$processed_data %>%
-        group_by(id_property) %>%
-        summarise(n_rows = n(), .groups = 'drop') %>%
-        filter(n_rows > 1)
-      
-      cat("Properties with Multiple Rows:", nrow(multi_row_props), "\n")
-      
-      if (nrow(multi_row_props) > 0) {
-        cat("\nRow Count Distribution:\n")
-        row_distribution <- table(multi_row_props$n_rows)
-        for (i in 1:length(row_distribution)) {
-          cat("  ", names(row_distribution)[i], "rows:", row_distribution[i], "properties\n")
-        }
-        
-        # Show a few examples with their types
-        cat("\nExample Properties with Multiple Rows (first 5):\n")
-        examples <- head(multi_row_props %>% arrange(desc(n_rows)), 5)
-        for (i in 1:nrow(examples)) {
-          prop_id <- examples$id_property[i]
-          cat("  ", prop_id, ":", examples$n_rows[i], "rows")
-          
-          # Show what types this property has
-          if ("property_type" %in% names(values$processed_data)) {
-            types <- values$processed_data %>%
-              filter(id_property == prop_id) %>%
-              pull(property_type) %>%
-              unique()
-            cat(" (", paste(types, collapse=", "), ")")
-          }
-          cat("\n")
-        }
-      }
-      
-      # Payment status
-      cat("\n=== PAYMENT STATUS ===\n")
-      if ("made_payment" %in% names(values$processed_data)) {
-        payment_summary <- table(values$processed_data$made_payment, useNA = "ifany")
-        print(payment_summary)
-        
-        # Compliance rate by unique properties
-        unique_props_payment <- values$processed_data %>%
-          group_by(id_property) %>%
-          summarise(made_payment = any(made_payment == TRUE, na.rm = TRUE), .groups = 'drop')
-        
-        cat("\nCompliance Rate (Unique Properties):", 
-            round(mean(unique_props_payment$made_payment, na.rm = TRUE) * 100, 1), "%\n")
-      }
-      
-      # Business categories
-      if ("business_category" %in% names(values$processed_data)) {
-        cat("\n=== BUSINESS CATEGORIES ===\n")
-        cat("Rows with businesses:", 
-            sum(!is.na(values$processed_data$business_category)), "\n")
-        cat("\nBusiness Category Distribution:\n")
-        print(table(values$processed_data$business_category, useNA = "ifany"))
-      }
-      
-      # Business sub-categories
-      if ("business_sub_category" %in% names(values$processed_data)) {
-        cat("\n=== BUSINESS SUB-CATEGORIES ===\n")
-        # Show top 10 sub-categories to avoid too long output
-        sub_cat_table <- table(values$processed_data$business_sub_category, useNA = "ifany")
-        sub_cat_sorted <- sort(sub_cat_table, decreasing = TRUE)
-        print(head(sub_cat_sorted, 10))
-        if (length(sub_cat_sorted) > 10) {
-          cat("... and", length(sub_cat_sorted) - 10, "more sub-categories\n")
-        }
-      }
-      
-      # Ward distribution
-      if ("ward" %in% names(values$processed_data)) {
-        cat("\n=== WARD DISTRIBUTION ===\n")
-        ward_table <- table(values$processed_data$ward, useNA = "ifany")
-        print(ward_table)
-      }
-      
-      # Missing values summary
-      cat("\n=== MISSING VALUES ===\n")
-      missing_summary <- colSums(is.na(values$processed_data))
-      missing_summary <- missing_summary[missing_summary > 0]
-      if (length(missing_summary) > 0) {
-        cat("Columns with missing values (showing top 20):\n")
-        print(head(sort(missing_summary, decreasing = TRUE), 20))
+          summarise(
+            `Unique Properties` = n_distinct(id_property),
+            `Total Rows` = n(),
+            .groups = "drop"
+          ) %>%
+          arrange(desc(`Unique Properties`)) %>%
+          rename(`Property Type` = property_type)
+      },
+      striped = TRUE,
+      hover = TRUE,
+      bordered = TRUE
+    )
+
+    # Output: Payment summary table
+    output$payment_summary <- renderTable(
+      {
+        req(values$combined_data)
+
+        # Get unique properties with their payment status
+        values$combined_data %>%
+          distinct(id_property, made_payment) %>%
+          group_by(made_payment) %>%
+          summarise(
+            `Number of Properties` = n(),
+            .groups = "drop"
+          ) %>%
+          mutate(
+            `Payment Status` = ifelse(made_payment, "Paid", "Not Paid")
+          ) %>%
+          select(`Payment Status`, `Number of Properties`)
+      },
+      striped = TRUE,
+      hover = TRUE,
+      bordered = TRUE
+    )
+
+    # Data preview - reactive to search
+    preview_data <- reactiveVal(NULL)
+
+    # Initialize preview with first 100 rows
+    observe({
+      req(values$combined_data)
+      # Select key columns for preview
+      key_cols <- c(
+        "id_property",
+        "property_type",
+        "property_area",
+        "commercial_type",
+        "made_payment",
+        "id_business",
+        "business_category",
+        "business_area",
+        "ward_number"
+      )
+      available_cols <- key_cols[key_cols %in% names(values$combined_data)]
+      preview_data(head(values$combined_data[, available_cols], 100))
+    })
+
+    # Handle search
+    observeEvent(input$search_btn, {
+      req(values$combined_data, input$search_property_id)
+
+      search_id <- trimws(input$search_property_id)
+      if (search_id == "") {
+        # Reset to default preview
+        key_cols <- c(
+          "id_property",
+          "property_type",
+          "property_area",
+          "commercial_type",
+          "made_payment",
+          "id_business",
+          "business_category",
+          "business_area",
+          "ward_number"
+        )
+        available_cols <- key_cols[key_cols %in% names(values$combined_data)]
+        preview_data(head(values$combined_data[, available_cols], 100))
       } else {
-        cat("✓ No missing values found!\n")
+        # Filter by property ID
+        filtered <- values$combined_data %>%
+          filter(grepl(search_id, id_property, ignore.case = TRUE))
+
+        if (nrow(filtered) == 0) {
+          showNotification(
+            paste("No properties found matching:", search_id),
+            type = "warning"
+          )
+        }
+
+        key_cols <- c(
+          "id_property",
+          "property_type",
+          "property_area",
+          "commercial_type",
+          "made_payment",
+          "id_business",
+          "business_category",
+          "business_area",
+          "ward_number"
+        )
+        available_cols <- key_cols[key_cols %in% names(filtered)]
+        preview_data(filtered[, available_cols])
       }
     })
-    
-    # Return processed data for use in other modules
-    return(reactive({
-      values$processed_data
-    }))
+
+    # Output: Data preview table
+    output$data_preview <- DT::renderDataTable({
+      req(preview_data())
+      DT::datatable(
+        preview_data(),
+        options = list(
+          pageLength = 10,
+          scrollX = TRUE,
+          dom = "frtip"
+        ),
+        rownames = FALSE
+      )
+    })
+
+    # Return all data and parameters to be used by other modules
+    return(
+      list(
+        # Authentication status
+        authenticated = reactive({
+          values$authenticated
+        }),
+        city = reactive({
+          values$city
+        }),
+
+        # Combined data (for calculations)
+        combined_data = reactive({
+          values$combined_data
+        }),
+
+        # Parameter tables (for default values in Module 2 and 3)
+        param_additions = reactive({
+          values$param_additions
+        }),
+        param_features = reactive({
+          values$param_features
+        }),
+        param_prop_struct_type = reactive({
+          values$param_prop_struct_type
+        }),
+        param_tax_min_rate = reactive({
+          values$param_tax_min_rate
+        }),
+        param_license = reactive({
+          values$param_license
+        })
+      )
+    )
   })
 }
