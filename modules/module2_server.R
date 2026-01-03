@@ -30,7 +30,6 @@ module2_server <- function(
       default_area_weight = 0.5,
 
       # Feature metadata for UI
-
       feature_metadata = NULL,
 
       # Scenario configurations
@@ -91,6 +90,7 @@ module2_server <- function(
     # Build default weights from parameter tables
     observe({
       # Build feature weights from param_features
+      # Now builds full column names like "has_water_Yes", "wall_material_Masonry"
       if (!is.null(param_features())) {
         values$default_feature_weights <- build_feature_weights_from_params(
           param_features()
@@ -101,6 +101,17 @@ module2_server <- function(
           length(values$default_feature_weights),
           "\n"
         )
+        # Debug: show a few example keys
+        if (length(values$default_feature_weights) > 0) {
+          cat(
+            "Sample feature weight keys:",
+            paste(
+              head(names(values$default_feature_weights), 5),
+              collapse = ", "
+            ),
+            "\n"
+          )
+        }
       }
 
       # Build structure weights from param_prop_struct_type
@@ -127,31 +138,32 @@ module2_server <- function(
 
     # ==========================================================================
     # HELPER FUNCTION - Get default weight for a feature
+    # Now works with full column names from build_feature_weights_from_params()
     # ==========================================================================
 
     get_feature_default <- function(feature_name) {
-      # Try to match feature name to parameter table
-      # Feature columns in data might be like "wall_material_Masonry"
-      # We need to match against param_features which has "wall_material" as feature
-
-      # First try direct match
+      # Direct lookup in pre-built weights (now keyed by full column name)
+      # e.g., "has_water_Yes" or "wall_material_Masonry"
       if (feature_name %in% names(values$default_feature_weights)) {
         return(values$default_feature_weights[[feature_name]])
       }
 
-      # Try to extract base feature name and option
-      # e.g., "wall_condition_Good" -> feature="wall_condition", option="Good"
-      parts <- strsplit(feature_name, "_(?=[^_]+$)", perl = TRUE)[[1]]
-      if (length(parts) == 2) {
-        base_feature <- parts[1]
-        option <- parts[2]
+      # Fallback: Try to look up in param_features directly
+      # This handles cases where the column name might not exactly match
+      pf <- param_features()
+      if (!is.null(pf)) {
+        # Try to split: "wall_condition_Good" → base="wall_condition", option="Good"
+        # Use regex to split on the last underscore
+        parts <- strsplit(feature_name, "_(?=[^_]+$)", perl = TRUE)[[1]]
 
-        # Look up in param_features
-        pf <- param_features()
-        if (!is.null(pf)) {
+        if (length(parts) == 2) {
+          base_feature <- parts[1]
+          option <- parts[2]
+
           match_row <- pf[
             pf$feature == base_feature & pf$feature_options == option,
           ]
+
           if (nrow(match_row) > 0) {
             return(match_row$weight_feature_option[1])
           }
@@ -287,7 +299,7 @@ module2_server <- function(
     generate_feature_ui <- function(scenario_suffix) {
       req(values$feature_columns)
 
-      # Group features by category using metadata if available
+      # Helper to create feature input boxes
       create_feature_inputs <- function(feature_list, title) {
         if (length(feature_list) == 0) {
           return(NULL)
@@ -307,9 +319,16 @@ module2_server <- function(
             # Try to get display label from metadata
             display_name <- feat
             if (!is.null(values$feature_metadata)) {
-              meta_match <- values$feature_metadata[
-                values$feature_metadata$feature == feat,
-              ]
+              # Match using full_col_name if available
+              if ("full_col_name" %in% names(values$feature_metadata)) {
+                meta_match <- values$feature_metadata[
+                  values$feature_metadata$full_col_name == feat,
+                ]
+              } else {
+                meta_match <- values$feature_metadata[
+                  values$feature_metadata$feature == feat,
+                ]
+              }
               if (nrow(meta_match) > 0) {
                 display_name <- meta_match$feature_label[1]
               }
@@ -382,38 +401,39 @@ module2_server <- function(
     generate_structure_ui <- function(scenario_suffix) {
       req(values$commercial_type_columns, values$institutional_type_columns)
 
-      create_structure_inputs <- function(struct_cols, title) {
-        if (length(struct_cols) == 0) {
+      create_structure_inputs <- function(columns, title) {
+        if (length(columns) == 0) {
           return(NULL)
         }
 
-        tagList(
-          h4(title),
-          lapply(struct_cols, function(col) {
+        box(
+          title = title,
+          width = 12,
+          collapsible = TRUE,
+          collapsed = TRUE,
+          status = "warning",
+          solidHeader = FALSE,
+          lapply(columns, function(col) {
             col_safe <- gsub("[^A-Za-z0-9_]", "_", col)
-            # Extract display name (remove prefix)
-            col_display <- gsub("^(commercial|institutional)_type_", "", col)
+            # Extract display name from column
+            display_name <- gsub("^(commercial|institutional)_type_", "", col)
             default_val <- get_structure_default(col)
 
-            div(
-              class = "form-group",
-              style = "margin-bottom: 10px;",
-              fluidRow(
-                column(
-                  8,
-                  tags$label(col_display, style = "font-size: 12px;")
-                ),
-                column(
-                  4,
-                  numericInput(
-                    ns(paste0("weight_", col_safe, "_", scenario_suffix)),
-                    label = NULL,
-                    value = default_val,
-                    min = -100,
-                    max = 5000,
-                    step = 1,
-                    width = "100%"
-                  )
+            fluidRow(
+              column(
+                8,
+                p(display_name, style = "margin-top: 5px; font-size: 12px;")
+              ),
+              column(
+                4,
+                numericInput(
+                  ns(paste0("weight_", col_safe, "_", scenario_suffix)),
+                  label = NULL,
+                  value = default_val,
+                  min = -100,
+                  max = 5000,
+                  step = 1,
+                  width = "100%"
                 )
               )
             )
@@ -424,34 +444,33 @@ module2_server <- function(
       tagList(
         create_structure_inputs(
           values$commercial_type_columns,
-          "Commercial Types"
+          "Commercial Structure Types"
         ),
-        br(),
         create_structure_inputs(
           values$institutional_type_columns,
-          "Institutional Types"
+          "Institutional Structure Types"
         )
       )
     }
 
     # Render structure UIs
-    output$structure_ui_existing <- renderUI({
+    output$structures_ui_existing <- renderUI({
       req(values$commercial_type_columns)
       generate_structure_ui("existing")
     })
 
-    output$structure_ui_scenario_a <- renderUI({
+    output$structures_ui_scenario_a <- renderUI({
       req(values$commercial_type_columns)
       generate_structure_ui("scenario_a")
     })
 
-    output$structure_ui_scenario_b <- renderUI({
+    output$structures_ui_scenario_b <- renderUI({
       req(values$commercial_type_columns)
       generate_structure_ui("scenario_b")
     })
 
     # ==========================================================================
-    # CALCULATION - Calculate Property Values
+    # CALCULATE VALUES
     # ==========================================================================
 
     observeEvent(input$calculate_values, {
@@ -526,7 +545,7 @@ module2_server <- function(
             }
           }
 
-          # Calculate product of feature weights
+          # Calculate feature product weights
           product_weights <- rep(1, n_rows)
           for (feat in names(feature_weights)) {
             if (feat %in% names(data)) {
@@ -550,11 +569,10 @@ module2_server <- function(
             }
           }
 
-          # Get areas
+          # Calculate property values
           property_area <- data$property_area %||% rep(NA, n_rows)
           business_area <- data$business_area %||% rep(NA, n_rows)
 
-          # Calculate property values
           property_values <- ifelse(
             !is.na(property_area) & property_area > 0,
             inflation_adjusted_base *
@@ -564,7 +582,6 @@ module2_server <- function(
             NA
           )
 
-          # Calculate business values
           business_values <- ifelse(
             !is.na(business_area) & business_area > 0,
             inflation_adjusted_base *
@@ -575,20 +592,19 @@ module2_server <- function(
           )
 
           # Store calculated values
-          calculated_df <- data.frame(
+          calc_result <- data.frame(
             id_property = data$id_property,
-            property_type = data$property_type,
             property_value = property_values,
             business_value = business_values,
             stringsAsFactors = FALSE
           )
 
           if (scenario == "existing") {
-            values$calculated_existing <- calculated_df
+            values$calculated_existing <- calc_result
           } else if (scenario == "scenario_a") {
-            values$calculated_scenario_a <- calculated_df
+            values$calculated_scenario_a <- calc_result
           } else {
-            values$calculated_scenario_b <- calculated_df
+            values$calculated_scenario_b <- calc_result
           }
         }
       })
@@ -796,7 +812,7 @@ module2_server <- function(
     # SAVE/LOAD CONFIGURATION HANDLERS
     # ==========================================================================
 
-    # Download handlers
+    # Download handlers - using collect_module2_config from module2_config_functions.R
     output$download_config_existing <- downloadHandler(
       filename = function() {
         paste0(
@@ -869,7 +885,7 @@ module2_server <- function(
       }
     )
 
-    # Upload handlers
+    # Upload handlers - using apply_module2_config from module2_config_functions.R
     observeEvent(input$upload_config_existing, {
       req(input$upload_config_existing)
       tryCatch(
@@ -885,7 +901,7 @@ module2_server <- function(
             values$ward_columns
           )
           showNotification(
-            "Existing scenario configuration uploaded!",
+            "Existing configuration uploaded!",
             type = "message"
           )
         },

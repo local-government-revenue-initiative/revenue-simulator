@@ -2,28 +2,43 @@
 # Module 2 Functions - Updated to use parameter tables for defaults
 
 # ==============================================================================
+# NULL COALESCING OPERATOR
+# ==============================================================================
+
+#' Null coalescing operator
+#' Returns y if x is NULL, otherwise returns x
+#' @param x Value to check
+#' @param y Default value if x is NULL
+#' @return x if not NULL, otherwise y
+`%||%` <- function(x, y) {
+  if (is.null(x)) y else x
+}
+
+# ==============================================================================
 # DEFAULT WEIGHTS FROM PARAMETER TABLES
 # ==============================================================================
 
 #' Build default feature weights from param_features table
+#' Creates a named list with full column names (e.g., "has_water_Yes", "wall_material_Masonry")
 #' @param param_features Data frame with columns: feature, feature_options,
 #'   weight_feature_option, feature_label, feature_category
-#' @return Named list of feature weights (using "Yes" option weights)
+#' @return Named list of feature weights keyed by full column name
 build_feature_weights_from_params <- function(param_features) {
   if (is.null(param_features) || nrow(param_features) == 0) {
     return(list())
   }
 
-  # Filter to "Yes" options only (these are the weights when feature is present)
-  yes_weights <- param_features %>%
-    filter(feature_options == "Yes") %>%
-    select(feature, weight_feature_option)
+  weights <- list()
 
-  # Convert to named list
-  weights <- as.list(setNames(
-    yes_weights$weight_feature_option,
-    yes_weights$feature
-  ))
+  for (i in seq_len(nrow(param_features))) {
+    row <- param_features[i, ]
+
+    # Build the full column name format: "feature_option"
+    # e.g., "has_water" + "Yes" → "has_water_Yes"
+    # e.g., "wall_material" + "Masonry" → "wall_material_Masonry"
+    col_name <- paste0(row$feature, "_", row$feature_options)
+    weights[[col_name]] <- row$weight_feature_option
+  }
 
   return(weights)
 }
@@ -82,12 +97,57 @@ get_feature_metadata <- function(param_features) {
   }
 
   # Get unique features with their labels and categories
+  # Include all feature_options, not just "Yes"
   metadata <- param_features %>%
-    filter(feature_options == "Yes") %>%
-    select(feature, feature_label, feature_category) %>%
-    distinct()
+    select(feature, feature_options, feature_label, feature_category) %>%
+    distinct() %>%
+    # Create full column name for matching
+    mutate(full_col_name = paste0(feature, "_", feature_options))
 
   return(metadata)
+}
+
+#' Look up feature weight from param_features table
+#' Handles both direct column name lookup and base_feature + option lookup
+#' @param feature_col_name Full column name like "has_water_Yes" or "wall_material_Masonry"
+#' @param param_features Data frame with feature parameters
+#' @param default_weights Named list of pre-built weights (optional, for faster lookup)
+#' @return Weight value or 0 if not found
+get_feature_weight <- function(
+  feature_col_name,
+  param_features = NULL,
+  default_weights = NULL
+) {
+  # First try direct lookup in pre-built weights
+  if (
+    !is.null(default_weights) && feature_col_name %in% names(default_weights)
+  ) {
+    return(default_weights[[feature_col_name]])
+  }
+
+  # If param_features provided, try to extract base feature and option
+  if (!is.null(param_features)) {
+    # Try to split: "wall_condition_Good" → base="wall_condition", option="Good"
+    # Use negative lookahead to split on last underscore
+    parts <- strsplit(feature_col_name, "_(?=[^_]+$)", perl = TRUE)[[1]]
+
+    if (length(parts) == 2) {
+      base_feature <- parts[1]
+      option <- parts[2]
+
+      match_row <- param_features[
+        param_features$feature == base_feature &
+          param_features$feature_options == option,
+      ]
+
+      if (nrow(match_row) > 0) {
+        return(match_row$weight_feature_option[1])
+      }
+    }
+  }
+
+  # Default to 0 if not found
+  return(0)
 }
 
 # ==============================================================================
