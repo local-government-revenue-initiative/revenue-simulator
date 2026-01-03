@@ -61,7 +61,7 @@ module1_server <- function(id) {
       }
 
       # Construct file path
-      data_file <- file.path("data", paste0(city, "_data.rds"))
+      data_file <- file.path("data", paste0(city, "_data_all.rds"))
 
       # Check if file exists
       if (!file.exists(data_file)) {
