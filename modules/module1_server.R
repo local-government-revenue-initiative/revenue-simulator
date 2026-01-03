@@ -5,12 +5,31 @@ module1_server <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    # Define city passwords (in production, consider more secure storage)
-    city_passwords <- list(
-      freetown = "6CW8FQR7+2X",
-      kenema = "kenema_password",
-      makeni = "makeni_password"
-    )
+    # NEW CODE - ADD THIS:
+    get_city_password <- function(city) {
+      env_var_name <- paste0("SIMULATOR_PWD_", toupper(city))
+      password <- get_env(env_var_name)
+
+      if (is.null(password)) {
+        # Fallback defaults for development (remove in production)
+        fallback_passwords <- list(
+          freetown = "6CW8FQR7+2X",
+          kenema = "kenema_password",
+          makeni = "makeni_password"
+        )
+        password <- fallback_passwords[[city]]
+
+        debug_logn(
+          "WARNING: Using fallback password for ",
+          city,
+          ". Set ",
+          env_var_name,
+          " environment variable for production."
+        )
+      }
+
+      return(password)
+    }
 
     # Reactive values to store loaded data
     values <- reactiveValues(
@@ -51,7 +70,7 @@ module1_server <- function(id) {
       }
 
       # Validate password
-      correct_password <- city_passwords[[city]]
+      correct_password <- get_city_password(city)
       if (is.null(correct_password) || password != correct_password) {
         output$auth_status <- renderUI({
           div(

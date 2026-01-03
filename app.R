@@ -20,10 +20,8 @@ library(shinytoastr)
 # Set options
 options(shiny.maxRequestSize = 100 * 1024^2) # 100MB max file size for large RDS files
 
-# Null-coalescing operator
-`%||%` <- function(x, y) {
-  if (is.null(x)) y else x
-}
+# Source shared utilities FIRST (defines %||% and debug_log)
+source("R/utils.R")
 
 # Source all module functions
 source("R/module1_functions.R")

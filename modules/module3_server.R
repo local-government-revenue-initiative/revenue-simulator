@@ -1093,8 +1093,3 @@ module3_server <- function(
     return(get_all_tax_configs)
   })
 }
-
-# Null coalescing operator (if not already defined)
-if (!exists("%||%")) {
-  `%||%` <- function(x, y) if (is.null(x)) y else x
-}

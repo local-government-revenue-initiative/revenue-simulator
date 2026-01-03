@@ -18,3 +18,6 @@ data/moptax2_scenario.json
 data/property_data_all_short.csv
 data/property_data_really_short.csv
 data/property_data_all.rds
+
+# Environment variables (contains passwords)
+.Renviron
