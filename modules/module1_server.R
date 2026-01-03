@@ -21,8 +21,15 @@ module1_server <- function(id) {
       param_features = NULL,
       param_prop_struct_type = NULL,
       param_tax_min_rate = NULL,
-      param_license = NULL
+      param_license = NULL,
+      validation_warnings = NULL
     )
+
+    # Reactive for data_loaded status (for conditional UI)
+    output$data_loaded <- reactive({
+      values$authenticated
+    })
+    outputOptions(output, "data_loaded", suspendWhenHidden = FALSE)
 
     # Handle data loading and authentication
     observeEvent(input$load_data, {
@@ -32,7 +39,6 @@ module1_server <- function(id) {
       password <- input$password
 
       # Validate city selection
-
       if (city == "") {
         output$auth_status <- renderUI({
           div(
@@ -91,40 +97,63 @@ module1_server <- function(id) {
             # Load the RDS file
             data_bundle <- readRDS(data_file)
 
-            incProgress(0.3, detail = "Extracting combined data...")
+            incProgress(0.2, detail = "Validating data structure...")
 
-            # Extract components from the bundle
-            # The RDS file contains a list with named elements
-            # We need to handle different possible naming conventions
+            # ============================================================
+            # VALIDATE DATA BUNDLE
+            # ============================================================
+            validation <- validate_data_bundle(data_bundle)
 
-            # Get combined data (try different possible names)
-            combined_data_names <- c(
-              "combined_data",
-              "combined_data_sample_rows",
-              paste0(city, "_data"),
-              "data"
-            )
-
-            for (name in combined_data_names) {
-              if (name %in% names(data_bundle)) {
-                values$combined_data <- data_bundle[[name]]
-                break
-              }
+            if (!validation$valid) {
+              # Critical errors - cannot proceed
+              output$auth_status <- renderUI({
+                div(
+                  class = "alert alert-danger",
+                  style = "margin-top: 15px;",
+                  HTML(
+                    paste0(
+                      "<i class='fa fa-times-circle'></i> <strong>Data validation failed:</strong><br>",
+                      paste("• ", validation$errors, collapse = "<br>")
+                    )
+                  )
+                )
+              })
+              values$authenticated <- FALSE
+              return()
             }
 
+            # Store warnings for display (non-critical issues)
+            if (length(validation$warnings) > 0) {
+              values$validation_warnings <- validation$warnings
+            }
+
+            incProgress(0.2, detail = "Extracting combined data...")
+
+            # ============================================================
+            # EXTRACT COMBINED DATA
+            # ============================================================
+            # Use the helper function for flexible naming
+            values$combined_data <- extract_combined_data(data_bundle)
+
             if (is.null(values$combined_data)) {
-              # If no matching name found, try the first element if it's a data frame
-              first_elem <- data_bundle[[1]]
-              if (is.data.frame(first_elem)) {
-                values$combined_data <- first_elem
-              } else {
-                stop("Could not find combined data in the data bundle.")
-              }
+              output$auth_status <- renderUI({
+                div(
+                  class = "alert alert-danger",
+                  style = "margin-top: 15px;",
+                  HTML(
+                    "<i class='fa fa-times-circle'></i> Could not find combined data in the data bundle."
+                  )
+                )
+              })
+              values$authenticated <- FALSE
+              return()
             }
 
             incProgress(0.2, detail = "Extracting parameters...")
 
-            # Extract parameter tables
+            # ============================================================
+            # EXTRACT PARAMETER TABLES
+            # ============================================================
             values$param_additions <- data_bundle[["param_additions"]]
             values$param_features <- data_bundle[["param_features"]]
             values$param_prop_struct_type <- data_bundle[[
@@ -133,24 +162,81 @@ module1_server <- function(id) {
             values$param_tax_min_rate <- data_bundle[["param_tax_min_rate"]]
             values$param_license <- data_bundle[["param_license"]]
 
-            incProgress(0.2, detail = "Finalizing...")
+            incProgress(0.1, detail = "Finalizing...")
 
             # Mark as authenticated and store city
             values$authenticated <- TRUE
             values$city <- city
 
-            # Success message
+            # ============================================================
+            # BUILD SUCCESS MESSAGE (with optional warnings)
+            # ============================================================
+            success_message <- paste0(
+              "<i class='fa fa-check-circle'></i> Successfully loaded data for ",
+              tools::toTitleCase(city),
+              "."
+            )
+
+            # Add data summary
+            n_properties <- length(unique(values$combined_data$id_property))
+            n_rows <- nrow(values$combined_data)
+            success_message <- paste0(
+              success_message,
+              "<br><small>",
+              format(n_properties, big.mark = ","),
+              " unique properties, ",
+              format(n_rows, big.mark = ","),
+              " total rows",
+              "</small>"
+            )
+
+            # Add parameter status
+            param_status <- c()
+            if (!is.null(values$param_additions)) {
+              param_status <- c(param_status, "additions")
+            }
+            if (!is.null(values$param_features)) {
+              param_status <- c(param_status, "features")
+            }
+            if (!is.null(values$param_prop_struct_type)) {
+              param_status <- c(param_status, "structure types")
+            }
+            if (!is.null(values$param_tax_min_rate)) {
+              param_status <- c(param_status, "tax rates")
+            }
+            if (!is.null(values$param_license)) {
+              param_status <- c(param_status, "licenses")
+            }
+
+            if (length(param_status) > 0) {
+              success_message <- paste0(
+                success_message,
+                "<br><small>Parameters loaded: ",
+                paste(param_status, collapse = ", "),
+                "</small>"
+              )
+            }
+
+            # Include warnings if any
+            if (length(validation$warnings) > 0) {
+              warning_html <- paste0(
+                "<hr style='margin: 10px 0;'>",
+                "<i class='fa fa-exclamation-triangle' style='color: #856404;'></i> ",
+                "<strong>Warnings:</strong><br>",
+                paste("• ", validation$warnings, collapse = "<br>")
+              )
+              success_message <- paste0(success_message, warning_html)
+            }
+
             output$auth_status <- renderUI({
               div(
-                class = "alert alert-success",
+                class = if (length(validation$warnings) > 0) {
+                  "alert alert-warning"
+                } else {
+                  "alert alert-success"
+                },
                 style = "margin-top: 15px;",
-                HTML(
-                  paste0(
-                    "<i class='fa fa-check-circle'></i> Successfully loaded data for ",
-                    tools::toTitleCase(city),
-                    "."
-                  )
-                )
+                HTML(success_message)
               )
             })
 
@@ -175,18 +261,16 @@ module1_server <- function(id) {
       })
     })
 
-    # Output: Data loaded flag for conditional panel
-    output$data_loaded <- reactive({
-      values$authenticated && !is.null(values$combined_data)
-    })
-    outputOptions(output, "data_loaded", suspendWhenHidden = FALSE)
+    # ========================================================================
+    # SUMMARY OUTPUTS
+    # ========================================================================
 
     # Output: Total properties value box
     output$total_properties <- renderValueBox({
       req(values$combined_data)
-      n_properties <- length(unique(values$combined_data$id_property))
+      n_props <- length(unique(values$combined_data$id_property))
       valueBox(
-        value = format(n_properties, big.mark = ","),
+        value = format(n_props, big.mark = ","),
         subtitle = "Unique Properties",
         icon = icon("home"),
         color = "blue"
@@ -196,12 +280,15 @@ module1_server <- function(id) {
     # Output: Total businesses value box
     output$total_businesses <- renderValueBox({
       req(values$combined_data)
-      # Count non-NA business IDs
-      n_businesses <- sum(!is.na(values$combined_data$id_business))
+      n_biz <- if ("id_business" %in% names(values$combined_data)) {
+        sum(!is.na(values$combined_data$id_business))
+      } else {
+        0
+      }
       valueBox(
-        value = format(n_businesses, big.mark = ","),
-        subtitle = "Business Records",
-        icon = icon("building"),
+        value = format(n_biz, big.mark = ","),
+        subtitle = "Businesses",
+        icon = icon("briefcase"),
         color = "green"
       )
     })
@@ -209,9 +296,8 @@ module1_server <- function(id) {
     # Output: Total rows value box
     output$total_rows <- renderValueBox({
       req(values$combined_data)
-      n_rows <- nrow(values$combined_data)
       valueBox(
-        value = format(n_rows, big.mark = ","),
+        value = format(nrow(values$combined_data), big.mark = ","),
         subtitle = "Total Data Rows",
         icon = icon("database"),
         color = "purple"
@@ -219,55 +305,93 @@ module1_server <- function(id) {
     })
 
     # Output: Property type summary table
-    output$property_type_summary <- renderTable(
-      {
-        req(values$combined_data)
+    output$property_type_summary <- renderTable({
+      req(values$combined_data)
+      if ("property_type" %in% names(values$combined_data)) {
+        summary_df <- as.data.frame(table(values$combined_data$property_type))
+        names(summary_df) <- c("Property Type", "Count")
+        summary_df$Count <- format(summary_df$Count, big.mark = ",")
+        summary_df
+      } else {
+        data.frame(
+          Message = "Property type column not found"
+        )
+      }
+    })
 
-        values$combined_data %>%
-          group_by(property_type) %>%
-          summarise(
-            `Unique Properties` = n_distinct(id_property),
-            `Total Rows` = n(),
-            .groups = "drop"
-          ) %>%
-          arrange(desc(`Unique Properties`)) %>%
-          rename(`Property Type` = property_type)
-      },
-      striped = TRUE,
-      hover = TRUE,
-      bordered = TRUE
-    )
+    # Output: Payment status summary table
+    output$payment_summary <- renderTable({
+      req(values$combined_data)
+      if ("made_payment" %in% names(values$combined_data)) {
+        summary_df <- as.data.frame(table(values$combined_data$made_payment))
+        names(summary_df) <- c("Made Payment", "Count")
+        summary_df$`Made Payment` <- ifelse(
+          summary_df$`Made Payment` == "TRUE" |
+            summary_df$`Made Payment` == TRUE,
+          "Yes",
+          "No"
+        )
+        summary_df$Count <- format(summary_df$Count, big.mark = ",")
+        summary_df
+      } else {
+        data.frame(
+          Message = "Payment status column not found"
+        )
+      }
+    })
 
-    # Output: Payment summary table
-    output$payment_summary <- renderTable(
-      {
-        req(values$combined_data)
+    # ========================================================================
+    # DATA PREVIEW
+    # ========================================================================
 
-        # Get unique properties with their payment status
-        values$combined_data %>%
-          distinct(id_property, made_payment) %>%
-          group_by(made_payment) %>%
-          summarise(
-            `Number of Properties` = n(),
-            .groups = "drop"
-          ) %>%
-          mutate(
-            `Payment Status` = ifelse(made_payment, "Paid", "Not Paid")
-          ) %>%
-          select(`Payment Status`, `Number of Properties`)
-      },
-      striped = TRUE,
-      hover = TRUE,
-      bordered = TRUE
-    )
-
-    # Data preview - reactive to search
+    # Reactive for filtered preview data
     preview_data <- reactiveVal(NULL)
 
-    # Initialize preview with first 100 rows
-    observe({
+    # Search functionality
+    observeEvent(input$search_btn, {
       req(values$combined_data)
-      # Select key columns for preview
+      search_term <- input$search_property_id
+
+      if (is.null(search_term) || search_term == "") {
+        # Show first 100 rows if no search term
+        filtered <- head(values$combined_data, 100)
+      } else {
+        # Filter by property ID (partial match)
+        filtered <- values$combined_data[
+          grepl(
+            search_term,
+            values$combined_data$id_property,
+            ignore.case = TRUE
+          ),
+        ]
+      }
+
+      if (nrow(filtered) > 0) {
+        # Select key columns for preview
+        key_cols <- c(
+          "id_property",
+          "property_type",
+          "property_area",
+          "commercial_type",
+          "made_payment",
+          "id_business",
+          "business_category",
+          "business_sub_category",
+          "business_area",
+          "ward_number"
+        )
+        available_cols <- key_cols[key_cols %in% names(filtered)]
+        preview_data(filtered[, available_cols, drop = FALSE])
+      } else {
+        preview_data(NULL)
+      }
+    })
+
+    # Initialize preview on authentication
+    observe({
+      req(values$authenticated, values$combined_data)
+
+      # Show first 100 rows initially
       key_cols <- c(
         "id_property",
         "property_type",
@@ -276,59 +400,15 @@ module1_server <- function(id) {
         "made_payment",
         "id_business",
         "business_category",
+        "business_sub_category",
         "business_area",
         "ward_number"
       )
       available_cols <- key_cols[key_cols %in% names(values$combined_data)]
-      preview_data(head(values$combined_data[, available_cols], 100))
-    })
-
-    # Handle search
-    observeEvent(input$search_btn, {
-      req(values$combined_data, input$search_property_id)
-
-      search_id <- trimws(input$search_property_id)
-      if (search_id == "") {
-        # Reset to default preview
-        key_cols <- c(
-          "id_property",
-          "property_type",
-          "property_area",
-          "commercial_type",
-          "made_payment",
-          "id_business",
-          "business_category",
-          "business_area",
-          "ward_number"
-        )
-        available_cols <- key_cols[key_cols %in% names(values$combined_data)]
-        preview_data(head(values$combined_data[, available_cols], 100))
-      } else {
-        # Filter by property ID
-        filtered <- values$combined_data %>%
-          filter(grepl(search_id, id_property, ignore.case = TRUE))
-
-        if (nrow(filtered) == 0) {
-          showNotification(
-            paste("No properties found matching:", search_id),
-            type = "warning"
-          )
-        }
-
-        key_cols <- c(
-          "id_property",
-          "property_type",
-          "property_area",
-          "commercial_type",
-          "made_payment",
-          "id_business",
-          "business_category",
-          "business_area",
-          "ward_number"
-        )
-        available_cols <- key_cols[key_cols %in% names(filtered)]
-        preview_data(filtered[, available_cols])
-      }
+      preview_data(head(
+        values$combined_data[, available_cols, drop = FALSE],
+        100
+      ))
     })
 
     # Output: Data preview table
@@ -345,7 +425,10 @@ module1_server <- function(id) {
       )
     })
 
-    # Return all data and parameters to be used by other modules
+    # ========================================================================
+    # RETURN VALUES FOR OTHER MODULES
+    # ========================================================================
+
     return(
       list(
         # Authentication status
