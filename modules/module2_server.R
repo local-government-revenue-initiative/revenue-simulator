@@ -336,7 +336,11 @@ module2_server <- function(
                 ]
               }
               if (nrow(meta_match) > 0) {
-                display_name <- meta_match$feature_label[1]
+                display_name <- paste0(
+                  meta_match$feature_label[1],
+                  ": ",
+                  meta_match$feature_options[1]
+                )
               }
             }
 
@@ -460,17 +464,17 @@ module2_server <- function(
     }
 
     # Render structure UIs
-    output$structures_ui_existing <- renderUI({
+    output$structure_ui_existing <- renderUI({
       req(values$commercial_type_columns)
       generate_structure_ui("existing")
     })
 
-    output$structures_ui_scenario_a <- renderUI({
+    output$structure_ui_scenario_a <- renderUI({
       req(values$commercial_type_columns)
       generate_structure_ui("scenario_a")
     })
 
-    output$structures_ui_scenario_b <- renderUI({
+    output$structure_ui_scenario_b <- renderUI({
       req(values$commercial_type_columns)
       generate_structure_ui("scenario_b")
     })
