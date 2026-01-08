@@ -315,7 +315,7 @@ module2_server <- function(
           title = title,
           width = 12,
           collapsible = TRUE,
-          collapsed = TRUE,
+          collapsed = FALSE,
           status = "info",
           solidHeader = FALSE,
           lapply(feature_list, function(feat) {
@@ -420,7 +420,7 @@ module2_server <- function(
           title = title,
           width = 12,
           collapsible = TRUE,
-          collapsed = TRUE,
+          collapsed = FALSE,
           status = "warning",
           solidHeader = FALSE,
           lapply(columns, function(col) {

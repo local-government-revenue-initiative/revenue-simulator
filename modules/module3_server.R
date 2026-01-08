@@ -57,26 +57,19 @@ module3_server <- function(
       }
     })
 
-    # Extract business subcategories from data
+    # Extract business subcategories from param_license
     observe({
-      req(processed_data())
-      data <- processed_data()
-
-      if ("business_sub_category" %in% names(data)) {
-        values$business_subcategories <- unique(
-          data$business_sub_category[!is.na(data$business_sub_category)]
-        )
-        cat(
-          "Business subcategories from data:",
-          length(values$business_subcategories),
-          "\n"
-        )
-      }
-
-      if ("business_category" %in% names(data)) {
-        values$business_categories <- unique(
-          data$business_category[!is.na(data$business_category)]
-        )
+      req(param_license())
+      values$business_subcategories <- get_license_subcategories(param_license())
+      cat(
+        "Business subcategories from param_license:",
+        length(values$business_subcategories),
+        "\n"
+      )
+      
+      # Also extract business categories from param_license
+      if ("business_category" %in% names(param_license())) {
+        values$business_categories <- unique(param_license()$business_category)
       }
     })
 
