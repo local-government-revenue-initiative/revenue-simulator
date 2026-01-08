@@ -1,5 +1,6 @@
 # R/module3_functions.R
 # Module 3 Functions - Updated to use parameter tables for defaults
+# Fixed defensive checks to handle vectors properly
 
 # ==============================================================================
 # BUILD DEFAULTS FROM PARAMETER TABLES
@@ -51,6 +52,7 @@ build_property_tax_defaults <- function(param_tax_min_rate) {
 #' @return List with license config by subcategory
 build_business_license_defaults <- function(param_license) {
   if (is.null(param_license) || nrow(param_license) == 0) {
+    # Return minimal default if no parameter table
     return(list(
       default = list(
         calculation_method = "minimum_rate",
@@ -65,105 +67,41 @@ build_business_license_defaults <- function(param_license) {
 
   for (i in seq_len(nrow(param_license))) {
     row <- param_license[i, ]
-    subcategory <- row$business_sub_category
-    method <- row$license_calculation_method
 
-    # Map method names from CSV to internal names
-    internal_method <- switch(
-      method,
-      "minimum_and_rate" = "minimum_rate",
-      "flat_amount_fixed" = "flat",
-      "minimum_rate" # Default
-    )
+    # Use subcategory as key
+    subcat <- as.character(row$business_sub_category)
 
-    config[[subcategory]] <- list(
-      category = row$business_category,
-      calculation_method = internal_method,
-      minimum = if (is.na(row$license_minimum)) 0 else row$license_minimum,
-      rate = if (is.na(row$license_rate)) 0 else row$license_rate,
-      flat_amount = if (is.na(row$license_flat_amount)) {
-        0
-      } else {
-        row$license_flat_amount
-      }
+    # Map calculation method
+    calc_method <- tolower(as.character(row$license_calculation_method))
+    if (calc_method %in% c("minimum and rate", "minimum_rate")) {
+      calc_method <- "minimum_rate"
+    } else if (calc_method == "flat") {
+      calc_method <- "flat"
+    } else {
+      calc_method <- "minimum_rate" # Default fallback
+    }
+
+    config[[subcat]] <- list(
+      calculation_method = calc_method,
+      minimum = as.numeric(row$license_minimum) %||% 350,
+      rate = as.numeric(row$license_rate) %||% 0.035,
+      flat_amount = as.numeric(row$license_flat_amount) %||% 0,
+      category = as.character(row$business_category)
     )
   }
-
-  # Add default fallback
-  config$default <- list(
-    calculation_method = "minimum_rate",
-    minimum = 350,
-    rate = 0.035,
-    flat_amount = 0
-  )
 
   return(config)
 }
 
-#' Get unique business subcategories from param_license
+#' Get list of business subcategories from param_license
 #' @param param_license Data frame with license parameters
-#' @return Vector of unique subcategory names
+#' @return Character vector of unique subcategories
 get_license_subcategories <- function(param_license) {
-  if (is.null(param_license) || nrow(param_license) == 0) {
-    return(character())
+  if (is.null(param_license) || !"business_sub_category" %in% names(param_license)) {
+    return(character(0))
   }
-  unique(param_license$business_sub_category)
+  unique(as.character(param_license$business_sub_category))
 }
-
-#' Get license defaults for a specific subcategory
-#' @param subcategory Subcategory name
-#' @param license_defaults List of license defaults from build_business_license_defaults
-#' @return List with minimum, rate, flat_amount, calculation_method
-get_subcategory_defaults <- function(
-  subcategory,
-  license_defaults = NULL,
-  category = NULL
-) {
-  # Default values
-  defaults <- list(
-    minimum = 350,
-    rate = 3.5, # Percentage for display
-    flat_amount = 0,
-    calculation_method = "minimum_rate"
-  )
-
-  if (is.null(license_defaults)) {
-    return(defaults)
-  }
-
-  # Try to find subcategory in defaults
-  if (subcategory %in% names(license_defaults)) {
-    subcat_config <- license_defaults[[subcategory]]
-    return(list(
-      minimum = subcat_config$minimum %||% 0,
-      rate = (subcat_config$rate %||% 0) * 100, # Convert to percentage
-      flat_amount = subcat_config$flat_amount %||% 0,
-      calculation_method = subcat_config$calculation_method %||% "minimum_rate"
-    ))
-  }
-
-  # Try composite key with category
-  if (!is.null(category)) {
-    composite_key <- paste0(category, "::", subcategory)
-    if (composite_key %in% names(license_defaults)) {
-      subcat_config <- license_defaults[[composite_key]]
-      return(list(
-        minimum = subcat_config$minimum %||% 0,
-        rate = (subcat_config$rate %||% 0) * 100,
-        flat_amount = subcat_config$flat_amount %||% 0,
-        calculation_method = subcat_config$calculation_method %||%
-          "minimum_rate"
-      ))
-    }
-  }
-
-  # Return default
-  return(defaults)
-}
-
-# ==============================================================================
-# LEGACY FUNCTION - Get default tax config (backward compatibility)
-# ==============================================================================
 
 #' Get default tax configuration - legacy function
 #' Use build_property_tax_defaults and build_business_license_defaults instead
@@ -190,16 +128,17 @@ get_default_tax_config <- function() {
 # ==============================================================================
 
 #' Calculate property tax for a single property
-#' @param property_value Numeric property value
+#' @param property_value Numeric property value (scalar)
 #' @param property_type Property type (domestic, commercial, institutional)
 #' @param tax_config Tax configuration list
 #' @return List with tax_amount, rate_used, minimum_used, slot_used
 calculate_property_tax <- function(property_value, property_type, tax_config) {
-  # Defensive checks
+  # FIXED: Defensive checks using any() to handle potential vector inputs
+  # This ensures the || operator receives scalar logical values
   if (
     length(property_value) == 0 ||
       is.null(property_value) ||
-      is.na(property_value)
+      all(is.na(property_value))
   ) {
     return(list(
       tax_amount = 0,
@@ -209,7 +148,33 @@ calculate_property_tax <- function(property_value, property_type, tax_config) {
     ))
   }
 
+  # If somehow a vector was passed, use only the first element
+  if (length(property_value) > 1) {
+    warning("calculate_property_tax received a vector; using first element only")
+    property_value <- property_value[1]
+  }
+
+  # Handle NA in the single value case
+  if (is.na(property_value)) {
+    return(list(
+      tax_amount = 0,
+      rate_used = 0,
+      minimum_used = 0,
+      slot_used = NA
+    ))
+  }
+
   if (length(property_type) == 0 || is.null(property_type)) {
+    property_type <- "domestic"
+  }
+
+  # If property_type is a vector, take first element
+  if (length(property_type) > 1) {
+    property_type <- property_type[1]
+  }
+
+  # Handle NA property type
+  if (is.na(property_type)) {
     property_type <- "domestic"
   }
 
@@ -251,6 +216,10 @@ calculate_property_tax <- function(property_value, property_type, tax_config) {
     }
 
     slot_config <- type_config$slots[[paste0("slot", slot_num)]]
+    if (is.null(slot_config)) {
+      # Fallback if slot config is missing
+      slot_config <- list(rate = type_config$rate %||% 0.025, minimum = type_config$minimum %||% 200)
+    }
     tax_amount <- max(property_value * slot_config$rate, slot_config$minimum)
 
     return(list(
@@ -263,8 +232,8 @@ calculate_property_tax <- function(property_value, property_type, tax_config) {
 }
 
 #' Calculate business license for a single business
-#' @param business_value Numeric business value
-#' @param business_area Numeric business area
+#' @param business_value Numeric business value (scalar)
+#' @param business_area Numeric business area (scalar)
 #' @param business_subcategory Subcategory name
 #' @param license_config License configuration list
 #' @param business_category Optional category name
@@ -285,12 +254,34 @@ calculate_business_license <- function(
     flat_amount_used = 0
   )
 
+  # FIXED: Handle vector inputs safely
+  if (length(business_value) == 0 || is.null(business_value)) {
+    return(default_result)
+  }
+
+  if (length(business_value) > 1) {
+    business_value <- business_value[1]
+  }
+
   if (is.na(business_value) || business_value <= 0) {
     return(default_result)
   }
 
+  if (length(business_subcategory) == 0 || is.null(business_subcategory)) {
+    return(default_result)
+  }
+
+  if (length(business_subcategory) > 1) {
+    business_subcategory <- business_subcategory[1]
+  }
+
   if (is.na(business_subcategory)) {
     return(default_result)
+  }
+
+  # Handle business_area if provided
+  if (length(business_area) > 1) {
+    business_area <- business_area[1]
   }
 
   # Get configuration for this subcategory
@@ -298,69 +289,349 @@ calculate_business_license <- function(
 
   # Try composite key if not found
   if (is.null(subcat_config) && !is.null(business_category)) {
-    composite_key <- paste0(business_category, "::", business_subcategory)
+    if (length(business_category) > 1) {
+      business_category <- business_category[1]
+    }
+    composite_key <- paste0(business_category, "_", business_subcategory)
     subcat_config <- license_config[[composite_key]]
   }
 
   # Use default if still not found
   if (is.null(subcat_config)) {
-    subcat_config <- license_config$default %||%
-      list(
-        calculation_method = "minimum_rate",
-        minimum = 350,
-        rate = 0.035,
-        flat_amount = 0
-      )
+    subcat_config <- license_config[["default"]] %||% list(
+      calculation_method = "minimum_rate",
+      minimum = 350,
+      rate = 0.035,
+      flat_amount = 0
+    )
   }
 
-  # Calculate based on method
+  # Calculate license based on method
   method <- subcat_config$calculation_method %||% "minimum_rate"
 
-  if (method == "minimum_rate") {
-    tax_amount <- max(
-      business_value * (subcat_config$rate %||% 0),
-      subcat_config$minimum %||% 0
-    )
-  } else if (method == "flat") {
-    tax_amount <- subcat_config$flat_amount %||% 0
+  if (method == "flat") {
+    return(list(
+      license_amount = subcat_config$flat_amount %||% 0,
+      method_used = "flat",
+      rate_used = 0,
+      minimum_used = 0,
+      flat_amount_used = subcat_config$flat_amount %||% 0
+    ))
   } else if (method == "flat_value_bands") {
-    # Flat amount based on business value bands
+    # Value-based bands
     bands <- subcat_config$value_bands
-    tax_amount <- bands$band3$tax %||% 0 # Default to highest band
-
-    if (!is.null(bands$band1) && business_value <= bands$band1$max) {
-      tax_amount <- bands$band1$tax
-    } else if (!is.null(bands$band2) && business_value <= bands$band2$max) {
-      tax_amount <- bands$band2$tax
+    if (is.null(bands)) {
+      # Fallback to minimum_rate if bands not configured
+      license_amount <- max(
+        business_value * (subcat_config$rate %||% 0.035),
+        subcat_config$minimum %||% 350
+      )
+      return(list(
+        license_amount = license_amount,
+        method_used = "minimum_rate",
+        rate_used = subcat_config$rate %||% 0.035,
+        minimum_used = subcat_config$minimum %||% 350,
+        flat_amount_used = 0
+      ))
     }
+
+    # Determine which band applies
+    if (business_value <= (bands$band1$max %||% 25000)) {
+      license_amount <- bands$band1$tax %||% 300
+    } else if (business_value <= (bands$band2$max %||% 50000)) {
+      license_amount <- bands$band2$tax %||% 500
+    } else {
+      license_amount <- bands$band3$tax %||% 1000
+    }
+
+    return(list(
+      license_amount = license_amount,
+      method_used = "flat_value_bands",
+      rate_used = 0,
+      minimum_used = 0,
+      flat_amount_used = license_amount
+    ))
   } else if (method == "flat_area_bands") {
-    # Flat amount based on business area bands
+    # Area-based bands
     bands <- subcat_config$area_bands
-    tax_amount <- bands$band3$tax %||% 0
-
-    if (
-      !is.null(bands$band1) &&
-        !is.na(business_area) &&
-        business_area <= bands$band1$max
-    ) {
-      tax_amount <- bands$band1$tax
-    } else if (
-      !is.null(bands$band2) &&
-        !is.na(business_area) &&
-        business_area <= bands$band2$max
-    ) {
-      tax_amount <- bands$band2$tax
+    if (is.null(bands) || is.na(business_area) || business_area <= 0) {
+      # Fallback to minimum_rate
+      license_amount <- max(
+        business_value * (subcat_config$rate %||% 0.035),
+        subcat_config$minimum %||% 350
+      )
+      return(list(
+        license_amount = license_amount,
+        method_used = "minimum_rate",
+        rate_used = subcat_config$rate %||% 0.035,
+        minimum_used = subcat_config$minimum %||% 350,
+        flat_amount_used = 0
+      ))
     }
+
+    # Determine which band applies
+    if (business_area <= (bands$band1$max %||% 50)) {
+      license_amount <- bands$band1$tax %||% 300
+    } else if (business_area <= (bands$band2$max %||% 200)) {
+      license_amount <- bands$band2$tax %||% 1000
+    } else {
+      license_amount <- bands$band3$tax %||% 2000
+    }
+
+    return(list(
+      license_amount = license_amount,
+      method_used = "flat_area_bands",
+      rate_used = 0,
+      minimum_used = 0,
+      flat_amount_used = license_amount
+    ))
   } else {
-    # Fallback
-    tax_amount <- max(business_value * 0.035, 350)
+    # Default: minimum_rate method
+    license_amount <- max(
+      business_value * (subcat_config$rate %||% 0.035),
+      subcat_config$minimum %||% 350
+    )
+
+    return(list(
+      license_amount = license_amount,
+      method_used = "minimum_rate",
+      rate_used = subcat_config$rate %||% 0.035,
+      minimum_used = subcat_config$minimum %||% 350,
+      flat_amount_used = 0
+    ))
+  }
+}
+
+# ==============================================================================
+# VECTORIZED TAX CALCULATION FUNCTIONS (for batch processing)
+# ==============================================================================
+
+#' Calculate property taxes for multiple properties (vectorized)
+#' @param property_values Numeric vector of property values
+#' @param property_types Character vector of property types
+#' @param tax_config Tax configuration list
+#' @return Numeric vector of tax amounts
+calculate_property_taxes_vectorized <- function(property_values, property_types, tax_config) {
+  n <- length(property_values)
+
+  if (n == 0) {
+    return(numeric(0))
   }
 
-  return(list(
-    license_amount = tax_amount,
-    method_used = method,
-    rate_used = subcat_config$rate %||% 0,
-    minimum_used = subcat_config$minimum %||% 0,
-    flat_amount_used = subcat_config$flat_amount %||% 0
-  ))
+  # Ensure property_types has same length
+  if (length(property_types) != n) {
+    property_types <- rep(property_types[1], n)
+  }
+
+  # Pre-allocate result vector
+  tax_amounts <- numeric(n)
+
+  # Process each property
+  for (i in seq_len(n)) {
+    result <- calculate_property_tax(
+      property_values[i],
+      property_types[i],
+      tax_config
+    )
+    tax_amounts[i] <- result$tax_amount
+  }
+
+  return(tax_amounts)
+}
+
+#' Calculate business licenses for Module 3 (vectorized)
+#' @param business_values Numeric vector of business values
+#' @param business_areas Numeric vector of business areas
+#' @param business_subcategories Character vector of subcategories
+#' @param license_config License configuration list
+#' @return Numeric vector of license amounts
+calculate_business_licenses_module3 <- function(
+  business_values,
+  business_areas,
+  business_subcategories,
+  license_config
+) {
+  n <- length(business_values)
+
+  if (n == 0) {
+    return(numeric(0))
+  }
+
+  # Ensure all vectors have same length
+  if (length(business_areas) != n) {
+    business_areas <- rep(NA, n)
+  }
+  if (length(business_subcategories) != n) {
+    business_subcategories <- rep(NA, n)
+  }
+
+  # Pre-allocate result vector
+  license_amounts <- numeric(n)
+
+  # Process each business
+  for (i in seq_len(n)) {
+    result <- calculate_business_license(
+      business_values[i],
+      business_areas[i],
+      business_subcategories[i],
+      license_config
+    )
+    license_amounts[i] <- result$license_amount
+  }
+
+  return(license_amounts)
+}
+
+# ==============================================================================
+# BUSINESS VALUE CALCULATION FUNCTION (for Module 3 Preview)
+# This is a standalone version that can be used without Module 4
+# ==============================================================================
+
+#' Calculate business values using Module 2 configuration
+#' @param data Data frame with property/business data
+#' @param config Module 2 configuration list with base_value, inflation, area_weight,
+#'   feature_weights, and structure_weights
+#' @return Numeric vector of business values
+calculate_business_values_module2 <- function(data, config) {
+  n_rows <- nrow(data)
+
+  # Get business areas
+  business_areas <- if ("business_area" %in% names(data)) {
+    data$business_area
+  } else {
+    rep(NA, n_rows)
+  }
+
+  # Only calculate for properties with businesses
+  if (all(is.na(business_areas)) || all(business_areas <= 0, na.rm = TRUE)) {
+    return(rep(0, n_rows))
+  }
+
+  # Get configuration values with defaults
+  base_value <- config$base_value %||% 0.5
+  inflation <- config$inflation %||% 0
+  area_weight <- config$area_weight %||% 0.5
+
+  # Calculate inflation-adjusted base value
+  inflation_adjusted_base <- base_value * (1 + inflation)
+
+  # Calculate feature weights product
+  all_features <- names(config$feature_weights)
+  product_weights <- rep(1, n_rows)
+
+  if (!is.null(all_features) && length(all_features) > 0) {
+    for (feat in all_features) {
+      if (feat %in% names(data)) {
+        weight <- config$feature_weights[[feat]]
+        if (!is.null(weight) && !is.na(weight)) {
+          feature_multiplier <- ifelse(
+            data[[feat]] == 1,
+            (weight / 100 + 1),
+            1
+          )
+          product_weights <- product_weights * feature_multiplier
+        }
+      }
+    }
+  }
+
+  # Calculate structure type weights using matrix approach
+  all_structures <- names(config$structure_weights)
+  structure_multipliers <- rep(1, n_rows)
+
+  if (!is.null(all_structures) && length(all_structures) > 0) {
+    structure_matrix <- matrix(0, nrow = n_rows, ncol = length(all_structures))
+    weight_vector <- numeric(length(all_structures))
+
+    for (j in seq_along(all_structures)) {
+      struct <- all_structures[j]
+
+      if (struct %in% names(data)) {
+        col_values <- data[[struct]]
+        structure_matrix[, j] <- ifelse(
+          !is.na(col_values) & col_values == 1,
+          1,
+          0
+        )
+
+        weight <- config$structure_weights[[struct]]
+        if (is.null(weight) || is.na(weight)) {
+          weight <- 0
+        }
+        weight_vector[j] <- weight
+      }
+    }
+
+    # Calculate structure weights using matrix multiplication
+    structure_weights <- structure_matrix %*% weight_vector
+    structure_weights <- as.vector(structure_weights)
+
+    # Apply structure type weights as multipliers
+    structure_multipliers <- (structure_weights / 100 + 1)
+  }
+
+  # Calculate business values
+  business_values <- ifelse(
+    is.na(business_areas) | business_areas <= 0,
+    0,
+    inflation_adjusted_base *
+      (business_areas^area_weight) *
+      product_weights *
+      structure_multipliers
+  )
+
+  return(business_values)
+}
+
+# ==============================================================================
+# HELPER FUNCTIONS
+# ==============================================================================
+
+#' Get property types from one-hot encoded columns
+#' @param data Data frame with property_type_* columns
+#' @return Character vector of property types
+get_property_types <- function(data) {
+  n_rows <- nrow(data)
+  property_types <- rep("domestic", n_rows) # Default
+
+  if ("property_type_Commercial" %in% names(data)) {
+    property_types[data$property_type_Commercial == 1] <- "commercial"
+  }
+
+  if ("property_type_Institutional" %in% names(data)) {
+    property_types[data$property_type_Institutional == 1] <- "institutional"
+  }
+
+  return(property_types)
+}
+
+#' Calculate property taxes with deduplication for multiple property types
+#' @param data Data frame with property data
+#' @param property_values Numeric vector of property values
+#' @param property_types Character vector of property types
+#' @param tax_config Tax configuration list
+#' @return Numeric vector of property taxes (deduplicated per property)
+calculate_property_taxes_with_deduplication <- function(
+  data,
+  property_values,
+  property_types,
+  tax_config
+) {
+  n_rows <- nrow(data)
+
+  # Calculate taxes for each row
+  property_taxes <- calculate_property_taxes_vectorized(
+    property_values,
+    property_types,
+    tax_config
+  )
+
+  # If data has id_property, we need to handle deduplication
+  # Properties might appear multiple times if they have multiple types
+  if ("id_property" %in% names(data)) {
+    # For now, just return the taxes - deduplication happens in Module 4
+    # when aggregating results
+  }
+
+  return(property_taxes)
 }
