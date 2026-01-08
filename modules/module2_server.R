@@ -170,7 +170,13 @@ module2_server <- function(
         }
       }
 
-      # Default to 0 if not found
+      # Log missing feature for debugging
+      cat(
+        "Warning: No parameter found for feature '",
+        feature_name,
+        "', defaulting to 0\n",
+        sep = ""
+      )
       return(0)
     }
 

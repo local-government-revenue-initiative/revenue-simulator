@@ -2,19 +2,6 @@
 # Module 2 Functions - Updated to use parameter tables for defaults
 
 # ==============================================================================
-# NULL COALESCING OPERATOR
-# ==============================================================================
-
-#' Null coalescing operator
-#' Returns y if x is NULL, otherwise returns x
-#' @param x Value to check
-#' @param y Default value if x is NULL
-#' @return x if not NULL, otherwise y
-`%||%` <- function(x, y) {
-  if (is.null(x)) y else x
-}
-
-# ==============================================================================
 # DEFAULT WEIGHTS FROM PARAMETER TABLES
 # ==============================================================================
 
