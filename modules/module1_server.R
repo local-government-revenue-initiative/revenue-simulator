@@ -5,26 +5,15 @@ module1_server <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    # NEW CODE - ADD THIS:
     get_city_password <- function(city) {
       env_var_name <- paste0("SIMULATOR_PWD_", toupper(city))
       password <- get_env(env_var_name)
 
       if (is.null(password)) {
-        # Fallback defaults for development (remove in production)
-        fallback_passwords <- list(
-          freetown = "6CW8FQR7+2X",
-          kenema = "kenema_password",
-          makeni = "makeni_password"
-        )
-        password <- fallback_passwords[[city]]
-
-        debug_logn(
-          "WARNING: Using fallback password for ",
-          city,
-          ". Set ",
+        stop(
+          "Password not found. Please set the ",
           env_var_name,
-          " environment variable for production."
+          " environment variable."
         )
       }
 

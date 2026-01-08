@@ -5,7 +5,7 @@
 # Function to safely load RDS file with error handling
 load_city_data <- function(city_name, data_dir = "data") {
   # Construct file path
-  file_path <- file.path(data_dir, paste0(city_name, "_data.rds"))
+  file_path <- file.path(data_dir, paste0(city_name, "_data_all.rds"))
 
   # Check if file exists
   if (!file.exists(file_path)) {
