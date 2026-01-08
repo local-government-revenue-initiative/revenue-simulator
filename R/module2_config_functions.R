@@ -31,7 +31,7 @@ collect_module2_config <- function(
     feature_weights = list(),
 
     # Structure type weights
-    structure_type_weights = list()
+    structure_weights = list()
   )
 
   # Collect all feature weights
@@ -60,8 +60,8 @@ collect_module2_config <- function(
     input_id <- paste0("weight_", struct_safe, "_", scenario_suffix)
     if (!is.null(input[[input_id]])) {
       # Store with both original name and safe name for compatibility
-      config$structure_type_weights[[struct]] <- input[[input_id]]
-      config$structure_type_weights[[struct_safe]] <- input[[input_id]]
+      config$structure_weights[[struct]] <- input[[input_id]]
+      config$structure_weights[[struct_safe]] <- input[[input_id]]
     }
   }
 
@@ -157,10 +157,10 @@ apply_module2_config <- function(
     struct_safe <- gsub("[^A-Za-z0-9_]", "_", struct)
 
     weight_value <- NULL
-    if (!is.null(config$structure_type_weights[[struct]])) {
-      weight_value <- config$structure_type_weights[[struct]]
-    } else if (!is.null(config$structure_type_weights[[struct_safe]])) {
-      weight_value <- config$structure_type_weights[[struct_safe]]
+    if (!is.null(config$structure_weights[[struct]])) {
+      weight_value <- config$structure_weights[[struct]]
+    } else if (!is.null(config$structure_weights[[struct_safe]])) {
+      weight_value <- config$structure_weights[[struct_safe]]
     }
 
     if (!is.null(weight_value)) {
