@@ -486,7 +486,7 @@ generate_business_license_ui <- function(
             ns(paste0(
               "bus_subcat_",
               subcategory_safe,
-              "_vband1_max_",
+              "_vb1_max_",
               scenario_suffix
             )),
             "Band 1 Max Value:",
@@ -500,7 +500,7 @@ generate_business_license_ui <- function(
             ns(paste0(
               "bus_subcat_",
               subcategory_safe,
-              "_vband1_tax_",
+              "_vb1_tax_",
               scenario_suffix
             )),
             "Band 1 Tax:",
@@ -516,7 +516,7 @@ generate_business_license_ui <- function(
             ns(paste0(
               "bus_subcat_",
               subcategory_safe,
-              "_vband2_max_",
+              "_vb2_max_",
               scenario_suffix
             )),
             "Band 2 Max Value:",
@@ -530,7 +530,7 @@ generate_business_license_ui <- function(
             ns(paste0(
               "bus_subcat_",
               subcategory_safe,
-              "_vband2_tax_",
+              "_vb2_tax_",
               scenario_suffix
             )),
             "Band 2 Tax:",
@@ -547,7 +547,7 @@ generate_business_license_ui <- function(
             ns(paste0(
               "bus_subcat_",
               subcategory_safe,
-              "_vband3_tax_",
+              "_vb3_tax_",
               scenario_suffix
             )),
             "Band 3 Tax:",
@@ -578,7 +578,7 @@ generate_business_license_ui <- function(
             ns(paste0(
               "bus_subcat_",
               subcategory_safe,
-              "_aband1_max_",
+              "_ab1_max_",
               scenario_suffix
             )),
             "Band 1 Max Area:",
@@ -592,7 +592,7 @@ generate_business_license_ui <- function(
             ns(paste0(
               "bus_subcat_",
               subcategory_safe,
-              "_aband1_tax_",
+              "_ab1_tax_",
               scenario_suffix
             )),
             "Band 1 Tax:",
@@ -608,7 +608,7 @@ generate_business_license_ui <- function(
             ns(paste0(
               "bus_subcat_",
               subcategory_safe,
-              "_aband2_max_",
+              "_ab2_max_",
               scenario_suffix
             )),
             "Band 2 Max Area:",
@@ -622,7 +622,7 @@ generate_business_license_ui <- function(
             ns(paste0(
               "bus_subcat_",
               subcategory_safe,
-              "_aband2_tax_",
+              "_ab2_tax_",
               scenario_suffix
             )),
             "Band 2 Tax:",
@@ -639,7 +639,7 @@ generate_business_license_ui <- function(
             ns(paste0(
               "bus_subcat_",
               subcategory_safe,
-              "_aband3_tax_",
+              "_ab3_tax_",
               scenario_suffix
             )),
             "Band 3 Tax:",

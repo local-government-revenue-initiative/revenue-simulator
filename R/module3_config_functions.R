@@ -104,19 +104,21 @@ collect_module3_config <- function(
       )
 
       # Collect all possible input values (the UI will show/hide based on method)
+      # Updated to match UI naming convention
       input_suffixes <- c(
         "_min_",
         "_rate_",
-        "_value_band1_max_",
-        "_value_band1_tax_",
-        "_value_band2_max_",
-        "_value_band2_tax_",
-        "_value_band3_tax_",
-        "_area_band1_max_",
-        "_area_band1_tax_",
-        "_area_band2_max_",
-        "_area_band2_tax_",
-        "_area_band3_tax_"
+        "_flat_",
+        "_vb1_max_",
+        "_vb1_tax_",
+        "_vb2_max_",
+        "_vb2_tax_",
+        "_vb3_tax_",
+        "_ab1_max_",
+        "_ab1_tax_",
+        "_ab2_max_",
+        "_ab2_tax_",
+        "_ab3_tax_"
       )
 
       for (suffix in input_suffixes) {
@@ -293,20 +295,21 @@ apply_module3_config <- function(
           updateSelectInput(session, method_id, selected = subcat_config$method)
         }
 
-        # Update all input values
+        # Update all input values - matches UI naming convention
         param_to_suffix <- list(
           "min" = "_min_",
           "rate" = "_rate_",
-          "value_band1_max" = "_value_band1_max_",
-          "value_band1_tax" = "_value_band1_tax_",
-          "value_band2_max" = "_value_band2_max_",
-          "value_band2_tax" = "_value_band2_tax_",
-          "value_band3_tax" = "_value_band3_tax_",
-          "area_band1_max" = "_area_band1_max_",
-          "area_band1_tax" = "_area_band1_tax_",
-          "area_band2_max" = "_area_band2_max_",
-          "area_band2_tax" = "_area_band2_tax_",
-          "area_band3_tax" = "_area_band3_tax_"
+          "flat" = "_flat_",
+          "vb1_max" = "_vb1_max_",
+          "vb1_tax" = "_vb1_tax_",
+          "vb2_max" = "_vb2_max_",
+          "vb2_tax" = "_vb2_tax_",
+          "vb3_tax" = "_vb3_tax_",
+          "ab1_max" = "_ab1_max_",
+          "ab1_tax" = "_ab1_tax_",
+          "ab2_max" = "_ab2_max_",
+          "ab2_tax" = "_ab2_tax_",
+          "ab3_tax" = "_ab3_tax_"
         )
 
         for (param in names(param_to_suffix)) {
