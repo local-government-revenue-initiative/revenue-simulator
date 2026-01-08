@@ -918,7 +918,6 @@ module3_server <- function(
 
       return(config)
     }
-
     # ==========================================================================
     # PROPERTY TAX PREVIEW
     # ==========================================================================
@@ -933,21 +932,34 @@ module3_server <- function(
           incProgress(0.2, detail = "Loading data...")
 
           preview_data <- head(processed_data(), input$property_preview_rows)
-          property_values <- head(
-            calculated_property_values()[[input$property_preview_scenario]],
-            input$property_preview_rows
-          )
+          
+          # calculated_property_values() returns a data frame with columns:
+          # id_property, property_value, business_value
+          calc_values_df <- calculated_property_values()[[input$property_preview_scenario]]
+          
+          if (is.null(calc_values_df)) {
+            showNotification(
+              "Please calculate property values in Module 2 first.",
+              type = "warning"
+            )
+            return()
+          }
+          
+          # Extract property_value column from the data frame
+          property_values <- head(calc_values_df$property_value, input$property_preview_rows)
 
           incProgress(0.3, detail = "Getting property types...")
 
           property_types <- sapply(1:nrow(preview_data), function(i) {
             if (
               "property_type_Commercial" %in% names(preview_data) &&
+                !is.na(preview_data$property_type_Commercial[i]) &&
                 preview_data$property_type_Commercial[i] == 1
             ) {
               return("commercial")
             } else if (
               "property_type_Institutional" %in% names(preview_data) &&
+                !is.na(preview_data$property_type_Institutional[i]) &&
                 preview_data$property_type_Institutional[i] == 1
             ) {
               return("institutional")
@@ -972,12 +984,19 @@ module3_server <- function(
 
           incProgress(0.1, detail = "Creating preview table...")
 
+          # Calculate effective rate, handling division by zero
+          effective_rate <- ifelse(
+            is.na(property_values) | property_values == 0,
+            0,
+            property_taxes / property_values * 100
+          )
+
           values$preview_data <- data.frame(
             id_property = preview_data$id_property,
             property_type = property_types,
             property_value = round(property_values, 2),
             property_tax = round(property_taxes, 2),
-            effective_rate = round(property_taxes / property_values * 100, 2),
+            effective_rate = round(effective_rate, 2),
             stringsAsFactors = FALSE
           )
 
@@ -987,8 +1006,7 @@ module3_server <- function(
 
       showNotification("Property tax preview calculated", type = "message")
     })
-
-    # ==========================================================================
+# ==========================================================================
     # BUSINESS LICENSE PREVIEW
     # ==========================================================================
 
@@ -1006,14 +1024,22 @@ module3_server <- function(
           incProgress(0.3, detail = "Calculating business values...")
 
           prop_config <- property_configs()[[input$business_preview_scenario]]
+          
+          if (is.null(prop_config)) {
+            showNotification(
+              "Please configure property parameters in Module 2 first.",
+              type = "warning"
+            )
+            return()
+          }
+          
+          # calculate_business_values_module2 is available from module3_functions.R
           business_values <- calculate_business_values_module2(
             preview_data,
             prop_config
           )
 
-          business_subcategories <- if (
-            "business_sub_category" %in% names(preview_data)
-          ) {
+          business_subcategories <- if ("business_sub_category" %in% names(preview_data)) {
             preview_data$business_sub_category
           } else {
             rep(NA, nrow(preview_data))
@@ -1033,40 +1059,51 @@ module3_server <- function(
           business_licenses <- numeric(nrow(preview_data))
 
           for (i in 1:nrow(preview_data)) {
-            if (!is.na(business_subcategories[i]) && business_values[i] > 0) {
+            has_valid_subcategory <- !is.na(business_subcategories[i]) && 
+                                      business_subcategories[i] != ""
+            has_valid_value <- !is.na(business_values[i]) && business_values[i] > 0
+            
+            if (has_valid_subcategory && has_valid_value) {
               subcat_config <- license_config[[business_subcategories[i]]]
 
               if (!is.null(subcat_config)) {
-                if (subcat_config$calculation_method == "minimum_rate") {
+                calc_method <- subcat_config$calculation_method %||% "minimum_rate"
+                
+                if (calc_method == "minimum_rate") {
                   business_licenses[i] <- max(
-                    business_values[i] * subcat_config$rate,
-                    subcat_config$minimum
+                    business_values[i] * (subcat_config$rate %||% 0.035),
+                    subcat_config$minimum %||% 350
                   )
-                } else if (subcat_config$calculation_method == "flat") {
-                  business_licenses[i] <- subcat_config$flat_amount
-                } else if (
-                  subcat_config$calculation_method == "flat_value_bands"
-                ) {
+                } else if (calc_method == "flat") {
+                  business_licenses[i] <- subcat_config$flat_amount %||% 0
+                } else if (calc_method == "flat_value_bands") {
                   bands <- subcat_config$value_bands
-                  if (business_values[i] <= bands$band1$max) {
-                    business_licenses[i] <- bands$band1$tax
-                  } else if (business_values[i] <= bands$band2$max) {
-                    business_licenses[i] <- bands$band2$tax
-                  } else {
-                    business_licenses[i] <- bands$band3$tax
+                  if (!is.null(bands)) {
+                    if (business_values[i] <= (bands$band1$max %||% 25000)) {
+                      business_licenses[i] <- bands$band1$tax %||% 300
+                    } else if (business_values[i] <= (bands$band2$max %||% 50000)) {
+                      business_licenses[i] <- bands$band2$tax %||% 500
+                    } else {
+                      business_licenses[i] <- bands$band3$tax %||% 1000
+                    }
                   }
-                } else if (
-                  subcat_config$calculation_method == "flat_area_bands"
-                ) {
+                } else if (calc_method == "flat_area_bands") {
                   bands <- subcat_config$area_bands
-                  if (business_areas[i] <= bands$band1$max) {
-                    business_licenses[i] <- bands$band1$tax
-                  } else if (business_areas[i] <= bands$band2$max) {
-                    business_licenses[i] <- bands$band2$tax
-                  } else {
-                    business_licenses[i] <- bands$band3$tax
+                  area_val <- business_areas[i]
+                  
+                  if (!is.null(bands) && !is.na(area_val) && area_val > 0) {
+                    if (area_val <= (bands$band1$max %||% 50)) {
+                      business_licenses[i] <- bands$band1$tax %||% 300
+                    } else if (area_val <= (bands$band2$max %||% 200)) {
+                      business_licenses[i] <- bands$band2$tax %||% 1000
+                    } else {
+                      business_licenses[i] <- bands$band3$tax %||% 2000
+                    }
                   }
                 }
+              } else {
+                # Default calculation if no specific config found
+                business_licenses[i] <- max(business_values[i] * 0.035, 350)
               }
             }
           }
