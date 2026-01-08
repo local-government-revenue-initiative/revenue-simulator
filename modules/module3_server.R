@@ -1,5 +1,5 @@
 # modules/module3_server.R
-# Module 3: Tax Parameters - Updated to use parameter tables
+# Module 3: Tax Parameters - Updated with category selector for fast loading
 
 module3_server <- function(
   id,
@@ -57,7 +57,7 @@ module3_server <- function(
       }
     })
 
-    # Extract business subcategories from param_license
+    # Extract business subcategories and categories from param_license
     observe({
       req(param_license())
       values$business_subcategories <- get_license_subcategories(param_license())
@@ -66,10 +66,15 @@ module3_server <- function(
         length(values$business_subcategories),
         "\n"
       )
-      
+
       # Also extract business categories from param_license
       if ("business_category" %in% names(param_license())) {
         values$business_categories <- unique(param_license()$business_category)
+        cat(
+          "Business categories from param_license:",
+          length(values$business_categories),
+          "\n"
+        )
       }
     })
 
@@ -104,19 +109,19 @@ module3_server <- function(
             box(
               title = paste(prop_type_title, "Property Tax"),
               width = 12,
-              status = if (prop_type == "commercial") "warning" else "info",
-              solidHeader = TRUE,
+              status = if (prop_type == "commercial") "warning" else "primary",
+              solidHeader = FALSE,
               collapsible = TRUE,
               collapsed = FALSE,
 
-              # Use slots toggle
+              # Toggle for slot-based configuration
               checkboxInput(
                 ns(paste0("use_slots_", prop_type, "_", scenario_suffix)),
                 "Use value-based slots",
-                value = defaults$use_slots %||% FALSE
+                value = defaults$use_slots
               ),
 
-              # Simple configuration (when not using slots)
+              # Simple configuration (shown when slots disabled)
               conditionalPanel(
                 condition = paste0(
                   "!input['",
@@ -129,7 +134,7 @@ module3_server <- function(
                     numericInput(
                       ns(paste0(prop_type, "_min_", scenario_suffix)),
                       "Minimum Tax:",
-                      value = defaults$minimum %||% 200,
+                      value = defaults$minimum,
                       min = 0
                     )
                   ),
@@ -138,23 +143,21 @@ module3_server <- function(
                     numericInput(
                       ns(paste0(prop_type, "_rate_", scenario_suffix)),
                       "Tax Rate (%):",
-                      value = (defaults$rate %||% 0.025) * 100,
+                      value = defaults$rate * 100,
                       min = 0,
-                      max = 100,
                       step = 0.1
                     )
                   )
                 )
               ),
 
-              # Slot configuration (when using slots)
+              # Slot configuration (shown when slots enabled)
               conditionalPanel(
                 condition = paste0(
                   "input['",
                   ns(paste0("use_slots_", prop_type, "_", scenario_suffix)),
                   "']"
                 ),
-                h5("Value Slot Configuration"),
                 # Slot 1
                 fluidRow(
                   column(3, h6("Slot 1")),
@@ -267,54 +270,35 @@ module3_server <- function(
     })
 
     # ==========================================================================
-    # DYNAMIC UI - Business License Configuration
+    # DYNAMIC UI - Business License Configuration (Category Selector Approach)
     # ==========================================================================
 
-    generate_business_license_ui <- function(scenario_suffix) {
-      req(values$business_subcategories, values$default_license)
-      
-      if (length(values$business_subcategories) == 0) {
-        return(p("No business subcategories found in data."))
-      }
-      
-      # Group subcategories by category
+    # Helper to get subcategories for a selected category
+    get_subcategories_for_category <- function(category) {
+      req(param_license())
       param_data <- param_license()
-      if (is.null(param_data)) {
-        return(p("License parameters not loaded."))
+      param_data$business_sub_category[param_data$business_category == category]
+    }
+
+    # Generate business license UI for a single scenario with category dropdown
+    generate_business_license_ui <- function(scenario_suffix) {
+      req(values$business_categories, values$default_license)
+
+      if (length(values$business_categories) == 0) {
+        return(p("No business categories found."))
       }
-      
-      categories <- unique(param_data$business_category)
-      
+
       tagList(
-        lapply(categories, function(cat) {
-          # Get subcategories for this category
-          subcats <- param_data$business_sub_category[
-            param_data$business_category == cat
-          ]
-          
-          box(
-            title = paste0(cat, " (", length(subcats), " subcategories)"),
-            width = 12,
-            collapsible = TRUE,
-            collapsed = TRUE,  # Start collapsed!
-            status = "info",
-            solidHeader = FALSE,
-            
-            lapply(subcats, function(subcategory) {
-              # Get defaults for this subcategory
-              defaults <- get_subcategory_defaults(
-                subcategory,
-                values$default_license
-              )
-              generate_business_license_ui_element(
-                ns,
-                subcategory,
-                scenario_suffix,
-                defaults
-              )
-            })
-          )
-        })
+        # Category selector dropdown
+        selectInput(
+          ns(paste0("selected_category_", scenario_suffix)),
+          label = "Select Business Category:",
+          choices = values$business_categories,
+          selected = values$business_categories[1]
+        ),
+
+        # Placeholder for subcategory inputs (rendered dynamically)
+        uiOutput(ns(paste0("subcategory_inputs_", scenario_suffix)))
       )
     }
 
@@ -440,7 +424,7 @@ module3_server <- function(
                   "_vb1_max_",
                   scenario_suffix
                 )),
-                "Band 1 Max:",
+                "Band 1 Max Value:",
                 value = 10000,
                 min = 0
               )
@@ -455,7 +439,7 @@ module3_server <- function(
                   scenario_suffix
                 )),
                 "Band 1 Tax:",
-                value = 500,
+                value = 200,
                 min = 0
               )
             )
@@ -470,7 +454,7 @@ module3_server <- function(
                   "_vb2_max_",
                   scenario_suffix
                 )),
-                "Band 2 Max:",
+                "Band 2 Max Value:",
                 value = 50000,
                 min = 0
               )
@@ -485,7 +469,7 @@ module3_server <- function(
                   scenario_suffix
                 )),
                 "Band 2 Tax:",
-                value = 1000,
+                value = 500,
                 min = 0
               )
             )
@@ -498,7 +482,7 @@ module3_server <- function(
               scenario_suffix
             )),
             "Band 3 Tax (above Band 2):",
-            value = 2000,
+            value = 1000,
             min = 0
           )
         ),
@@ -540,7 +524,7 @@ module3_server <- function(
                   scenario_suffix
                 )),
                 "Band 1 Tax:",
-                value = 500,
+                value = 300,
                 min = 0
               )
             )
@@ -590,9 +574,9 @@ module3_server <- function(
       )
     }
 
-    # Render business license UIs
+    # Render business license UIs (just the category selector)
     output$business_license_ui_existing <- renderUI({
-      req(values$business_subcategories, values$default_license)
+      req(values$business_categories, values$default_license)
       div(
         style = "max-height: 500px; overflow-y: auto;",
         generate_business_license_ui("existing")
@@ -600,7 +584,7 @@ module3_server <- function(
     })
 
     output$business_license_ui_scenario_a <- renderUI({
-      req(values$business_subcategories, values$default_license)
+      req(values$business_categories, values$default_license)
       div(
         style = "max-height: 500px; overflow-y: auto;",
         generate_business_license_ui("scenario_a")
@@ -608,10 +592,94 @@ module3_server <- function(
     })
 
     output$business_license_ui_scenario_b <- renderUI({
-      req(values$business_subcategories, values$default_license)
+      req(values$business_categories, values$default_license)
       div(
         style = "max-height: 500px; overflow-y: auto;",
         generate_business_license_ui("scenario_b")
+      )
+    })
+
+    # Dynamically render subcategory inputs when category is selected - EXISTING
+    output$subcategory_inputs_existing <- renderUI({
+      req(input$selected_category_existing)
+      selected_cat <- input$selected_category_existing
+
+      subcats <- get_subcategories_for_category(selected_cat)
+
+      if (length(subcats) == 0) {
+        return(p("No subcategories found for this category."))
+      }
+
+      tagList(
+        h5(paste0("Subcategories in '", selected_cat, "' (", length(subcats), "):")),
+        lapply(subcats, function(subcategory) {
+          defaults <- get_subcategory_defaults(
+            subcategory,
+            values$default_license
+          )
+          generate_business_license_ui_element(
+            ns,
+            subcategory,
+            "existing",
+            defaults
+          )
+        })
+      )
+    })
+
+    # Dynamically render subcategory inputs when category is selected - SCENARIO A
+    output$subcategory_inputs_scenario_a <- renderUI({
+      req(input$selected_category_scenario_a)
+      selected_cat <- input$selected_category_scenario_a
+
+      subcats <- get_subcategories_for_category(selected_cat)
+
+      if (length(subcats) == 0) {
+        return(p("No subcategories found for this category."))
+      }
+
+      tagList(
+        h5(paste0("Subcategories in '", selected_cat, "' (", length(subcats), "):")),
+        lapply(subcats, function(subcategory) {
+          defaults <- get_subcategory_defaults(
+            subcategory,
+            values$default_license
+          )
+          generate_business_license_ui_element(
+            ns,
+            subcategory,
+            "scenario_a",
+            defaults
+          )
+        })
+      )
+    })
+
+    # Dynamically render subcategory inputs when category is selected - SCENARIO B
+    output$subcategory_inputs_scenario_b <- renderUI({
+      req(input$selected_category_scenario_b)
+      selected_cat <- input$selected_category_scenario_b
+
+      subcats <- get_subcategories_for_category(selected_cat)
+
+      if (length(subcats) == 0) {
+        return(p("No subcategories found for this category."))
+      }
+
+      tagList(
+        h5(paste0("Subcategories in '", selected_cat, "' (", length(subcats), "):")),
+        lapply(subcats, function(subcategory) {
+          defaults <- get_subcategory_defaults(
+            subcategory,
+            values$default_license
+          )
+          generate_business_license_ui_element(
+            ns,
+            subcategory,
+            "scenario_b",
+            defaults
+          )
+        })
       )
     })
 
@@ -705,6 +773,7 @@ module3_server <- function(
     }
 
     # Collect business license configuration for a scenario
+    # NOTE: This collects ALL subcategories, not just the currently displayed one
     collect_business_license_config <- function(scenario) {
       config <- list()
 
@@ -721,297 +790,250 @@ module3_server <- function(
           "_method_",
           scenario
         )]]
+
+        # If this subcategory hasn't been rendered yet, use defaults
         if (is.null(method)) {
-          method <- "minimum_rate"
+          defaults <- get_subcategory_defaults(
+            subcategory,
+            values$default_license
+          )
+          config[[subcategory]] <- list(
+            calculation_method = defaults$calculation_method,
+            minimum = defaults$minimum,
+            rate = defaults$rate / 100, # Convert from percentage
+            flat_amount = defaults$flat_amount,
+            value_bands = list(
+              band1 = list(max = 10000, tax = 200),
+              band2 = list(max = 50000, tax = 500),
+              band3 = list(tax = 1000)
+            ),
+            area_bands = list(
+              band1 = list(max = 50, tax = 300),
+              band2 = list(max = 200, tax = 1000),
+              band3 = list(tax = 2000)
+            )
+          )
+          next
         }
 
-        if (method == "minimum_rate") {
-          min_val <- input[[paste0(
+        # Collect values from rendered inputs
+        config[[subcategory]] <- list(
+          calculation_method = method,
+          minimum = input[[paste0(
             "bus_subcat_",
             subcategory_safe,
             "_min_",
             scenario
-          )]]
-          rate_val <- input[[paste0(
+          )]] %||% 0,
+          rate = (input[[paste0(
             "bus_subcat_",
             subcategory_safe,
             "_rate_",
             scenario
-          )]]
-
-          config[[subcategory]] <- list(
-            calculation_method = "minimum_rate",
-            minimum = min_val %||% 350,
-            rate = (rate_val %||% 3.5) / 100
-          )
-        } else if (method == "flat") {
-          flat_val <- input[[paste0(
+          )]] %||% 0) / 100,
+          flat_amount = input[[paste0(
             "bus_subcat_",
             subcategory_safe,
             "_flat_",
             scenario
-          )]]
-
-          config[[subcategory]] <- list(
-            calculation_method = "flat",
-            flat_amount = flat_val %||% 1000
-          )
-        } else if (method == "flat_value_bands") {
-          config[[subcategory]] <- list(
-            calculation_method = "flat_value_bands",
-            value_bands = list(
-              band1 = list(
-                max = input[[paste0(
-                  "bus_subcat_",
-                  subcategory_safe,
-                  "_vb1_max_",
-                  scenario
-                )]] %||%
-                  10000,
-                tax = input[[paste0(
-                  "bus_subcat_",
-                  subcategory_safe,
-                  "_vb1_tax_",
-                  scenario
-                )]] %||%
-                  500
-              ),
-              band2 = list(
-                max = input[[paste0(
-                  "bus_subcat_",
-                  subcategory_safe,
-                  "_vb2_max_",
-                  scenario
-                )]] %||%
-                  50000,
-                tax = input[[paste0(
-                  "bus_subcat_",
-                  subcategory_safe,
-                  "_vb2_tax_",
-                  scenario
-                )]] %||%
-                  1000
-              ),
-              band3 = list(
-                tax = input[[paste0(
-                  "bus_subcat_",
-                  subcategory_safe,
-                  "_vb3_tax_",
-                  scenario
-                )]] %||%
-                  2000
-              )
+          )]] %||% 0,
+          value_bands = list(
+            band1 = list(
+              max = input[[paste0(
+                "bus_subcat_",
+                subcategory_safe,
+                "_vb1_max_",
+                scenario
+              )]] %||% 10000,
+              tax = input[[paste0(
+                "bus_subcat_",
+                subcategory_safe,
+                "_vb1_tax_",
+                scenario
+              )]] %||% 200
+            ),
+            band2 = list(
+              max = input[[paste0(
+                "bus_subcat_",
+                subcategory_safe,
+                "_vb2_max_",
+                scenario
+              )]] %||% 50000,
+              tax = input[[paste0(
+                "bus_subcat_",
+                subcategory_safe,
+                "_vb2_tax_",
+                scenario
+              )]] %||% 500
+            ),
+            band3 = list(
+              tax = input[[paste0(
+                "bus_subcat_",
+                subcategory_safe,
+                "_vb3_tax_",
+                scenario
+              )]] %||% 1000
+            )
+          ),
+          area_bands = list(
+            band1 = list(
+              max = input[[paste0(
+                "bus_subcat_",
+                subcategory_safe,
+                "_ab1_max_",
+                scenario
+              )]] %||% 50,
+              tax = input[[paste0(
+                "bus_subcat_",
+                subcategory_safe,
+                "_ab1_tax_",
+                scenario
+              )]] %||% 300
+            ),
+            band2 = list(
+              max = input[[paste0(
+                "bus_subcat_",
+                subcategory_safe,
+                "_ab2_max_",
+                scenario
+              )]] %||% 200,
+              tax = input[[paste0(
+                "bus_subcat_",
+                subcategory_safe,
+                "_ab2_tax_",
+                scenario
+              )]] %||% 1000
+            ),
+            band3 = list(
+              tax = input[[paste0(
+                "bus_subcat_",
+                subcategory_safe,
+                "_ab3_tax_",
+                scenario
+              )]] %||% 2000
             )
           )
-        } else if (method == "flat_area_bands") {
-          config[[subcategory]] <- list(
-            calculation_method = "flat_area_bands",
-            area_bands = list(
-              band1 = list(
-                max = input[[paste0(
-                  "bus_subcat_",
-                  subcategory_safe,
-                  "_ab1_max_",
-                  scenario
-                )]] %||%
-                  50,
-                tax = input[[paste0(
-                  "bus_subcat_",
-                  subcategory_safe,
-                  "_ab1_tax_",
-                  scenario
-                )]] %||%
-                  500
-              ),
-              band2 = list(
-                max = input[[paste0(
-                  "bus_subcat_",
-                  subcategory_safe,
-                  "_ab2_max_",
-                  scenario
-                )]] %||%
-                  200,
-                tax = input[[paste0(
-                  "bus_subcat_",
-                  subcategory_safe,
-                  "_ab2_tax_",
-                  scenario
-                )]] %||%
-                  1000
-              ),
-              band3 = list(
-                tax = input[[paste0(
-                  "bus_subcat_",
-                  subcategory_safe,
-                  "_ab3_tax_",
-                  scenario
-                )]] %||%
-                  2000
-              )
-            )
-          )
-        }
+        )
       }
 
       return(config)
     }
 
     # ==========================================================================
-    # PREVIEW CALCULATIONS
+    # PROPERTY TAX PREVIEW
     # ==========================================================================
 
-    # Get precalculated property values from Module 2
-    get_precalculated_values <- function(scenario, data, n_rows) {
-      calc_values <- calculated_property_values()
-
-      if (is.null(calc_values) || is.null(calc_values[[scenario]])) {
-        # No precalculated values - return NAs
-        return(list(
-          property_values = rep(NA, n_rows),
-          business_values = rep(NA, n_rows)
-        ))
-      }
-
-      scenario_values <- calc_values[[scenario]]
-
-      # Match by id_property
-      matched_indices <- match(data$id_property, scenario_values$id_property)
-
-      property_values <- scenario_values$property_value[matched_indices]
-      business_values <- scenario_values$business_value[matched_indices]
-
-      # Handle NAs
-      property_values[is.na(property_values)] <- 0
-      business_values[is.na(business_values)] <- 0
-
-      list(
-        property_values = property_values,
-        business_values = business_values
-      )
-    }
-
-    # Property tax preview calculation
     observeEvent(input$calculate_property_preview, {
-      req(processed_data())
+      req(processed_data(), calculated_property_values())
 
-      data <- processed_data()
-      scenario <- input$property_preview_scenario %||% "existing"
-      n_rows <- min(input$property_preview_rows %||% 100, nrow(data))
+      withProgress(
+        message = "Calculating property tax preview...",
+        value = 0,
+        {
+          incProgress(0.2, detail = "Loading data...")
 
-      withProgress(message = "Calculating property tax preview...", value = 0, {
-        preview_data <- data[1:n_rows, ]
+          preview_data <- head(processed_data(), input$property_preview_rows)
+          property_values <- head(
+            calculated_property_values()[[input$property_preview_scenario]],
+            input$property_preview_rows
+          )
 
-        incProgress(0.3, detail = "Getting property values...")
+          incProgress(0.3, detail = "Getting property types...")
 
-        values_result <- get_precalculated_values(
-          scenario,
-          preview_data,
-          n_rows
-        )
-        property_values <- values_result$property_values
+          property_types <- sapply(1:nrow(preview_data), function(i) {
+            if (
+              "property_type_Commercial" %in% names(preview_data) &&
+                preview_data$property_type_Commercial[i] == 1
+            ) {
+              return("commercial")
+            } else if (
+              "property_type_Institutional" %in% names(preview_data) &&
+                preview_data$property_type_Institutional[i] == 1
+            ) {
+              return("institutional")
+            } else {
+              return("domestic")
+            }
+          })
 
-        incProgress(0.3, detail = "Calculating taxes...")
+          incProgress(0.3, detail = "Calculating taxes...")
 
-        # Get property types
-        property_types <- if ("property_type" %in% names(preview_data)) {
-          tolower(preview_data$property_type)
-        } else {
-          rep("domestic", n_rows)
-        }
+          tax_config <- collect_property_tax_config(input$property_preview_scenario)
+          property_taxes <- numeric(length(property_values))
 
-        # Get tax configuration
-        tax_config <- collect_property_tax_config(scenario)
-
-        # Calculate taxes
-        property_taxes <- numeric(n_rows)
-        tax_rates <- numeric(n_rows)
-
-        for (i in 1:n_rows) {
-          if (is.na(property_values[i]) || property_values[i] <= 0) {
-            property_taxes[i] <- 0
-            tax_rates[i] <- 0
-          } else {
+          for (i in seq_along(property_values)) {
             result <- calculate_property_tax(
               property_values[i],
               property_types[i],
               tax_config
             )
             property_taxes[i] <- result$tax_amount
-            tax_rates[i] <- result$rate_used * 100
           }
+
+          incProgress(0.1, detail = "Creating preview table...")
+
+          values$preview_data <- data.frame(
+            id_property = preview_data$id_property,
+            property_type = property_types,
+            property_value = round(property_values, 2),
+            property_tax = round(property_taxes, 2),
+            effective_rate = round(property_taxes / property_values * 100, 2),
+            stringsAsFactors = FALSE
+          )
+
+          incProgress(0.1, detail = "Done!")
         }
-
-        incProgress(0.3, detail = "Creating preview table...")
-
-        values$preview_data <- data.frame(
-          id_property = preview_data$id_property,
-          property_type = property_types,
-          property_value = round(property_values, 2),
-          tax_rate = round(tax_rates, 2),
-          property_tax = round(property_taxes, 2),
-          stringsAsFactors = FALSE
-        )
-
-        incProgress(0.1, detail = "Done!")
-      })
+      )
 
       showNotification("Property tax preview calculated", type = "message")
     })
 
-    # Business license preview calculation
-    observeEvent(input$calculate_business_preview, {
-      req(processed_data())
+    # ==========================================================================
+    # BUSINESS LICENSE PREVIEW
+    # ==========================================================================
 
-      data <- processed_data()
-      scenario <- input$business_preview_scenario %||% "existing"
-      n_rows <- min(input$business_preview_rows %||% 100, nrow(data))
+    observeEvent(input$calculate_business_preview, {
+      req(processed_data(), property_configs())
 
       withProgress(
         message = "Calculating business license preview...",
         value = 0,
         {
-          preview_data <- data[1:n_rows, ]
+          incProgress(0.2, detail = "Loading data...")
 
-          incProgress(0.3, detail = "Getting business values...")
+          preview_data <- head(processed_data(), input$business_preview_rows)
 
-          values_result <- get_precalculated_values(
-            scenario,
+          incProgress(0.3, detail = "Calculating business values...")
+
+          prop_config <- property_configs()[[input$business_preview_scenario]]
+          business_values <- calculate_business_values_module2(
             preview_data,
-            n_rows
+            prop_config
           )
-          business_values <- values_result$business_values
 
-          incProgress(0.3, detail = "Calculating licenses...")
-
-          # Get business info
           business_subcategories <- if (
             "business_sub_category" %in% names(preview_data)
           ) {
             preview_data$business_sub_category
           } else {
-            rep(NA, n_rows)
+            rep(NA, nrow(preview_data))
           }
 
           business_areas <- if ("business_area" %in% names(preview_data)) {
             preview_data$business_area
           } else {
-            rep(0, n_rows)
+            rep(NA, nrow(preview_data))
           }
 
-          # Get license configuration
-          license_config <- collect_business_license_config(scenario)
+          incProgress(0.3, detail = "Calculating licenses...")
 
-          # Calculate licenses
-          business_licenses <- numeric(n_rows)
+          license_config <- collect_business_license_config(
+            input$business_preview_scenario
+          )
+          business_licenses <- numeric(nrow(preview_data))
 
-          for (i in 1:n_rows) {
-            if (
-              is.na(business_subcategories[i]) ||
-                is.na(business_values[i]) ||
-                business_values[i] <= 0
-            ) {
-              business_licenses[i] <- 0
-            } else {
+          for (i in 1:nrow(preview_data)) {
+            if (!is.na(business_subcategories[i]) && business_values[i] > 0) {
               subcat_config <- license_config[[business_subcategories[i]]]
 
               if (!is.null(subcat_config)) {
@@ -1049,7 +1071,7 @@ module3_server <- function(
             }
           }
 
-          incProgress(0.3, detail = "Creating preview table...")
+          incProgress(0.1, detail = "Creating preview table...")
 
           values$business_preview_data <- data.frame(
             id_property = preview_data$id_property,
