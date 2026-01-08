@@ -271,26 +271,48 @@ module3_server <- function(
     # ==========================================================================
 
     generate_business_license_ui <- function(scenario_suffix) {
-      req(values$business_subcategories)
-
+      req(values$business_subcategories, values$default_license)
+      
       if (length(values$business_subcategories) == 0) {
         return(p("No business subcategories found in data."))
       }
-
+      
+      # Group subcategories by category
+      param_data <- param_license()
+      if (is.null(param_data)) {
+        return(p("License parameters not loaded."))
+      }
+      
+      categories <- unique(param_data$business_category)
+      
       tagList(
-        lapply(values$business_subcategories, function(subcategory) {
-          # Get defaults for this subcategory
-          defaults <- get_subcategory_defaults(
-            subcategory,
-            values$default_license
-          )
-
-          # Use the helper function from module3_functions.R
-          generate_business_license_ui_element(
-            ns,
-            subcategory,
-            scenario_suffix,
-            defaults
+        lapply(categories, function(cat) {
+          # Get subcategories for this category
+          subcats <- param_data$business_sub_category[
+            param_data$business_category == cat
+          ]
+          
+          box(
+            title = paste0(cat, " (", length(subcats), " subcategories)"),
+            width = 12,
+            collapsible = TRUE,
+            collapsed = TRUE,  # Start collapsed!
+            status = "info",
+            solidHeader = FALSE,
+            
+            lapply(subcats, function(subcategory) {
+              # Get defaults for this subcategory
+              defaults <- get_subcategory_defaults(
+                subcategory,
+                values$default_license
+              )
+              generate_business_license_ui_element(
+                ns,
+                subcategory,
+                scenario_suffix,
+                defaults
+              )
+            })
           )
         })
       )
