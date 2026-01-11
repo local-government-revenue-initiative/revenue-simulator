@@ -156,40 +156,74 @@ get_default_weights <- function() {
 # ==============================================================================
 # FEATURE COLUMN DETECTION
 # ==============================================================================
-
 #' Categorize feature columns from data based on naming patterns
+#' Updated to support multiple cities (Freetown, Kenema, Makeni)
 #' @param column_names Vector of column names from the data
 #' @return List of categorized feature columns
 categorize_feature_columns <- function(column_names) {
   # Define patterns for each category
+  # Include patterns for ALL supported cities
+  
   structure_features <- c(
+    # Freetown patterns
     "wall_material",
     "wall_condition",
     "roof_material",
     "roof_condition",
     "window_material",
     "has_veranda",
-    "air_conditioning"
+    "air_conditioning",
+    # Kenema patterns
+    "wall_structure",
+    "wall_finish",
+    "wall_state_of_repair",
+    "roof_repair",
+    "high_value_roof",
+    "windows",
+    "doors",
+    "enclosed_veranda",
+    "airconditioning"
   )
 
   utility_features <- c(
+    # Freetown patterns
     "has_water",
     "drainage",
     "has_security",
     "has_pool",
-    "has_outbuilding"
+    "has_outbuilding",
+    # Kenema patterns
+    "no_water",
+    "well",
+    "plastic_tank",
+    "electricity",
+    "generator_housing",
+    "indoor_toilet",
+    "pool",
+    "quarters",
+    "guard_post",
+    "permanent_fence"
   )
 
   location_features <- c(
+    # Freetown patterns
     "street_access",
     "street_quality",
     "street_lanes",
     "main_road_high_visibility",
     "potential_to_build",
-    "domestic_use_groundfloor"
+    "domestic_use_groundfloor",
+    # Kenema patterns
+    "street_status",
+    "difficult_access",
+    "parking_commercial",
+    "parking_inst",
+    "parking_ngo",
+    "low_community"
   )
 
   location_zones <- c(
+    # Freetown patterns
     "old_tourist_area",
     "old_environmental_hazard",
     "old_informal_settlement",
@@ -205,6 +239,7 @@ categorize_feature_columns <- function(column_names) {
     "wellington_industrial_estate",
     "hazardous_zones",
     "informal_settlements"
+    # Kenema: cbd is already included above
   )
 
   # Find matching columns (with _Yes suffix for dummy variables)
