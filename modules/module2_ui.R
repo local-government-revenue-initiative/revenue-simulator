@@ -13,17 +13,6 @@ module2_ui <- function(id) {
                             status = "primary",
                             solidHeader = TRUE,
 
-                            # General note
-                            div(
-                                   class = "alert alert-info",
-                                   style = "margin-bottom: 20px;",
-                                   HTML(
-                                          "<strong><i class='fa fa-info-circle'></i> General Note:</strong><br>
-            Avoid any specific currency or length of measurement unit. 
-            For example, do not specify dollars or feet. 
-            Default values are loaded from the city's parameter configuration."
-                                   )
-                            ),
 
                             # Main tabset
                             tabsetPanel(
@@ -115,9 +104,9 @@ module2_ui <- function(id) {
                                           "Property Feature Weights",
                                           br(),
                                           p(
-                                                 "Weights for property features typically range from -250 to 250. ",
+                                                 "Weights for property features typically range from -100 to 250. ",
                                                  "Negative weights decrease value, positive weights increase value. ",
-                                                 "Default values are loaded from the city's parameter configuration."
+                                                 "Default values are based on 2026 tax cycle."
                                           ),
                                           br(),
 

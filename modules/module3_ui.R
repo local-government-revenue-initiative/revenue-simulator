@@ -13,17 +13,6 @@ module3_ui <- function(id) {
         status = "primary",
         solidHeader = TRUE,
 
-        # Info note
-        div(
-          class = "alert alert-info",
-          style = "margin-bottom: 20px;",
-          HTML(
-            "<strong><i class='fa fa-info-circle'></i> Note:</strong><br>
-            Configure property tax rates and business license fees for each scenario.
-            Default values are loaded from the city's parameter configuration.
-            Property tax is calculated as: max(property_value × rate, minimum)."
-          )
-        ),
 
         # Main tabset
         tabsetPanel(
@@ -35,7 +24,8 @@ module3_ui <- function(id) {
             br(),
             p(
               "Configure property tax rates and minimums for each property type. ",
-              "You can optionally enable value-based slots for more granular control."
+              "You can optionally enable value-based slots for more granular control. ",
+              "Defaults are based on 2026 tax cycle."
             ),
             br(),
 
